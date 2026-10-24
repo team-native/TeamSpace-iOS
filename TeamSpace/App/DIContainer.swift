@@ -36,11 +36,27 @@ final class DIContainer {
     var loginUseCase: LoginUseCase {
         LoginUseCase(authRepository: authRepository, tokenStorage: tokenStorage)
     }
+
+    var requestAccountUseCase: RequestAccountUseCase {
+        RequestAccountUseCase(authRepository: authRepository)
+    }
+
+    var requestPasswordResetUseCase: RequestPasswordResetUseCase {
+        RequestPasswordResetUseCase(authRepository: authRepository)
+    }
 }
 
 @MainActor
 extension DIContainer {
     func makeLoginViewModel() -> LoginViewModel {
         LoginViewModel(loginUseCase: loginUseCase)
+    }
+
+    func makePasswordResetViewModel() -> PasswordResetViewModel {
+        PasswordResetViewModel(requestPasswordResetUseCase: requestPasswordResetUseCase)
+    }
+
+    func makeAccountRequestViewModel() -> AccountRequestViewModel {
+        AccountRequestViewModel(requestAccountUseCase: requestAccountUseCase)
     }
 }

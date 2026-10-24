@@ -7,6 +7,10 @@ enum TSIcon: String {
     case eyeSlash = "eye.slash"
     case check = "checkmark"
     case info = "exclamationmark.circle"
+    case chevronLeft = "chevron.left"
+    case chevronDown = "chevron.down"
+    case shield = "checkmark.shield"
+    case clock = "clock"
 
     var image: Image {
         Image(systemName: rawValue)
