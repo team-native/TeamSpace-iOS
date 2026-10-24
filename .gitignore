@@ -1,0 +1,20 @@
+# Xcode
+*.xcodeproj
+*.xcworkspace
+xcuserdata/
+DerivedData/
+build/
+.build/
+*.xcresult
+
+# Secrets
+Config/Secrets.xcconfig
+
+# VS Code / SweetPad
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+buildServer.json
+
+# macOS
+.DS_Store
