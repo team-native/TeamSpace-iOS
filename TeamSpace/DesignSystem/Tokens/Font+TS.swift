@@ -9,6 +9,7 @@ enum TSFontStyle {
     case title3         // 22 Bold
     case headline       // 17 Bold
     case subheadline    // 16 Bold
+    case bodyLarge      // 16 Regular — 메뉴 항목
     case body           // 15 Regular
     case bodyBold       // 15 Bold
     case callout        // 14 Regular
@@ -22,6 +23,8 @@ enum TSFontStyle {
     case caption2       // 11 Regular
     case caption2Bold   // 11 Bold
     case micro          // 10 Bold
+    case tabLabel         // 10.5 Medium — 하단 탭바
+    case tabLabelSelected // 10.5 Bold — 하단 탭바 선택
 
     var size: CGFloat {
         switch self {
@@ -31,21 +34,22 @@ enum TSFontStyle {
         case .title2: return 24
         case .title3: return 22
         case .headline: return 17
-        case .subheadline: return 16
+        case .subheadline, .bodyLarge: return 16
         case .body, .bodyBold: return 15
         case .callout, .calloutBold: return 14
         case .footnote, .footnoteMedium, .footnoteBold: return 13
         case .caption, .captionMedium, .captionBold: return 12
         case .caption2, .caption2Bold: return 11
         case .micro: return 10
+        case .tabLabel, .tabLabelSelected: return 10.5
         }
     }
 
     var weight: Font.Weight {
         switch self {
-        case .body, .callout, .footnote, .caption, .caption2:
+        case .bodyLarge, .body, .callout, .footnote, .caption, .caption2:
             return .regular
-        case .footnoteMedium, .captionMedium:
+        case .footnoteMedium, .captionMedium, .tabLabel:
             return .medium
         default:
             return .bold

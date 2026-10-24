@@ -1,0 +1,77 @@
+import SwiftUI
+
+/// 로그인 후 메인 — 하단 플로팅 탭바 + 탭별 NavigationStack
+struct MainTabView: View {
+    let user: AuthUser
+    let onLogout: () -> Void
+
+    @State private var selectedTab: MainTab = .home
+    @State private var paths: [MainTab: [AppRoute]] = [:]
+
+    var body: some View {
+        TabView(selection: $selectedTab) {
+            ForEach(MainTab.allCases) { tab in
+                NavigationStack(path: pathBinding(for: tab)) {
+                    rootView(for: tab)
+                        .navigationDestination(for: AppRoute.self) { route in
+                            AppRouteView(route: route)
+                        }
+                }
+                .toolbar(.hidden, for: .tabBar)
+                .tag(tab)
+            }
+        }
+        .overlay(alignment: .bottom) {
+            if isTabBarVisible {
+                TSTabBar(items: MainTab.allCases.map(\.tabBarItem), selection: tabSelection)
+                    .padding(.bottom, Spacing.xxs)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
+        .animation(.easeInOut(duration: 0.2), value: isTabBarVisible)
+    }
+
+    @ViewBuilder
+    private func rootView(for tab: MainTab) -> some View {
+        switch tab {
+        case .home:
+            HomeView(user: user, onNavigate: { push($0, in: .home) }, onLogout: onLogout)
+        case .finance, .approval, .documents, .workspace:
+            ComingSoonView(title: tab.title, showsBackButton: false)
+        }
+    }
+
+    /// 각 탭의 첫 화면에서만 탭바를 보여줍니다.
+    private var isTabBarVisible: Bool {
+        paths[selectedTab, default: []].isEmpty
+    }
+
+    /// 이미 선택된 탭을 한 번 더 누르면 첫 화면으로 돌아갑니다.
+    private var tabSelection: Binding<String> {
+        Binding(
+            get: { selectedTab.rawValue },
+            set: { newValue in
+                guard let tab = MainTab(rawValue: newValue) else { return }
+                if tab == selectedTab {
+                    paths[tab] = []
+                }
+                selectedTab = tab
+            }
+        )
+    }
+
+    private func pathBinding(for tab: MainTab) -> Binding<[AppRoute]> {
+        Binding(
+            get: { paths[tab, default: []] },
+            set: { paths[tab] = $0 }
+        )
+    }
+
+    private func push(_ route: AppRoute, in tab: MainTab) {
+        paths[tab, default: []].append(route)
+    }
+}
+
+#Preview {
+    MainTabView(user: AuthUser(id: 1, name: "홍길동", roles: [.member]), onLogout: {})
+}

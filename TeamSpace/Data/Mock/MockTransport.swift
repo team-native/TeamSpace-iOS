@@ -4,6 +4,7 @@ import Foundation
 /// - 비밀번호 `wrong` → 401 (계정 불일치)
 /// - 이메일 형식 오류 → 400 (errors[].reason)
 /// - 그 외 → 200 로그인 성공
+/// - GET /users/me: Authorization 헤더가 없으면 401
 /// - 계정 요청: 이메일이 `taken@` 으로 시작하면 409 (이미 요청됨)
 struct MockTransport: HTTPTransport {
     static let baseURL = URL(fileURLWithPath: "/mock-api")
@@ -19,6 +20,8 @@ struct MockTransport: HTTPTransport {
             return try login(request)
         case ("POST", "account-requests"):
             return try accountRequest(request)
+        case ("GET", "me"):
+            return try me(request)
         case ("POST", "password-reset"):
             return try respond(request, status: 200, json: #"{"code":200,"message":"메일 발송 완료","data":{"success":true}}"#)
         default:
@@ -44,6 +47,16 @@ struct MockTransport: HTTPTransport {
         return try respond(request, status: 200, json: """
         {"code":200,"message":"로그인 성공","data":{"accessToken":"mock-access-token","refreshToken":"mock-refresh-token",\
         "user":{"id":1,"name":"홍길동","roles":["Member"]}}}
+        """)
+    }
+
+    private func me(_ request: URLRequest) throws -> (Data, HTTPURLResponse) {
+        guard request.value(forHTTPHeaderField: "Authorization") != nil else {
+            return try respond(request, status: 401, json: #"{"code":401,"message":"유효하지 않거나 만료된 토큰입니다. 로그인해 주세요."}"#)
+        }
+        return try respond(request, status: 200, json: """
+        {"code":200,"message":"조회 성공","data":{"id":1,"name":"홍길동","email":"s00000@gsm.hs.kr",\
+        "department":"NativeOps","roles":["Member","PM"]}}
         """)
     }
 

@@ -24,6 +24,14 @@ final class AuthRepositoryImpl: AuthRepository, @unchecked Sendable {
         }
     }
 
+    func fetchMe() async throws -> AuthUser {
+        do {
+            return try await client.request(Endpoint(method: .get, path: "users/me"), as: UserMeResponseDTO.self).toEntity()
+        } catch let error as NetworkError {
+            throw error.asAppError
+        }
+    }
+
     // TODO: API 명세서에 계정 요청 API 추가되면 경로 · 필드명 확인
     func requestAccount(_ form: AccountRequestForm) async throws -> AccountRequestReceipt {
         guard let department = form.department else {
