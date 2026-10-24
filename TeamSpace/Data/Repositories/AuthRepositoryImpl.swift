@@ -23,4 +23,45 @@ final class AuthRepositoryImpl: AuthRepository, @unchecked Sendable {
             throw appError
         }
     }
+
+    // TODO: API 명세서에 계정 요청 API 추가되면 경로 · 필드명 확인
+    func requestAccount(_ form: AccountRequestForm) async throws -> AccountRequestReceipt {
+        guard let department = form.department else {
+            throw AppError.invalidInput("소속 부서를 선택해 주세요.")
+        }
+        let endpoint = Endpoint(
+            method: .post,
+            path: "auth/account-requests",
+            body: AccountRequestRequestDTO(
+                name: form.name,
+                email: form.email,
+                department: department.rawValue,
+                password: form.password
+            ),
+            requiresAuth: false
+        )
+        do {
+            return try await client.request(endpoint, as: AccountRequestResponseDTO.self).toEntity()
+        } catch let error as NetworkError {
+            throw error.asAppError
+        }
+    }
+
+    // TODO: API 명세서에 비밀번호 재설정 API 추가되면 경로 확인
+    func requestPasswordReset(email: String) async throws {
+        let endpoint = Endpoint(
+            method: .post,
+            path: "auth/password-reset",
+            body: PasswordResetRequestDTO(email: email),
+            requiresAuth: false
+        )
+        do {
+            _ = try await client.request(endpoint, as: EmptyResponseDTO.self)
+        } catch NetworkError.emptyData {
+            // data 없이 성공 응답만 오는 경우도 성공으로 봅니다.
+            return
+        } catch let error as NetworkError {
+            throw error.asAppError
+        }
+    }
 }

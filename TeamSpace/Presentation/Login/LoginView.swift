@@ -3,22 +3,21 @@ import SwiftUI
 /// 01-1 로그인
 struct LoginView: View {
     @State private var viewModel: LoginViewModel
+    @State private var passwordResetViewModel: PasswordResetViewModel
     @FocusState private var isEmailFocused: Bool
     @FocusState private var isPasswordFocused: Bool
     private let onLoginSucceeded: (AuthUser) -> Void
-    private let onFindPassword: () -> Void
     private let onRequestAccount: () -> Void
 
-    /// 비밀번호 찾기(01-4) · 계정 요청(01-2)은 다음 이슈에서 연결합니다.
     init(
         viewModel: LoginViewModel,
+        passwordResetViewModel: PasswordResetViewModel,
         onLoginSucceeded: @escaping (AuthUser) -> Void = { _ in },
-        onFindPassword: @escaping () -> Void = {},
         onRequestAccount: @escaping () -> Void = {}
     ) {
         _viewModel = State(initialValue: viewModel)
+        _passwordResetViewModel = State(initialValue: passwordResetViewModel)
         self.onLoginSucceeded = onLoginSucceeded
-        self.onFindPassword = onFindPassword
         self.onRequestAccount = onRequestAccount
     }
 
@@ -34,7 +33,7 @@ struct LoginView: View {
                     isEmailFocused: $isEmailFocused,
                     isPasswordFocused: $isPasswordFocused,
                     onSubmit: submit,
-                    onFindPassword: onFindPassword
+                    onFindPassword: findPassword
                 )
             }
             .padding(.horizontal, Spacing.xxl)
@@ -57,6 +56,7 @@ struct LoginView: View {
             )
         }
         .background(Color.tsSurface.ignoresSafeArea())
+        .passwordResetAlert(passwordResetViewModel)
         .onChange(of: viewModel.email) { _, _ in viewModel.clearError() }
         .onChange(of: viewModel.password) { _, _ in viewModel.clearError() }
     }
@@ -68,6 +68,11 @@ struct LoginView: View {
                 onLoginSucceeded(user)
             }
         }
+    }
+
+    private func findPassword() {
+        dismissKeyboard()
+        passwordResetViewModel.present(prefilledEmail: viewModel.email)
     }
 
     private func dismissKeyboard() {
@@ -91,10 +96,18 @@ private struct LoginHeader: View {
 }
 
 #Preview("기본") {
-    LoginView(viewModel: DIContainer.preview().makeLoginViewModel())
+    let container = DIContainer.preview()
+    return LoginView(
+        viewModel: container.makeLoginViewModel(),
+        passwordResetViewModel: container.makePasswordResetViewModel()
+    )
 }
 
 #Preview("다크 모드") {
-    LoginView(viewModel: DIContainer.preview().makeLoginViewModel())
-        .preferredColorScheme(.dark)
+    let container = DIContainer.preview()
+    return LoginView(
+        viewModel: container.makeLoginViewModel(),
+        passwordResetViewModel: container.makePasswordResetViewModel()
+    )
+    .preferredColorScheme(.dark)
 }
