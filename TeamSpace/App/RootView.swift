@@ -19,7 +19,7 @@ struct RootView: View {
         case .signedOut:
             AuthFlowView(container: container, onLoginSucceeded: { user in session.signIn(user) })
         case .signedIn(let user):
-            MainTabView(user: user, onLogout: { session.signOut() })
+            MainTabView(container: container, user: user, onLogout: { session.signOut() })
         }
     }
 }

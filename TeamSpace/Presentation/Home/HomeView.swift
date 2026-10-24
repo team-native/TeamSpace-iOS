@@ -11,7 +11,13 @@ struct HomeView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: Spacing.xl) {
-                BrandLogo()
+                HStack {
+                    BrandLogo()
+                    Spacer()
+                    CircleIconButton(icon: .bell, accessibilityLabel: "알림", background: .tsSurface, hasBorder: true) {
+                        onNavigate(.notificationCenter)
+                    }
+                }
                 VStack(alignment: .leading, spacing: Spacing.xs) {
                     Text("\(user.name) 님, 반가워요.")
                         .tsFont(.title2)
