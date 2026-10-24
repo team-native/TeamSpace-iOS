@@ -2,6 +2,7 @@ import SwiftUI
 
 /// 로그인 후 메인 — 하단 플로팅 탭바 + 탭별 NavigationStack
 struct MainTabView: View {
+    let container: DIContainer
     let user: AuthUser
     let onLogout: () -> Void
 
@@ -14,7 +15,7 @@ struct MainTabView: View {
                 NavigationStack(path: pathBinding(for: tab)) {
                     rootView(for: tab)
                         .navigationDestination(for: AppRoute.self) { route in
-                            AppRouteView(route: route)
+                            AppRouteView(route: route, container: container, onNavigate: { push($0, in: tab) })
                         }
                 }
                 .toolbar(.hidden, for: .tabBar)
@@ -73,5 +74,5 @@ struct MainTabView: View {
 }
 
 #Preview {
-    MainTabView(user: AuthUser(id: 1, name: "홍길동", roles: [.member]), onLogout: {})
+    MainTabView(container: .preview(), user: AuthUser(id: 1, name: "홍길동", roles: [.member]), onLogout: {})
 }

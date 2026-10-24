@@ -4,10 +4,12 @@ import Foundation
 final class DIContainer {
     private let tokenStorage: TokenStorage
     private let authRepository: AuthRepository
+    private let notificationRepository: NotificationRepository
 
     init(apiClient: APIClient, tokenStorage: TokenStorage) {
         self.tokenStorage = tokenStorage
         self.authRepository = AuthRepositoryImpl(client: apiClient)
+        self.notificationRepository = NotificationRepositoryImpl(client: apiClient)
     }
 
     /// xcconfig 의 USE_MOCK_API / API_BASE_URL 에 따라 실서버 또는 Mock 서버를 씁니다.
@@ -45,6 +47,14 @@ final class DIContainer {
         LogoutUseCase(tokenStorage: tokenStorage)
     }
 
+    var fetchNotificationsUseCase: FetchNotificationsUseCase {
+        FetchNotificationsUseCase(notificationRepository: notificationRepository)
+    }
+
+    var markNotificationsReadUseCase: MarkNotificationsReadUseCase {
+        MarkNotificationsReadUseCase(notificationRepository: notificationRepository)
+    }
+
     var requestAccountUseCase: RequestAccountUseCase {
         RequestAccountUseCase(authRepository: authRepository)
     }
@@ -70,5 +80,12 @@ extension DIContainer {
 
     func makeAccountRequestViewModel() -> AccountRequestViewModel {
         AccountRequestViewModel(requestAccountUseCase: requestAccountUseCase)
+    }
+
+    func makeNotificationCenterViewModel() -> NotificationCenterViewModel {
+        NotificationCenterViewModel(
+            fetchNotificationsUseCase: fetchNotificationsUseCase,
+            markNotificationsReadUseCase: markNotificationsReadUseCase
+        )
     }
 }

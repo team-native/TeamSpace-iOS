@@ -5,12 +5,14 @@ import Foundation
 /// - 이메일 형식 오류 → 400 (errors[].reason)
 /// - 그 외 → 200 로그인 성공
 /// - GET /users/me: Authorization 헤더가 없으면 401
+/// - GET /notifications · PATCH /notifications/{id}/read: 읽음 상태를 메모리에 기억
 /// - 계정 요청: 이메일이 `taken@` 으로 시작하면 409 (이미 요청됨)
 struct MockTransport: HTTPTransport {
     static let baseURL = URL(fileURLWithPath: "/mock-api")
     static let failingPassword = "wrong"
 
     var latencyNanoseconds: UInt64 = 700_000_000
+    private let notificationStore = MockNotificationStore()
 
     func send(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
         try await Task.sleep(nanoseconds: latencyNanoseconds)
@@ -20,6 +22,10 @@ struct MockTransport: HTTPTransport {
             return try login(request)
         case ("POST", "account-requests"):
             return try accountRequest(request)
+        case ("GET", "notifications"):
+            return try notifications(request)
+        case ("PATCH", "read"):
+            return try markRead(request)
         case ("GET", "me"):
             return try me(request)
         case ("POST", "password-reset"):
@@ -48,6 +54,19 @@ struct MockTransport: HTTPTransport {
         {"code":200,"message":"로그인 성공","data":{"accessToken":"mock-access-token","refreshToken":"mock-refresh-token",\
         "user":{"id":1,"name":"홍길동","roles":["Member"]}}}
         """)
+    }
+
+    private func notifications(_ request: URLRequest) throws -> (Data, HTTPURLResponse) {
+        let payload = MockEnvelope(code: 200, message: "조회 성공", data: ["list": notificationStore.items()])
+        return try respond(request, status: 200, json: String(decoding: try JSONEncoder().encode(payload), as: UTF8.self))
+    }
+
+    private func markRead(_ request: URLRequest) throws -> (Data, HTTPURLResponse) {
+        let components = request.url?.pathComponents ?? []
+        guard components.count >= 2, let id = Int(components[components.count - 2]), notificationStore.markRead(id: id) else {
+            return try respond(request, status: 404, json: #"{"code":404,"message":"해당 알림을 찾을 수 없습니다."}"#)
+        }
+        return try respond(request, status: 200, json: #"{"code":200,"message":"읽음 처리 완료","data":{"success":true,"updatedId":\#(id)}}"#)
     }
 
     private func me(_ request: URLRequest) throws -> (Data, HTTPURLResponse) {
@@ -108,4 +127,59 @@ private struct MockAccountRequestData: Encodable {
     let department: String
     let status: String
     let requestedAt: String
+}
+
+/// Mock 알림 — Figma 02-2 알림 센터 예시 내용
+private final class MockNotificationStore: @unchecked Sendable {
+    struct Item: Encodable {
+        let id: Int
+        let type: String
+        let title: String
+        let message: String
+        let deepLink: String?
+        var isRead: Bool
+        let createdAt: String
+    }
+
+    private let lock = NSLock()
+    private var storage: [Item]
+
+    init(now: Date = Date()) {
+        let formatter = ISO8601DateFormatter()
+        func ago(_ seconds: TimeInterval) -> String { formatter.string(from: now.addingTimeInterval(-seconds)) }
+        storage = [
+            Item(id: 101, type: "APPROVAL", title: "새 결재 요청이 도착했어요",
+                 message: "이시우 님이 Book-on 프로젝트 인력 지원(iOS 1명)을 요청했어요.",
+                 deepLink: "/approvals/12", isRead: false, createdAt: ago(30)),
+            Item(id: 102, type: "FINANCE", title: "외주 입금이 확인됐어요",
+                 message: "BRIDGE · iOS 앱 프로토타입  +3,600,000원",
+                 deepLink: "/finance", isRead: false, createdAt: ago(32 * 60)),
+            Item(id: 103, type: "SCHEDULE", title: "디자인 리뷰 시간이 바뀌었어요",
+                 message: "10월 14일(화) 14:00 → 15:00 · 온라인",
+                 deepLink: nil, isRead: false, createdAt: ago(2 * 3_600)),
+            Item(id: 104, type: "RULE", title: "프로젝트 운영 원칙이 개정됐어요",
+                 message: "시행 10월 20일 · NativeOps · 변경 3건",
+                 deepLink: "/rules/3", isRead: true, createdAt: ago(3 * 86_400)),
+            Item(id: 105, type: "NOTICE", title: "10월 정기 회의 장소 안내",
+                 message: "이번 달 회의는 4층 홈베이스에서 진행해요.",
+                 deepLink: "/posts/77", isRead: true, createdAt: ago(4 * 86_400)),
+            Item(id: 106, type: "APPROVAL_RESULT", title: "비용 승인 요청이 승인됐어요",
+                 message: "Book-on 테스트 기기 구매 · 420,000원",
+                 deepLink: "/documents/55", isRead: true, createdAt: ago(5 * 86_400))
+        ]
+    }
+
+    func items() -> [Item] {
+        lock.lock()
+        defer { lock.unlock() }
+        return storage
+    }
+
+    func markRead(id: Int) -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        guard let index = storage.firstIndex(where: { $0.id == id }) else { return false }
+        storage[index].isRead = true
+        return true
+    }
 }
