@@ -116,3 +116,34 @@ extension WorkspaceRecords {
         return inquiries.map { "\($0.title) · \($0.status.title)" }.joined(separator: " / ")
     }
 }
+
+extension ProjectRunStatus: BadgeRepresentable {
+    var badgeTitle: String {
+        switch self {
+        case .planned: return "시작 전"
+        case .inProgress: return "진행 중"
+        case .completed: return "완료"
+        case .unknown: return "확인 중"
+        }
+    }
+
+    var badgeTone: BadgeTone {
+        switch self {
+        case .inProgress: return .primary
+        case .completed: return .positive
+        case .planned, .unknown: return .neutral
+        }
+    }
+}
+
+extension JoinedProject {
+    /// 아이콘 자리 첫 글자 ("B")
+    var initial: String {
+        name.first.map { String($0).uppercased() } ?? "·"
+    }
+
+    /// "독서 기록 앱 · 07.01 – 11.30"
+    var periodText: String {
+        "\(summary) · \(TSFormat.shortDate(startDate)) – \(TSFormat.shortDate(endDate))"
+    }
+}

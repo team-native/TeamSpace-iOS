@@ -202,6 +202,10 @@ final class DIContainer {
         FetchWorkspaceHomeUseCase(workspaceRepository: workspaceRepository)
     }
 
+    var fetchJoinedProjectsUseCase: FetchJoinedProjectsUseCase {
+        FetchJoinedProjectsUseCase(workspaceRepository: workspaceRepository)
+    }
+
     var fetchTodosUseCase: FetchTodosUseCase {
         FetchTodosUseCase(workspaceRepository: workspaceRepository)
     }
@@ -358,5 +362,17 @@ extension DIContainer {
             toggleTodoUseCase: toggleTodoUseCase,
             addTodoUseCase: addTodoUseCase
         )
+    }
+
+    func makeWorkspaceMenuViewModel(user: AuthUser) -> WorkspaceMenuViewModel {
+        WorkspaceMenuViewModel(
+            user: user,
+            fetchApprovalBoxUseCase: fetchApprovalBoxUseCase,
+            fetchWorkspaceHomeUseCase: fetchWorkspaceHomeUseCase
+        )
+    }
+
+    func makeWorkspaceProjectsViewModel() -> WorkspaceProjectsViewModel {
+        WorkspaceProjectsViewModel(fetchJoinedProjectsUseCase: fetchJoinedProjectsUseCase)
     }
 }

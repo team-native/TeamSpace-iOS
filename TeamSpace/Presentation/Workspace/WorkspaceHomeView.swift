@@ -1,9 +1,11 @@
 import SwiftUI
 
-/// 07-1 내 공간 대시보드 (내 공간 탭 첫 화면)
+/// 07-1 내 공간 대시보드 (07-3 내 공간 → 업무 대시보드)
 struct WorkspaceHomeView: View {
     @State private var viewModel: WorkspaceHomeViewModel
     private let onNavigate: (AppRoute) -> Void
+
+    @Environment(\.dismiss) private var dismiss
 
     init(viewModel: WorkspaceHomeViewModel, onNavigate: @escaping (AppRoute) -> Void) {
         _viewModel = State(initialValue: viewModel)
@@ -23,10 +25,10 @@ struct WorkspaceHomeView: View {
             }
             .padding(.horizontal, Spacing.screen)
             .padding(.top, Spacing.xl)
-            .padding(.bottom, Spacing.tabBarInset)
+            .padding(.bottom, Spacing.xxxl)
         }
         .safeAreaInset(edge: .top, spacing: 0) {
-            WorkspaceTopBar(onMenu: { onNavigate(.comingSoon(title: "설정")) })
+            WorkspaceTopBar(onBack: { dismiss() }, onMenu: { onNavigate(.comingSoon(title: "설정")) })
         }
         .background(Color.tsBackground.ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)

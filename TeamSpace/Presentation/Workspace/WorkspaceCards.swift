@@ -78,8 +78,9 @@ struct WorkspaceItemText: View {
     }
 }
 
-/// 07-1 상단 — 가운데 제목 + 오른쪽 더보기
+/// 07-1 상단 — 뒤로 · 가운데 제목 · 오른쪽 더보기
 struct WorkspaceTopBar: View {
+    let onBack: () -> Void
     let onMenu: () -> Void
 
     var body: some View {
@@ -89,6 +90,14 @@ struct WorkspaceTopBar: View {
                 .foregroundStyle(Color.tsInk)
                 .accessibilityAddTraits(.isHeader)
             HStack {
+                CircleIconButton(
+                    icon: .chevronLeft,
+                    accessibilityLabel: "뒤로",
+                    size: 34,
+                    background: .tsSurface,
+                    hasBorder: true,
+                    action: onBack
+                )
                 Spacer()
                 Button(action: onMenu) {
                     TSIcon.ellipsis.sized(.base, weight: .semibold)

@@ -136,4 +136,27 @@ final class WorkspaceTests: XCTestCase {
         XCTAssertEqual(schedule.metaText(now: now), "10.23 15:00–16:00 · 온라인 · Book-on")
         XCTAssertEqual(schedule.badgeTitle(now: now), "예정")
     }
+
+    // MARK: 07-3 내 공간 · 07-6 참여 프로젝트
+
+    func testMenuShowsWaitingApprovalsAndAffiliation() async {
+        let viewModel = makeContainer().makeWorkspaceMenuViewModel(user: AuthUser(id: 1, name: "옥물결", roles: [.member]))
+
+        await viewModel.load()
+
+        XCTAssertEqual(viewModel.affiliation, "NativeLab / Design")
+        XCTAssertEqual(viewModel.waitingApprovals.count, 2, "검토 대기 · 검토 중인 받은 결재만")
+        XCTAssertEqual(viewModel.latestWaiting?.title, "Book-on 프로젝트 인력 지원", "가장 최근 요청이 위로")
+    }
+
+    func testJoinedProjects() async {
+        let viewModel = makeContainer().makeWorkspaceProjectsViewModel()
+
+        await viewModel.load()
+
+        XCTAssertEqual(viewModel.projects.map(\.name), ["Book-on", "Native 팀스페이스"])
+        XCTAssertEqual(viewModel.projects.first?.initial, "B")
+        XCTAssertEqual(viewModel.projects.first?.periodText, "독서 기록 앱 · 07.01 – 11.30")
+        XCTAssertEqual(ProjectRunStatus.inProgress.badgeTitle, "진행 중")
+    }
 }

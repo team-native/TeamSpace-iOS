@@ -13,7 +13,7 @@ import Foundation
 /// - GET /finance/~: Figma 04 재무 예시 (MockFinanceFixture)
 /// - GET /dashboard/home: Figma 02-1 홈 예시 (MockDashboardFixture)
 /// - GET /library · /library/search: Figma 06 문서함 예시 (MockLibraryFixture)
-/// - GET /workspace/home: Figma 07 내 공간 예시 (MockWorkspaceFixture)
+/// - GET /workspace/home · /workspace/projects: Figma 07 내 공간 예시 (MockWorkspaceFixture)
 /// - GET · POST /workspace/todos · PATCH /workspace/todos/{id}: Figma 07-2 (MockTodoStore, 메모리에 기억)
 /// - POST /notifications/push-token: Authorization 헤더가 없으면 401
 struct MockTransport: HTTPTransport {
@@ -177,6 +177,8 @@ struct MockTransport: HTTPTransport {
                 todayTodoTitles: summary.today,
                 completedTodoCount: summary.completed
             ))
+        case ("GET", "projects"):
+            return try respond(request, status: 200, json: MockWorkspaceFixture.projects())
         case ("GET", "todos"):
             return try respond(request, status: 200, json: todoStore.listJSON())
         case ("POST", "todos"):

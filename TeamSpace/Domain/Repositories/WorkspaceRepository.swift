@@ -5,6 +5,8 @@ import Foundation
 protocol WorkspaceRepository: Sendable {
     /// GET /workspace/home — 07-1 내 공간 대시보드 요약
     func fetchHome() async throws -> WorkspaceHome
+    /// GET /workspace/projects — 07-6 참여 프로젝트 (명세서에 없음)
+    func fetchJoinedProjects() async throws -> [JoinedProject]
     /// GET /workspace/todos — 사용자 할 일 목록 (명세서)
     func fetchTodos() async throws -> [TodoItem]
     /// POST /workspace/todos — 할 일 추가 (명세서에 없음)

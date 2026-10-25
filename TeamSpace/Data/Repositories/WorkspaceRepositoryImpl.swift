@@ -11,6 +11,11 @@ final class WorkspaceRepositoryImpl: WorkspaceRepository, @unchecked Sendable {
         try await request(Endpoint(method: .get, path: "workspace/home"), as: WorkspaceHomeResponseDTO.self).toEntity()
     }
 
+    func fetchJoinedProjects() async throws -> [JoinedProject] {
+        try await request(Endpoint(method: .get, path: "workspace/projects"), as: JoinedProjectListResponseDTO.self)
+            .list.map { $0.toEntity() }
+    }
+
     func fetchTodos() async throws -> [TodoItem] {
         try await request(Endpoint(method: .get, path: "workspace/todos"), as: TodoListResponseDTO.self)
             .list.map { $0.toEntity() }

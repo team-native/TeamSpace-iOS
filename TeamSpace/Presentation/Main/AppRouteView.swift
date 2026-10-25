@@ -20,8 +20,8 @@ struct AppRouteView: View {
             financeScreen
         case .approvalDetail, .approvalCompose, .librarySearch, .templateDetail, .templateCompose:
             documentScreen
-        case .workspaceTodos:
-            TodoListView(viewModel: container.makeTodoListViewModel(userName: user.name), onNavigate: onNavigate)
+        case .workspaceDashboard, .workspaceTodos, .workspaceProjects:
+            workspaceScreen
         case .comingSoon(let title):
             ComingSoonView(title: title, showsBackButton: true)
         }
@@ -101,6 +101,19 @@ struct AppRouteView: View {
             }
         default:
             ApprovalComposeView(container: container, onNavigate: onNavigate)
+        }
+    }
+
+    /// 07 내 공간
+    @ViewBuilder
+    private var workspaceScreen: some View {
+        switch route {
+        case .workspaceTodos:
+            TodoListView(viewModel: container.makeTodoListViewModel(userName: user.name), onNavigate: onNavigate)
+        case .workspaceProjects:
+            WorkspaceProjectsView(viewModel: container.makeWorkspaceProjectsViewModel(), onNavigate: onNavigate)
+        default:
+            WorkspaceHomeView(viewModel: container.makeWorkspaceHomeViewModel(user: user), onNavigate: onNavigate)
         }
     }
 }

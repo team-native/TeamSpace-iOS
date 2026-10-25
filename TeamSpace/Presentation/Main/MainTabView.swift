@@ -65,9 +65,10 @@ struct MainTabView: View {
         case .documents:
             LibraryView(viewModel: container.makeLibraryViewModel(), onNavigate: { push($0, in: .documents) })
         case .workspace:
-            WorkspaceHomeView(
-                viewModel: container.makeWorkspaceHomeViewModel(user: user),
-                onNavigate: { push($0, in: .workspace) }
+            WorkspaceMenuView(
+                viewModel: container.makeWorkspaceMenuViewModel(user: user),
+                onNavigate: { push($0, in: .workspace) },
+                onSelectTab: { selectedTab = $0 }
             )
         }
     }
