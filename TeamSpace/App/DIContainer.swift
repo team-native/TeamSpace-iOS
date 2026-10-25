@@ -9,6 +9,7 @@ final class DIContainer {
     private let notificationPermissionRepository: NotificationPermissionRepository
     private let pushTokenRepository: PushTokenRepository
     private let dashboardRepository: DashboardRepository
+    private let memberRepository: MemberRepository
 
     init(
         apiClient: APIClient,
@@ -23,6 +24,7 @@ final class DIContainer {
         self.notificationPermissionRepository = notificationPermissionRepository
         self.pushTokenRepository = PushTokenRepositoryImpl(client: apiClient)
         self.dashboardRepository = DashboardRepositoryImpl(client: apiClient)
+        self.memberRepository = MemberRepositoryImpl(client: apiClient)
     }
 
     /// xcconfig 의 USE_MOCK_API / API_BASE_URL 에 따라 실서버 또는 Mock 서버를 씁니다.
@@ -106,6 +108,18 @@ final class DIContainer {
     var fetchDashboardHomeUseCase: FetchDashboardHomeUseCase {
         FetchDashboardHomeUseCase(dashboardRepository: dashboardRepository)
     }
+
+    var fetchMembersUseCase: FetchMembersUseCase {
+        FetchMembersUseCase(memberRepository: memberRepository)
+    }
+
+    var fetchMemberDetailUseCase: FetchMemberDetailUseCase {
+        FetchMemberDetailUseCase(memberRepository: memberRepository)
+    }
+
+    var fetchOrganizationUseCase: FetchOrganizationUseCase {
+        FetchOrganizationUseCase(memberRepository: memberRepository)
+    }
 }
 
 @MainActor
@@ -158,5 +172,16 @@ extension DIContainer {
 
     func makeHomeViewModel() -> HomeViewModel {
         HomeViewModel(fetchDashboardHomeUseCase: fetchDashboardHomeUseCase)
+    }
+
+    func makeMemberDirectoryViewModel() -> MemberDirectoryViewModel {
+        MemberDirectoryViewModel(
+            fetchMembersUseCase: fetchMembersUseCase,
+            fetchOrganizationUseCase: fetchOrganizationUseCase
+        )
+    }
+
+    func makeMemberDetailViewModel(memberId: Int) -> MemberDetailViewModel {
+        MemberDetailViewModel(memberId: memberId, fetchMemberDetailUseCase: fetchMemberDetailUseCase)
     }
 }

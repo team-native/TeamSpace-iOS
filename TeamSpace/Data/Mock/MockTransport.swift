@@ -7,6 +7,7 @@ import Foundation
 /// - GET /users/me: Authorization 헤더가 없으면 401
 /// - GET /notifications · PATCH /notifications/{id}/read: 읽음 상태를 메모리에 기억
 /// - 계정 요청: 이메일이 `taken@` 으로 시작하면 409 (이미 요청됨)
+/// - GET /users · /users/{id} · /organization/tree: Figma 03 팀원 예시 (MockMemberFixture)
 /// - GET /dashboard/home: Figma 02-1 홈 예시 (MockDashboardFixture)
 /// - POST /notifications/push-token: Authorization 헤더가 없으면 401
 struct MockTransport: HTTPTransport {
@@ -19,6 +20,9 @@ struct MockTransport: HTTPTransport {
     func send(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
         try await Task.sleep(nanoseconds: latencyNanoseconds)
         let path = request.url?.lastPathComponent ?? ""
+        if let response = try memberRoute(request, path: path) {
+            return response
+        }
         switch (request.httpMethod, path) {
         case ("POST", "login"):
             return try login(request)
@@ -73,6 +77,26 @@ struct MockTransport: HTTPTransport {
             return try respond(request, status: 404, json: #"{"code":404,"message":"해당 알림을 찾을 수 없습니다."}"#)
         }
         return try respond(request, status: 200, json: #"{"code":200,"message":"읽음 처리 완료","data":{"success":true,"updatedId":\#(id)}}"#)
+    }
+
+    /// 03 팀원 — GET /users, /users/{id}, /organization/tree
+    private func memberRoute(_ request: URLRequest, path: String) throws -> (Data, HTTPURLResponse)? {
+        guard request.httpMethod == "GET" else { return nil }
+        let parent = request.url?.deletingLastPathComponent().lastPathComponent
+        let body: Data?
+        if path == "users" {
+            body = MockMemberFixture.list()
+        } else if parent == "users", let id = Int(path) {
+            body = MockMemberFixture.detail(id: id)
+        } else if parent == "organization", path == "tree" {
+            body = MockMemberFixture.tree()
+        } else {
+            return nil
+        }
+        guard let body else {
+            return try respond(request, status: 404, json: #"{"code":404,"message":"해당 팀원을 찾을 수 없습니다."}"#)
+        }
+        return try respond(request, status: 200, json: String(decoding: body, as: UTF8.self))
     }
 
     private func pushToken(_ request: URLRequest) throws -> (Data, HTTPURLResponse) {

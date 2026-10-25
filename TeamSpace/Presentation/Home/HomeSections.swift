@@ -52,7 +52,7 @@ struct HomeSections: View {
         case .findDocument: onSelectTab(.documents)
         case .teamBoard: onNavigate(.comingSoon(title: "팀 게시판"))
         case .inquiry: onNavigate(.comingSoon(title: "문의 · 건의"))
-        case .members: onNavigate(.comingSoon(title: "팀원 소개"))
+        case .members: onNavigate(.memberDirectory)
         }
     }
 }

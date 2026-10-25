@@ -8,6 +8,9 @@ enum AppRoute: Hashable {
     case notificationSettings       // 02-9
     case notificationPermission     // 02-6
     case notificationTroubleshoot   // 02-7
+    // 03 팀원
+    case memberDirectory            // 목록 · 조직도
+    case memberDetail(id: Int)
     // 아직 만들지 않은 화면
     case comingSoon(title: String)
 }
