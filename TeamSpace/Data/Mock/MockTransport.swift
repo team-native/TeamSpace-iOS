@@ -149,7 +149,7 @@ private struct MockAccountRequestData: Encodable {
     let requestedAt: String
 }
 
-/// Mock 알림 — Figma 02-2 알림 센터 예시 내용
+/// Mock 알림 — Figma 02-2 · 02-3 · 02-4 알림 센터 예시 내용
 private final class MockNotificationStore: @unchecked Sendable {
     struct Item: Encodable {
         let id: Int
@@ -159,6 +159,7 @@ private final class MockNotificationStore: @unchecked Sendable {
         let deepLink: String?
         var isRead: Bool
         let createdAt: String
+        var effectiveAt: String?
     }
 
     private let lock = NSLock()
@@ -167,6 +168,7 @@ private final class MockNotificationStore: @unchecked Sendable {
     init(now: Date = Date()) {
         let formatter = ISO8601DateFormatter()
         func ago(_ seconds: TimeInterval) -> String { formatter.string(from: now.addingTimeInterval(-seconds)) }
+        func later(days: Double) -> String { formatter.string(from: now.addingTimeInterval(days * 86_400)) }
         storage = [
             Item(id: 101, type: "APPROVAL", title: "새 결재 요청이 도착했어요",
                  message: "이시우 님이 Book-on 프로젝트 인력 지원(iOS 1명)을 요청했어요.",
@@ -177,9 +179,15 @@ private final class MockNotificationStore: @unchecked Sendable {
             Item(id: 103, type: "SCHEDULE", title: "디자인 리뷰 시간이 바뀌었어요",
                  message: "10월 14일(화) 14:00 → 15:00 · 온라인",
                  deepLink: nil, isRead: false, createdAt: ago(2 * 3_600)),
+            Item(id: 107, type: "INQUIRY_ANSWER", title: "내 문의에 답변이 도착했어요",
+                 message: "활동 보고서 제출 기한은 다음 주 금요일까지 연장했어요. 자세한 내용은 공식 답변을 확인해 주세요.",
+                 deepLink: "/inquiries/42", isRead: false, createdAt: ago(3 * 3_600)),
             Item(id: 104, type: "RULE", title: "프로젝트 운영 원칙이 개정됐어요",
-                 message: "시행 10월 20일 · NativeOps · 변경 3건",
-                 deepLink: "/rules/3", isRead: true, createdAt: ago(3 * 86_400)),
+                 message: "제안 검토 기한이 3주에서 2주로 바뀌어요. 시행 전에 달라진 조항을 확인해 주세요!",
+                 deepLink: "/rules/3", isRead: false, createdAt: ago(1 * 86_400), effectiveAt: later(days: 5)),
+            Item(id: 108, type: "RULE", title: "프로젝트 문서 분류 안내",
+                 message: "문서 분류 기준이 정리됐어요.",
+                 deepLink: "/rules/4", isRead: true, createdAt: ago(6 * 86_400), effectiveAt: ago(2 * 86_400)),
             Item(id: 105, type: "NOTICE", title: "10월 정기 회의 장소 안내",
                  message: "이번 달 회의는 4층 홈베이스에서 진행해요.",
                  deepLink: "/posts/77", isRead: true, createdAt: ago(4 * 86_400)),

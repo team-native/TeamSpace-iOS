@@ -5,6 +5,8 @@ struct NotificationSectionList: View {
     let sections: [NotificationSection]
     let onOpen: (AppNotification) -> Void
     let onReview: (AppNotification) -> Void
+    /// 규칙 전후 비교 · 문의 답변처럼 다른 화면으로 이동
+    let onOpenTarget: (AppNotification) -> Void
 
     var body: some View {
         if sections.isEmpty {
@@ -17,15 +19,34 @@ struct NotificationSectionList: View {
                         .foregroundStyle(Color.tsInk3)
                         .accessibilityAddTraits(.isHeader)
                     ForEach(section.items) { notification in
-                        NotificationCard(
-                            notification: notification,
-                            onOpen: { onOpen(notification) },
-                            onReview: { onReview(notification) },
-                            onLater: { onOpen(notification) }
-                        )
+                        card(for: notification)
                     }
                 }
             }
+        }
+    }
+}
+
+extension NotificationSectionList {
+    /// 알림 종류에 맞는 카드 (02-3 문의 답변 · 02-4 규칙 · 그 외)
+    @ViewBuilder
+    fileprivate func card(for notification: AppNotification) -> some View {
+        switch notification.type {
+        case .rule:
+            RuleNotificationCard(
+                notification: notification,
+                onCompare: { onOpenTarget(notification) },
+                onConfirmRead: { onOpen(notification) }
+            )
+        case .inquiryAnswer:
+            InquiryAnswerCard(notification: notification, onOpenAnswer: { onOpenTarget(notification) })
+        default:
+            NotificationCard(
+                notification: notification,
+                onOpen: { onOpen(notification) },
+                onReview: { onReview(notification) },
+                onLater: { onOpen(notification) }
+            )
         }
     }
 }

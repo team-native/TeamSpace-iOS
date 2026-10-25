@@ -14,6 +14,8 @@ struct NotificationResponseDTO: Decodable {
     let deepLink: String?
     let isRead: Bool
     let createdAt: Date
+    /// 명세서에 없는 필드 — 규칙 알림의 시행일
+    let effectiveAt: Date?
 
     func toEntity() -> AppNotification {
         AppNotification(
@@ -23,7 +25,8 @@ struct NotificationResponseDTO: Decodable {
             message: message,
             deepLink: deepLink,
             isRead: isRead,
-            createdAt: createdAt
+            createdAt: createdAt,
+            effectiveAt: effectiveAt
         )
     }
 }

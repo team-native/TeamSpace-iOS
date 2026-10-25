@@ -9,6 +9,8 @@ enum NotificationType: String, UnknownCaseDecodable {
     case schedule = "SCHEDULE"
     case rule = "RULE"
     case notice = "NOTICE"
+    /// 내 문의에 공식 답변 도착 (작성자 본인만 받음)
+    case inquiryAnswer = "INQUIRY_ANSWER"
     case unknown = "UNKNOWN"
 
     static let unknownCase: NotificationType = .unknown
@@ -27,7 +29,7 @@ enum NotificationCategory: CaseIterable, Hashable {
 extension NotificationType {
     var category: NotificationCategory {
         switch self {
-        case .approval, .approvalResult: return .personalTask
+        case .approval, .approvalResult, .inquiryAnswer: return .personalTask
         case .finance: return .finance
         case .schedule: return .schedule
         case .rule: return .rule
@@ -47,4 +49,6 @@ struct AppNotification: Identifiable, Equatable {
     let deepLink: String?
     var isRead: Bool
     let createdAt: Date
+    /// 제도 · 규칙 알림의 시행일 (명세서에 없는 필드 — 서버와 맞춰야 함)
+    var effectiveAt: Date? = nil
 }

@@ -4,6 +4,7 @@ import SwiftUI
 struct MainTabView: View {
     let container: DIContainer
     let user: AuthUser
+    let entryRouter: NotificationEntryRouter
     let onLogout: () -> Void
 
     @State private var selectedTab: MainTab = .home
@@ -30,6 +31,16 @@ struct MainTabView: View {
             }
         }
         .animation(.easeInOut(duration: 0.2), value: isTabBarVisible)
+        .onChange(of: entryRouter.pending, initial: true) { _, entry in
+            if entry != nil { openPendingEntry() }
+        }
+    }
+
+    /// 알림을 눌러 들어왔으면 홈 → 알림 센터 → 목적지 순으로 열어요. (02-8)
+    private func openPendingEntry() {
+        guard let entry = entryRouter.take() else { return }
+        selectedTab = .home
+        paths[.home] = [.notificationCenter, .comingSoon(title: entry.type.targetTitle)]
     }
 
     @ViewBuilder
@@ -80,5 +91,10 @@ struct MainTabView: View {
 }
 
 #Preview {
-    MainTabView(container: .preview(), user: AuthUser(id: 1, name: "홍길동", roles: [.member]), onLogout: {})
+    MainTabView(
+        container: .preview(),
+        user: AuthUser(id: 1, name: "홍길동", roles: [.member]),
+        entryRouter: NotificationEntryRouter(),
+        onLogout: {}
+    )
 }

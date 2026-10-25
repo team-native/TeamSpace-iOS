@@ -21,8 +21,9 @@ final class NotificationCenterViewModelTests: XCTestCase {
         let sections = viewModel.sections()
         XCTAssertEqual(sections.first?.title, "오늘")
         XCTAssertTrue(sections.map(\.title).contains("이번 주"))
-        XCTAssertEqual(viewModel.unreadCount(for: .all), 3)
-        XCTAssertEqual(viewModel.unreadCount(for: .personalTask), 1)
+        XCTAssertEqual(viewModel.unreadCount(for: .all), 5)
+        XCTAssertEqual(viewModel.unreadCount(for: .personalTask), 2, "결재 요청 + 문의 답변")
+        XCTAssertEqual(viewModel.unreadCount(for: .rule), 1)
         XCTAssertNil(viewModel.unreadCount(for: .notice), "안 읽은 공지가 없으면 숫자를 숨겨요")
     }
 
