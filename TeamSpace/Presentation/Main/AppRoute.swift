@@ -11,6 +11,9 @@ enum AppRoute: Hashable {
     // 03 팀원
     case memberDirectory            // 목록 · 조직도
     case memberDetail(id: Int)
+    // 04 재무
+    case financeContractLedger      // 04-3 수금 내역
+    case financeContractDetail(id: Int) // 04-2 수주 상세
     // 아직 만들지 않은 화면
     case comingSoon(title: String)
 }

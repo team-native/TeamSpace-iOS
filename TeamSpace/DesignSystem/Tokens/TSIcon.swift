@@ -39,6 +39,8 @@ enum TSIcon: String {
     case organization = "ic-org"
     // 04 재무 — Figma 원본 SVG
     case lock = "ic-lock"
+    case file = "ic-file"
+    case filter = "ic-filter"
     // 하단 탭바 — Figma 원본 SVG (Resources/Assets.xcassets/Icons)
     case tabHome = "tab-home"
     case tabFinance = "tab-finance"
@@ -50,7 +52,7 @@ enum TSIcon: String {
     private static let assetIcons: Set<TSIcon> = [
         .chevronLeft, .clipboard, .creditCard, .calendar, .bookOpen, .bell, .checkCircle, .settings,
         .bellRing, .bellOff, .clipboardCheck, .wallet, .megaphone, .infoCircle, .checkSmall, .moon,
-        .chevronRight, .arrowRight, .search, .link, .mailOutline, .message, .organization, .lock,
+        .chevronRight, .arrowRight, .search, .link, .mailOutline, .message, .organization, .lock, .file, .filter,
         .tabHome, .tabFinance, .tabApproval, .tabDocuments, .tabWorkspace
     ]
 

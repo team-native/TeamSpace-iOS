@@ -176,7 +176,7 @@ struct FinanceMenuList: View {
     private let items: [(title: String, route: AppRoute)] = [
         ("월별 흐름", .comingSoon(title: "월별 흐름")),
         ("돈의 구성", .comingSoon(title: "돈의 구성")),
-        ("이번 달 수금 현황", .comingSoon(title: "이번 달 수금 현황"))
+        ("이번 달 수금 현황", .financeContractLedger)
     ]
 
     var body: some View {

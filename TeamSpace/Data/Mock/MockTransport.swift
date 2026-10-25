@@ -92,11 +92,19 @@ struct MockTransport: HTTPTransport {
         else { return nil }
         let month = URLComponents(url: url, resolvingAgainstBaseURL: false)?
             .queryItems?.first { $0.name == "month" }?.value
+        let query = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems
         switch path {
         case "overview":
             return try respond(request, status: 200, json: MockFinanceFixture.overview(monthText: month))
+        case "contracts":
+            let year = query?.first { $0.name == "year" }?.value
+            return try respond(request, status: 200, json: MockFinanceFixture.ledger(yearText: year))
         default:
-            return nil
+            guard url.deletingLastPathComponent().lastPathComponent == "contracts", let id = Int(path) else { return nil }
+            guard let json = MockFinanceFixture.contractDetail(id: id) else {
+                return try respond(request, status: 404, json: #"{"code":404,"message":"해당 수주를 찾을 수 없습니다."}"#)
+            }
+            return try respond(request, status: 200, json: json)
         }
     }
 

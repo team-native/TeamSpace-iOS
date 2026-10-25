@@ -23,6 +23,13 @@ struct AppRouteView: View {
             MemberDirectoryView(viewModel: container.makeMemberDirectoryViewModel(), onNavigate: onNavigate)
         case .memberDetail(let id):
             MemberDetailView(viewModel: container.makeMemberDetailViewModel(memberId: id), onNavigate: onNavigate)
+        case .financeContractLedger:
+            ContractLedgerView(
+                viewModel: container.makeContractLedgerViewModel(year: Calendar.current.component(.year, from: Date())),
+                onNavigate: onNavigate
+            )
+        case .financeContractDetail(let id):
+            ContractDetailView(viewModel: container.makeContractDetailViewModel(contractId: id), onNavigate: onNavigate)
         case .comingSoon(let title):
             ComingSoonView(title: title, showsBackButton: true)
         }

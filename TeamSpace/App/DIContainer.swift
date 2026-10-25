@@ -126,6 +126,14 @@ final class DIContainer {
     var fetchFinanceOverviewUseCase: FetchFinanceOverviewUseCase {
         FetchFinanceOverviewUseCase(financeRepository: financeRepository)
     }
+
+    var fetchContractLedgerUseCase: FetchContractLedgerUseCase {
+        FetchContractLedgerUseCase(financeRepository: financeRepository)
+    }
+
+    var fetchContractDetailUseCase: FetchContractDetailUseCase {
+        FetchContractDetailUseCase(financeRepository: financeRepository)
+    }
 }
 
 @MainActor
@@ -193,5 +201,13 @@ extension DIContainer {
 
     func makeFinanceViewModel(user: AuthUser) -> FinanceViewModel {
         FinanceViewModel(user: user, fetchFinanceOverviewUseCase: fetchFinanceOverviewUseCase)
+    }
+
+    func makeContractLedgerViewModel(year: Int) -> ContractLedgerViewModel {
+        ContractLedgerViewModel(year: year, fetchContractLedgerUseCase: fetchContractLedgerUseCase)
+    }
+
+    func makeContractDetailViewModel(contractId: Int) -> ContractDetailViewModel {
+        ContractDetailViewModel(contractId: contractId, fetchContractDetailUseCase: fetchContractDetailUseCase)
     }
 }
