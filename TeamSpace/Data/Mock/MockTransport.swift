@@ -96,6 +96,10 @@ struct MockTransport: HTTPTransport {
         switch path {
         case "overview":
             return try respond(request, status: 200, json: MockFinanceFixture.overview(monthText: month))
+        case "flows":
+            let to = query?.first { $0.name == "to" }?.value
+            let count = query?.first { $0.name == "months" }?.value
+            return try respond(request, status: 200, json: MockFinanceFixture.flows(toText: to, countText: count))
         case "contracts":
             let year = query?.first { $0.name == "year" }?.value
             return try respond(request, status: 200, json: MockFinanceFixture.ledger(yearText: year))

@@ -4,6 +4,8 @@ import Foundation
 protocol FinanceRepository: Sendable {
     /// GET /finance/overview?month=2026-10
     func fetchOverview(month: Date) async throws -> FinanceOverview
+    /// GET /finance/flows?to=2026-10&months=7 — 오래된 달 → 최근 달 순
+    func fetchMonthlyFlows(endingAt month: Date, count: Int) async throws -> [MonthlyFlow]
     /// GET /finance/contracts?year=2026
     func fetchContracts(year: Int) async throws -> ContractLedger
     /// GET /finance/contracts/{contractId}

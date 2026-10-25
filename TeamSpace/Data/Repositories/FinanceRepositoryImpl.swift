@@ -16,6 +16,18 @@ final class FinanceRepositoryImpl: FinanceRepository, @unchecked Sendable {
         return try await request(endpoint, as: FinanceOverviewResponseDTO.self).toEntity()
     }
 
+    func fetchMonthlyFlows(endingAt month: Date, count: Int) async throws -> [MonthlyFlow] {
+        let endpoint = Endpoint(
+            method: .get,
+            path: "finance/flows",
+            queryItems: [
+                URLQueryItem(name: "to", value: FinanceMonthParameter.string(from: month)),
+                URLQueryItem(name: "months", value: String(count))
+            ]
+        )
+        return try await request(endpoint, as: MonthlyFlowListResponseDTO.self).list.map { $0.toEntity() }
+    }
+
     func fetchContracts(year: Int) async throws -> ContractLedger {
         let endpoint = Endpoint(
             method: .get,

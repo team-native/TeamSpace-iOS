@@ -14,6 +14,8 @@ enum AppRoute: Hashable {
     // 04 재무
     case financeContractLedger      // 04-3 수금 내역
     case financeContractDetail(id: Int) // 04-2 수주 상세
+    case financeMonthlyFlow(month: Date) // 04-5 월별 흐름
+    case financeComposition(month: Date) // 04-6 돈의 구성
     // 아직 만들지 않은 화면
     case comingSoon(title: String)
 }

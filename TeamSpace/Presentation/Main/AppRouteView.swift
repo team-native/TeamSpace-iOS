@@ -30,6 +30,10 @@ struct AppRouteView: View {
             )
         case .financeContractDetail(let id):
             ContractDetailView(viewModel: container.makeContractDetailViewModel(contractId: id), onNavigate: onNavigate)
+        case .financeMonthlyFlow(let month):
+            MonthlyFlowView(viewModel: container.makeMonthlyFlowViewModel(endMonth: month))
+        case .financeComposition(let month):
+            FinanceCompositionView(viewModel: container.makeFinanceCompositionViewModel(month: month))
         case .comingSoon(let title):
             ComingSoonView(title: title, showsBackButton: true)
         }

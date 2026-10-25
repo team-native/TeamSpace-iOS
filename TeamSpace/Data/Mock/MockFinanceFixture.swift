@@ -9,6 +9,25 @@ enum MockFinanceFixture {
         return 1.0 - Double((10 - value + 12) % 12) * 0.06
     }
 
+    /// GET /finance/flows — Figma 04-5 막대 높이 비율 그대로 (마지막 달 = 7,260,000 / 3,480,000)
+    static func flows(toText: String?, countText: String?, now: Date = Date()) -> String {
+        let calendar = Calendar.current
+        let end = calendar.startOfMonth(for: toText.flatMap(FinanceMonthParameter.date(from:)) ?? now)
+        let incomeHeights = [40, 52, 48, 66, 72, 80, 96]
+        let expenseHeights = [26, 30, 34, 38, 40, 46, 50]
+        let count = min(max(countText.flatMap(Int.init) ?? 7, 1), incomeHeights.count)
+        let formatter = ISO8601DateFormatter()
+        let items = (0..<count).compactMap { index -> String? in
+            let offset = index - (count - 1)
+            guard let month = calendar.date(byAdding: .month, value: offset, to: end) else { return nil }
+            let heightIndex = incomeHeights.count - count + index
+            let income = 7_260_000 * incomeHeights[heightIndex] / 96 / 10_000 * 10_000
+            let expense = 3_480_000 * expenseHeights[heightIndex] / 50 / 10_000 * 10_000
+            return #"{"month":"\#(formatter.string(from: month))","income":\#(income),"expense":\#(expense)}"#
+        }
+        return #"{"code":200,"message":"조회 성공","data":{"list":[\#(items.joined(separator: ","))]}}"#
+    }
+
     static func overview(monthText: String?, now: Date = Date()) -> String {
         let month = monthText.flatMap(FinanceMonthParameter.date(from:)) ?? now
         let ratio = scale(for: month)

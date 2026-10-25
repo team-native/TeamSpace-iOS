@@ -171,13 +171,17 @@ private struct FlowCard: View {
 
 /// 04-1 월별 흐름 · 돈의 구성 · 이번 달 수금 현황
 struct FinanceMenuList: View {
+    /// 04-4 에서 고른 달
+    let month: Date
     let onSelect: (AppRoute) -> Void
 
-    private let items: [(title: String, route: AppRoute)] = [
-        ("월별 흐름", .comingSoon(title: "월별 흐름")),
-        ("돈의 구성", .comingSoon(title: "돈의 구성")),
-        ("이번 달 수금 현황", .financeContractLedger)
-    ]
+    private var items: [(title: String, route: AppRoute)] {
+        [
+            ("월별 흐름", .financeMonthlyFlow(month: month)),
+            ("돈의 구성", .financeComposition(month: month)),
+            ("이번 달 수금 현황", .financeContractLedger)
+        ]
+    }
 
     var body: some View {
         VStack(spacing: 0) {

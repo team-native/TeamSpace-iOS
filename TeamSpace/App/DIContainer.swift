@@ -134,6 +134,10 @@ final class DIContainer {
     var fetchContractDetailUseCase: FetchContractDetailUseCase {
         FetchContractDetailUseCase(financeRepository: financeRepository)
     }
+
+    var fetchMonthlyFlowsUseCase: FetchMonthlyFlowsUseCase {
+        FetchMonthlyFlowsUseCase(financeRepository: financeRepository)
+    }
 }
 
 @MainActor
@@ -209,5 +213,13 @@ extension DIContainer {
 
     func makeContractDetailViewModel(contractId: Int) -> ContractDetailViewModel {
         ContractDetailViewModel(contractId: contractId, fetchContractDetailUseCase: fetchContractDetailUseCase)
+    }
+
+    func makeMonthlyFlowViewModel(endMonth: Date) -> MonthlyFlowViewModel {
+        MonthlyFlowViewModel(endMonth: endMonth, fetchMonthlyFlowsUseCase: fetchMonthlyFlowsUseCase)
+    }
+
+    func makeFinanceCompositionViewModel(month: Date) -> FinanceCompositionViewModel {
+        FinanceCompositionViewModel(month: month, fetchFinanceOverviewUseCase: fetchFinanceOverviewUseCase)
     }
 }

@@ -53,7 +53,7 @@ struct FinanceView: View {
         case .loaded(let overview):
             FinanceTrackerCard(overview: overview)
             FinanceSummarySection(overview: overview)
-            FinanceMenuList(onSelect: { onNavigate($0) })
+            FinanceMenuList(month: viewModel.selectedMonth, onSelect: { onNavigate($0) })
             InfoBanner(message: viewModel.permissionNotice, icon: .lock, style: .muted)
             Button {
                 onSelectTab(.approval)
