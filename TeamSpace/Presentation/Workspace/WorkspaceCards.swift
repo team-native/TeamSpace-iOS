@@ -179,3 +179,23 @@ struct WorkspacePageTitle: View {
         .padding(.top, Spacing.sm)
     }
 }
+
+/// 07 작은 칩 — 선택하면 파란 배경 (예: "전체 3")
+struct WorkspaceCountChip: View {
+    let title: String
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text(title)
+                .tsFont(.caption2Bold)
+                .foregroundStyle(isSelected ? Color.tsOnPrimary : Color.tsInk2)
+                .padding(.horizontal, Spacing.md)
+                .frame(height: 28)
+                .background(isSelected ? Color.tsPrimary : Color.tsSurface2, in: Capsule())
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+}

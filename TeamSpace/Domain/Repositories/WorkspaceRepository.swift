@@ -19,6 +19,12 @@ protocol WorkspaceRepository: Sendable {
     func respond(scheduleId: Int, response: ScheduleResponse) async throws -> ScheduleEvent
     /// PATCH /workspace/schedules/{id}/reminders — 내 리마인더 (명세서에 없음)
     func updateReminders(scheduleId: Int, reminders: [ReminderTiming]) async throws -> [ReminderTiming]
+    /// GET /workspace/activity — 07-12 내 활동 요약 (명세서에 없음)
+    func fetchActivitySummary() async throws -> ActivitySummary
+    /// GET /workspace/posts — 07-10 내가 쓴 글 · 댓글 (명세서에 없음)
+    func fetchMyPosts() async throws -> MyPosts
+    /// GET /workspace/proposals — 07-11 내가 작성한 운영 제안 (명세서에 없음)
+    func fetchMyProposals() async throws -> [MyProposal]
     /// GET /workspace/todos — 사용자 할 일 목록 (명세서)
     func fetchTodos() async throws -> [TodoItem]
     /// POST /workspace/todos — 할 일 추가 (명세서에 없음)

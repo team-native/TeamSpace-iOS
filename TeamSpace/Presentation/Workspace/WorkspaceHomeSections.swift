@@ -137,20 +137,19 @@ struct WorkspaceSchedulesCard: View {
 /// 07-1 내가 남긴 기록 — 글 · 댓글 / 운영 제안 / 문의
 struct WorkspaceRecordsCard: View {
     let records: WorkspaceRecords
-    /// 이동할 화면 제목
-    let onOpen: (String) -> Void
+    let onOpen: (AppRoute) -> Void
 
     var body: some View {
         WorkspaceCard {
             WorkspaceCardTitle(title: "내가 남긴 기록")
-            WorkspaceLinkRow(title: "내 글 · 댓글", subtitle: records.postText) { onOpen("내가 쓴 게시글·댓글") }
+            WorkspaceLinkRow(title: "내 글 · 댓글", subtitle: records.postText) { onOpen(.workspaceMyPosts) }
             TSDivider()
             WorkspaceLinkRow(title: "내 운영 제안 · \(records.proposalCount)건", subtitle: records.proposalText) {
-                onOpen("내가 작성한 운영 제안")
+                onOpen(.workspaceMyProposals)
             }
             TSDivider()
             WorkspaceLinkRow(title: "내 문의 · \(records.inquiries.count)건", subtitle: records.inquiryText) {
-                onOpen("내 문의")
+                onOpen(.comingSoon(title: "내 문의"))
             }
         }
     }

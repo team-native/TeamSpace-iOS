@@ -17,6 +17,7 @@ import Foundation
 /// - GET /workspace/documents · DELETE /documents/{id}: 07-4 · 07-5 (MockApprovalStore 의 내 결재)
 /// - GET · POST /workspace/todos · PATCH /workspace/todos/{id}: Figma 07-2 (MockTodoStore, 메모리에 기억)
 /// - /workspace/schedules/~: Figma 07-7 ~ 07-9 (MockScheduleStore, 참석 응답 · 리마인더 기억)
+/// - GET /workspace/activity · posts · proposals: Figma 07-10 ~ 07-12 (MockActivityFixture)
 /// - POST /notifications/push-token: Authorization 헤더가 없으면 401
 struct MockTransport: HTTPTransport {
     static let baseURL = URL(fileURLWithPath: "/mock-api")
@@ -215,6 +216,17 @@ struct MockTransport: HTTPTransport {
                 return try respond(request, status: 404, json: Self.scheduleNotFound)
             }
             return try respond(request, status: 200, json: json)
+        case ("GET", "activity"):
+            let unread = notificationStore.items().filter { !$0.isRead }.count
+            let submitted = approvalStore.items(mine: true).filter { $0.status != "DRAFT" }.count
+            return try respond(request, status: 200, json: MockActivityFixture.summary(
+                unreadNotifications: unread,
+                submittedDocuments: submitted
+            ))
+        case ("GET", "posts"):
+            return try respond(request, status: 200, json: MockActivityFixture.posts())
+        case ("GET", "proposals"):
+            return try respond(request, status: 200, json: MockActivityFixture.proposals())
         case ("GET", "documents"):
             return try respond(request, status: 200, json: approvalStore.myDocumentsJSON())
         case ("GET", "projects"):

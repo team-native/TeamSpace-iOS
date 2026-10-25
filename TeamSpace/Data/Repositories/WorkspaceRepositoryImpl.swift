@@ -62,6 +62,18 @@ final class WorkspaceRepositoryImpl: WorkspaceRepository, @unchecked Sendable {
         return try await request(endpoint, as: ScheduleRemindersDTO.self).reminders.compactMap(ReminderTiming.init(rawValue:))
     }
 
+    func fetchActivitySummary() async throws -> ActivitySummary {
+        try await request(Endpoint(method: .get, path: "workspace/activity"), as: ActivitySummaryDTO.self).toEntity()
+    }
+
+    func fetchMyPosts() async throws -> MyPosts {
+        try await request(Endpoint(method: .get, path: "workspace/posts"), as: MyPostsResponseDTO.self).toEntity()
+    }
+
+    func fetchMyProposals() async throws -> [MyProposal] {
+        try await request(Endpoint(method: .get, path: "workspace/proposals"), as: MyProposalListResponseDTO.self).toEntity()
+    }
+
     func fetchTodos() async throws -> [TodoItem] {
         try await request(Endpoint(method: .get, path: "workspace/todos"), as: TodoListResponseDTO.self)
             .list.map { $0.toEntity() }

@@ -70,7 +70,7 @@ private struct WorkspaceHomeCards: View {
         )
         WorkspaceProjectsCard(projects: home.projects, onOpen: { onNavigate(.comingSoon(title: "참여 프로젝트")) })
         WorkspaceSchedulesCard(schedules: schedules, onOpen: { onNavigate(.workspaceSchedules) })
-        WorkspaceRecordsCard(records: home.records, onOpen: { onNavigate(.comingSoon(title: $0)) })
+        WorkspaceRecordsCard(records: home.records, onOpen: onNavigate)
         WorkspaceNote()
     }
 }

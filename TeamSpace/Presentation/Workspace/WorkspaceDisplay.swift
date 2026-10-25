@@ -72,6 +72,7 @@ extension ProposalStatus {
     var title: String {
         switch self {
         case .reviewing: return "검토 중"
+        case .answered: return "답변 완료"
         case .adopted: return "채택"
         case .closed: return "종료"
         case .unknown: return "확인 중"

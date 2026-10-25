@@ -230,6 +230,18 @@ final class DIContainer {
         UpdateRemindersUseCase(workspaceRepository: workspaceRepository)
     }
 
+    var fetchActivitySummaryUseCase: FetchActivitySummaryUseCase {
+        FetchActivitySummaryUseCase(workspaceRepository: workspaceRepository)
+    }
+
+    var fetchMyPostsUseCase: FetchMyPostsUseCase {
+        FetchMyPostsUseCase(workspaceRepository: workspaceRepository)
+    }
+
+    var fetchMyProposalsUseCase: FetchMyProposalsUseCase {
+        FetchMyProposalsUseCase(workspaceRepository: workspaceRepository)
+    }
+
     var fetchTodosUseCase: FetchTodosUseCase {
         FetchTodosUseCase(workspaceRepository: workspaceRepository)
     }
@@ -422,5 +434,17 @@ extension DIContainer {
             respondScheduleUseCase: respondScheduleUseCase,
             updateRemindersUseCase: updateRemindersUseCase
         )
+    }
+
+    func makeActivitySummaryViewModel() -> ActivitySummaryViewModel {
+        ActivitySummaryViewModel(fetchActivitySummaryUseCase: fetchActivitySummaryUseCase)
+    }
+
+    func makeMyPostsViewModel(userName: String) -> MyPostsViewModel {
+        MyPostsViewModel(userName: userName, fetchMyPostsUseCase: fetchMyPostsUseCase)
+    }
+
+    func makeMyProposalsViewModel(userName: String) -> MyProposalsViewModel {
+        MyProposalsViewModel(userName: userName, fetchMyProposalsUseCase: fetchMyProposalsUseCase)
     }
 }

@@ -108,7 +108,7 @@ struct WorkspaceMenuList: View {
     private var rows: [(title: String, route: AppRoute)] {
         [
             ("업무 대시보드", .workspaceDashboard),
-            ("내 활동", .comingSoon(title: "내 활동")),
+            ("내 활동", .workspaceActivity),
             ("참여 프로젝트", .workspaceProjects),
             ("예정된 일정", .workspaceSchedules)
         ]

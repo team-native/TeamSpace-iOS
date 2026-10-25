@@ -290,4 +290,43 @@ final class WorkspaceTests: XCTestCase {
         XCTAssertEqual(viewModel.detail?.reminders, [.dayBefore, .tenMinutesBefore], "이른 순으로 저장")
         XCTAssertFalse(viewModel.isReminderEditorPresented)
     }
+
+    // MARK: 07-10 ~ 07-12 내 활동
+
+    func testActivitySummaryUsesLiveCounts() async {
+        let viewModel = makeContainer().makeActivitySummaryViewModel()
+
+        await viewModel.load()
+
+        XCTAssertEqual(viewModel.state.value?.unreadNotificationCount, 5, "알림 센터와 같은 안 읽은 알림 수")
+        XCTAssertEqual(viewModel.state.value?.submittedDocumentCount, 6, "임시 저장은 빼고 센 내 결재")
+        XCTAssertEqual(viewModel.state.value?.postCount, 3)
+    }
+
+    func testMyPostsTabsAndTexts() async {
+        let viewModel = makeContainer().makeMyPostsViewModel(userName: "옥물결")
+
+        await viewModel.load()
+
+        XCTAssertEqual(viewModel.title(for: .posts), "글 3")
+        XCTAssertEqual(viewModel.title(for: .comments), "댓글 4")
+        XCTAssertEqual(viewModel.posts.first?.title, "이번 주 함께 읽을 책 추천해요", "최근 글이 위로")
+        XCTAssertEqual(viewModel.posts.first?.statsText, "좋아요 8 · 댓글 3 · 조회 41")
+        XCTAssertEqual(viewModel.posts[1].statsText, "좋아요 12 · 댓글 6 · 공개 표시: 익명")
+        XCTAssertEqual(viewModel.posts[2].statsText, "좋아요 5 · 댓글 2 · 첨부 1개")
+        XCTAssertTrue(viewModel.posts[1].metaText(authorName: "옥물결").hasSuffix("나만 보는 익명 기록"))
+        XCTAssertEqual(viewModel.comments.first?.quoteText, "“예약 기준이 정리되면 좋겠어요.”")
+    }
+
+    func testMyProposalsFilter() async {
+        let viewModel = makeContainer().makeMyProposalsViewModel(userName: "옥물결")
+
+        await viewModel.load()
+
+        XCTAssertEqual(ProposalFilter.allCases.map { viewModel.count(of: $0) }, [3, 2, 1])
+        XCTAssertEqual(viewModel.subtitle, "옥물결 님이 작성한 운영 제안 3개")
+        viewModel.filter = .answered
+        XCTAssertEqual(viewModel.proposals.map(\.title), ["집중 업무 시간을 캘린더에 표시해요"])
+        XCTAssertEqual(viewModel.proposals.first?.linkTitle, "운영 답변 확인")
+    }
 }

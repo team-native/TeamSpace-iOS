@@ -86,6 +86,8 @@ struct WorkspaceSchedule: Equatable, Identifiable, Sendable {
 /// 운영 제안 상태
 enum ProposalStatus: String, UnknownCaseDecodable, Hashable, Sendable {
     case reviewing = "IN_REVIEW"
+    /// 운영진이 공식 답변을 남김
+    case answered = "ANSWERED"
     case adopted = "ADOPTED"
     case closed = "CLOSED"
     case unknown = "UNKNOWN"
