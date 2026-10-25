@@ -20,6 +20,7 @@ import Foundation
 /// - GET /workspace/activity · posts · proposals: Figma 07-10 ~ 07-12 (MockActivityFixture)
 /// - GET · PATCH /workspace/profile: Figma 07-13 (MockProfileStore, 저장 내용 기억)
 /// - /projects/~ · /applications/~: Figma 08 (MockProjectStore, 신청 · 결과 등록 기억)
+/// - GET /rules · /rules/{id} · POST /rules/{id}/acknowledge: Figma 09 (MockRuleStore, 읽음 확인 기억)
 /// - POST /notifications/push-token: Authorization 헤더가 없으면 401
 struct MockTransport: HTTPTransport {
     static let baseURL = URL(fileURLWithPath: "/mock-api")
@@ -35,6 +36,7 @@ struct MockTransport: HTTPTransport {
     private let scheduleStore = MockScheduleStore()
     private let profileStore = MockProfileStore()
     private let projectStore = MockProjectStore()
+    private let ruleStore = MockRuleStore()
 
     func send(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
         try await Task.sleep(nanoseconds: latencyNanoseconds)
@@ -190,6 +192,9 @@ struct MockTransport: HTTPTransport {
         if components.first == "applications" {
             return try applicationRoute(request, components: components)
         }
+        if components.first == "rules" {
+            return try ruleRoute(request, components: components)
+        }
         guard components.first == "projects" else { return nil }
         let notFound = #"{"code":404,"message":"해당 프로젝트를 찾을 수 없습니다."}"#
         let projectId = components.count > 1 ? Int(components[1]) : nil
@@ -236,6 +241,24 @@ struct MockTransport: HTTPTransport {
             else {
                 return try respond(request, status: 404, json: notFound)
             }
+            return try respond(request, status: 200, json: json)
+        default:
+            return nil
+        }
+    }
+
+    /// 09 규칙 · 제도 — /rules/~
+    private func ruleRoute(_ request: URLRequest, components: [String]) throws -> (Data, HTTPURLResponse)? {
+        let notFound = #"{"code":404,"message":"해당 규칙을 찾을 수 없습니다."}"#
+        let id = components.count > 1 ? Int(components[1]) : nil
+        switch (request.httpMethod ?? "", components.count) {
+        case ("GET", 1):
+            return try respond(request, status: 200, json: ruleStore.listJSON())
+        case ("GET", 2):
+            guard let id = id, let json = ruleStore.detailJSON(id: id) else { return try respond(request, status: 404, json: notFound) }
+            return try respond(request, status: 200, json: json)
+        case ("POST", 3) where components[2] == "acknowledge":
+            guard let id = id, let json = ruleStore.acknowledge(id: id) else { return try respond(request, status: 404, json: notFound) }
             return try respond(request, status: 200, json: json)
         default:
             return nil
@@ -537,10 +560,10 @@ private final class MockNotificationStore: @unchecked Sendable {
                  deepLink: "/inquiries/42", isRead: false, createdAt: ago(3 * 3_600)),
             Item(id: 104, type: "RULE", title: "프로젝트 운영 원칙이 개정됐어요",
                  message: "제안 검토 기한이 3주에서 2주로 바뀌어요. 시행 전에 달라진 조항을 확인해 주세요!",
-                 deepLink: "/rules/3", isRead: false, createdAt: ago(1 * 86_400), effectiveAt: later(days: 5)),
+                 deepLink: "/rules/1", isRead: false, createdAt: ago(1 * 86_400), effectiveAt: later(days: 5)),
             Item(id: 108, type: "RULE", title: "프로젝트 문서 분류 안내",
                  message: "문서 분류 기준이 정리됐어요.",
-                 deepLink: "/rules/4", isRead: true, createdAt: ago(6 * 86_400), effectiveAt: ago(2 * 86_400)),
+                 deepLink: "/rules", isRead: true, createdAt: ago(6 * 86_400), effectiveAt: ago(2 * 86_400)),
             Item(id: 105, type: "NOTICE", title: "10월 정기 회의 장소 안내",
                  message: "이번 달 회의는 4층 홈베이스에서 진행해요.",
                  deepLink: "/posts/77", isRead: true, createdAt: ago(4 * 86_400)),
