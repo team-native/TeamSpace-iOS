@@ -128,6 +128,24 @@ struct MockTransport: HTTPTransport {
                 let json = approvalStore.commentJSON(documentId: id, body: dto.body)
             else { return try respond(request, status: 404, json: notFound) }
             return try respond(request, status: 201, json: json)
+        case ("POST", "documents"):
+            guard
+                let body = request.httpBody,
+                let dto = try? JSONDecoder().decode(DocumentCreateRequestDTO.self, from: body)
+            else { return try respond(request, status: 400, json: #"{"code":400,"message":"잘못된 요청입니다."}"#) }
+            let json = approvalStore.createJSON(
+                kind: dto.type,
+                title: dto.title,
+                amount: dto.amount,
+                fields: dto.fields.map { ($0.title, $0.value) },
+                reason: dto.reason
+            )
+            return try respond(request, status: 201, json: json)
+        case ("POST", "submit"):
+            guard let id = Int(parent), approvalStore.update(id: id, status: "PENDING") else {
+                return try respond(request, status: 404, json: notFound)
+            }
+            return try respond(request, status: 200, json: #"{"code":200,"message":"제출 완료","data":{"success":true}}"#)
         case ("POST", "withdraw"):
             guard let id = Int(parent), approvalStore.update(id: id, status: "DRAFT") else {
                 return try respond(request, status: 404, json: notFound)

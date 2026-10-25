@@ -45,6 +45,8 @@ struct AppRouteView: View {
             )
         case .approvalDetail(let documentId):
             ApprovalDetailView(viewModel: container.makeApprovalDetailViewModel(documentId: documentId), onNavigate: onNavigate)
+        case .approvalCompose:
+            ApprovalComposeView(container: container, onNavigate: onNavigate)
         case .comingSoon(let title):
             ComingSoonView(title: title, showsBackButton: true)
         }

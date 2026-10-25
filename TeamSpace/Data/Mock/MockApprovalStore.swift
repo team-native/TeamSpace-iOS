@@ -28,6 +28,9 @@ final class MockApprovalStore: @unchecked Sendable {
     private var storage: [Item]
     private var comments: [Int: [Comment]] = [:]
     private var nextCommentId = 1_000
+    private var nextDocumentId = 100
+    /// 새로 작성한 문서의 상세 항목 · 사유
+    private var drafts: [Int: (fields: [(String, String)], reason: String)] = [:]
 
     init(now: Date = Date()) {
         let formatter = ISO8601DateFormatter()
@@ -153,6 +156,9 @@ final class MockApprovalStore: @unchecked Sendable {
     }
 
     private func fields(for item: Item) -> [Field] {
+        if let draft = drafts[item.id] {
+            return draft.fields.map { Field(title: $0.0, value: $0.1) }
+        }
         if item.kind == "STAFFING" {
             return [
                 Field(title: "프로젝트", value: "Book-on"),
@@ -169,6 +175,7 @@ final class MockApprovalStore: @unchecked Sendable {
     }
 
     private func reason(for item: Item) -> String {
+        if let draft = drafts[item.id] { return draft.reason }
         switch item.id {
         case 1: return "iOS 실기기 테스트용 iPhone 1대가 필요해요. 기존 기기는 OS 지원이 끝났어요."
         case 11: return "출시 전 QA와 위젯 기능 개발이 겹쳐서 iOS 인원이 1명 더 필요해요."
@@ -222,5 +229,29 @@ final class MockApprovalStore: @unchecked Sendable {
         let comment = Comment(id: nextCommentId, authorName: "홍길동", body: body, createdAt: ISO8601DateFormatter().string(from: now))
         comments[documentId, default: []].append(comment)
         return comment
+    }
+
+    // MARK: 05-5 · 05-6 작성 · 제출
+
+    /// POST /documents — 내가 올린 결재에 '작성 중' 으로 추가
+    func createJSON(
+        kind: String,
+        title: String,
+        amount: Int?,
+        fields: [(String, String)],
+        reason: String,
+        now: Date = Date()
+    ) -> String {
+        lock.lock()
+        nextDocumentId += 1
+        let id = nextDocumentId
+        storage.append(Item(
+            id: id, kind: kind, title: title, amount: amount, status: "DRAFT", requesterName: "홍길동",
+            requesterDepartment: "NativeOps", summary: nil, updatedAt: ISO8601DateFormatter().string(from: now), isMine: true
+        ))
+        drafts[id] = (fields, reason)
+        lock.unlock()
+        struct Created: Encodable { let documentId: Int }
+        return encode(Created(documentId: id), message: "작성 완료")
     }
 }

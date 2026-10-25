@@ -164,6 +164,10 @@ final class DIContainer {
     var withdrawApprovalUseCase: WithdrawApprovalUseCase {
         WithdrawApprovalUseCase(approvalRepository: approvalRepository)
     }
+
+    var submitDocumentUseCase: SubmitDocumentUseCase {
+        SubmitDocumentUseCase(approvalRepository: approvalRepository)
+    }
 }
 
 @MainActor
@@ -269,5 +273,13 @@ extension DIContainer {
             addApprovalCommentUseCase: addApprovalCommentUseCase,
             withdrawApprovalUseCase: withdrawApprovalUseCase
         )
+    }
+
+    func makeExpenseRequestViewModel() -> ExpenseRequestViewModel {
+        ExpenseRequestViewModel(submitDocumentUseCase: submitDocumentUseCase)
+    }
+
+    func makeStaffingRequestViewModel() -> StaffingRequestViewModel {
+        StaffingRequestViewModel(submitDocumentUseCase: submitDocumentUseCase)
     }
 }

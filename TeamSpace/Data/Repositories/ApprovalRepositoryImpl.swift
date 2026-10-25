@@ -40,6 +40,22 @@ final class ApprovalRepositoryImpl: ApprovalRepository, @unchecked Sendable {
         return try await request(endpoint, as: ApprovalCommentDTO.self).toEntity()
     }
 
+    func createDocument(_ draft: DocumentDraft) async throws -> Int {
+        let endpoint = Endpoint(method: .post, path: "documents", body: DocumentCreateRequestDTO(draft))
+        return try await request(endpoint, as: DocumentCreateResponseDTO.self).documentId
+    }
+
+    func submitDocument(documentId: Int) async throws {
+        let endpoint = Endpoint(method: .post, path: "documents/\(documentId)/submit")
+        do {
+            _ = try await client.request(endpoint, as: EmptyResponseDTO.self)
+        } catch NetworkError.emptyData {
+            return
+        } catch let error as NetworkError {
+            throw error.asAppError
+        }
+    }
+
     func withdraw(documentId: Int) async throws {
         let endpoint = Endpoint(method: .post, path: "documents/\(documentId)/withdraw")
         do {

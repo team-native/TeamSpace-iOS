@@ -20,6 +20,7 @@ enum AppRoute: Hashable {
     case financeProjectAmounts      // 04-9 프로젝트별 금액 (권한 없으면 04-8)
     // 05 결재
     case approvalDetail(documentId: Int) // 05-3 내 결재 상세 · 05-4 받은 결재 검토
+    case approvalCompose                 // 05-0 결재 올리기 · 종류 선택
     // 아직 만들지 않은 화면
     case comingSoon(title: String)
 }

@@ -24,7 +24,7 @@ struct ApprovalListView: View {
                 }
                 .padding(.top, Spacing.xxl)
                 Button {
-                    onNavigate(.comingSoon(title: "결재 올리기"))
+                    onNavigate(.approvalCompose)
                 } label: {
                     HStack(spacing: Spacing.xs) {
                         Text("결재 올리기")
