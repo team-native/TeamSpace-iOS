@@ -282,4 +282,8 @@ extension DIContainer {
     func makeStaffingRequestViewModel() -> StaffingRequestViewModel {
         StaffingRequestViewModel(submitDocumentUseCase: submitDocumentUseCase)
     }
+
+    func makeRequestFormViewModel(kind: RequestFormKind) -> RequestFormViewModel {
+        RequestFormViewModel(kind: kind, submitDocumentUseCase: submitDocumentUseCase)
+    }
 }

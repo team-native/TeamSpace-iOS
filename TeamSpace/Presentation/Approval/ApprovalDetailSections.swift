@@ -185,7 +185,9 @@ extension ApprovalKind {
         switch self {
         case .expense: return "비용 승인"
         case .staffing: return "프로젝트 인력 지원"
-        case .other: return "기타 요청"
+        case .projectRequest: return "프로젝트 관련 요청서"
+        case .operationRequest: return "운영 관련 요청서"
+        case .other: return "기타 내부 문서"
         case .unknown: return "결재"
         }
     }

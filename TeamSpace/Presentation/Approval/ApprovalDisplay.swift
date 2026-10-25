@@ -39,6 +39,8 @@ extension ApprovalKind {
         switch self {
         case .expense: return "비용"
         case .staffing: return "인력 지원"
+        case .projectRequest: return "프로젝트"
+        case .operationRequest: return "운영"
         case .other: return "기타"
         case .unknown: return "결재"
         }

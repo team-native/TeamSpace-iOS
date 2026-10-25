@@ -26,6 +26,8 @@ enum ApprovalStatus: String, UnknownCaseDecodable, Hashable, CaseIterable, Senda
 enum ApprovalKind: String, UnknownCaseDecodable, Hashable, Sendable {
     case expense = "EXPENSE"   // 비용 승인
     case staffing = "STAFFING" // 프로젝트 인력 지원
+    case projectRequest = "PROJECT_REQUEST"     // 프로젝트 관련 요청서
+    case operationRequest = "OPERATION_REQUEST" // 운영 관련 요청서
     case other = "ETC"
     case unknown = "UNKNOWN"
 

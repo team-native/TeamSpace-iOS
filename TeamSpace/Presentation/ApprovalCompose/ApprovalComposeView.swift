@@ -98,12 +98,7 @@ struct ApprovalComposeView: View {
     }
 
     private func open(_ kind: ApprovalComposeKind) {
-        switch kind {
-        case .expense, .staffing:
-            activeSheet = kind
-        case .projectRequest, .operationRequest, .etcDocument:
-            onNavigate(.comingSoon(title: kind.title))
-        }
+        activeSheet = kind
     }
 
     @ViewBuilder
@@ -113,10 +108,16 @@ struct ApprovalComposeView: View {
             submitted = result
         }
         switch kind {
+        case .expense:
+            ExpenseRequestSheet(viewModel: container.makeExpenseRequestViewModel(), onFinish: onFinish)
         case .staffing:
             StaffingRequestSheet(viewModel: container.makeStaffingRequestViewModel(), onFinish: onFinish)
-        default:
-            ExpenseRequestSheet(viewModel: container.makeExpenseRequestViewModel(), onFinish: onFinish)
+        case .projectRequest:
+            RequestFormSheet(viewModel: container.makeRequestFormViewModel(kind: .project), onFinish: onFinish)
+        case .operationRequest:
+            RequestFormSheet(viewModel: container.makeRequestFormViewModel(kind: .operation), onFinish: onFinish)
+        case .etcDocument:
+            RequestFormSheet(viewModel: container.makeRequestFormViewModel(kind: .etc), onFinish: onFinish)
         }
     }
 }
