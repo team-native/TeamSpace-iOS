@@ -31,6 +31,37 @@ final class WorkspaceRepositoryImpl: WorkspaceRepository, @unchecked Sendable {
         }
     }
 
+    func fetchSchedules(month: Date) async throws -> [ScheduleEvent] {
+        let endpoint = Endpoint(
+            method: .get,
+            path: "workspace/schedules",
+            queryItems: [URLQueryItem(name: "month", value: FinanceMonthParameter.string(from: month))]
+        )
+        return try await request(endpoint, as: ScheduleListResponseDTO.self).list.map { $0.toEntity() }
+    }
+
+    func fetchScheduleDetail(id: Int) async throws -> ScheduleEventDetail {
+        try await request(Endpoint(method: .get, path: "workspace/schedules/\(id)"), as: ScheduleDetailDTO.self).toEntity()
+    }
+
+    func respond(scheduleId: Int, response: ScheduleResponse) async throws -> ScheduleEvent {
+        let endpoint = Endpoint(
+            method: .post,
+            path: "workspace/schedules/\(scheduleId)/response",
+            body: ScheduleResponseRequestDTO(response: response.rawValue)
+        )
+        return try await request(endpoint, as: ScheduleEventDTO.self).toEntity()
+    }
+
+    func updateReminders(scheduleId: Int, reminders: [ReminderTiming]) async throws -> [ReminderTiming] {
+        let endpoint = Endpoint(
+            method: .patch,
+            path: "workspace/schedules/\(scheduleId)/reminders",
+            body: ScheduleRemindersDTO(reminders: reminders.map(\.rawValue))
+        )
+        return try await request(endpoint, as: ScheduleRemindersDTO.self).reminders.compactMap(ReminderTiming.init(rawValue:))
+    }
+
     func fetchTodos() async throws -> [TodoItem] {
         try await request(Endpoint(method: .get, path: "workspace/todos"), as: TodoListResponseDTO.self)
             .list.map { $0.toEntity() }

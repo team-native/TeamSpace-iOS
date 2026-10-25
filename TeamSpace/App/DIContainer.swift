@@ -214,6 +214,22 @@ final class DIContainer {
         DeleteDraftUseCase(workspaceRepository: workspaceRepository)
     }
 
+    var fetchSchedulesUseCase: FetchSchedulesUseCase {
+        FetchSchedulesUseCase(workspaceRepository: workspaceRepository)
+    }
+
+    var fetchScheduleDetailUseCase: FetchScheduleDetailUseCase {
+        FetchScheduleDetailUseCase(workspaceRepository: workspaceRepository)
+    }
+
+    var respondScheduleUseCase: RespondScheduleUseCase {
+        RespondScheduleUseCase(workspaceRepository: workspaceRepository)
+    }
+
+    var updateRemindersUseCase: UpdateRemindersUseCase {
+        UpdateRemindersUseCase(workspaceRepository: workspaceRepository)
+    }
+
     var fetchTodosUseCase: FetchTodosUseCase {
         FetchTodosUseCase(workspaceRepository: workspaceRepository)
     }
@@ -390,5 +406,21 @@ extension DIContainer {
 
     func makeDraftDocumentsViewModel() -> DraftDocumentsViewModel {
         DraftDocumentsViewModel(fetchMyDocumentsUseCase: fetchMyDocumentsUseCase, deleteDraftUseCase: deleteDraftUseCase)
+    }
+
+    func makeScheduleCalendarViewModel() -> ScheduleCalendarViewModel {
+        ScheduleCalendarViewModel(
+            fetchSchedulesUseCase: fetchSchedulesUseCase,
+            respondScheduleUseCase: respondScheduleUseCase
+        )
+    }
+
+    func makeScheduleDetailViewModel(scheduleId: Int) -> ScheduleDetailViewModel {
+        ScheduleDetailViewModel(
+            scheduleId: scheduleId,
+            fetchScheduleDetailUseCase: fetchScheduleDetailUseCase,
+            respondScheduleUseCase: respondScheduleUseCase,
+            updateRemindersUseCase: updateRemindersUseCase
+        )
     }
 }

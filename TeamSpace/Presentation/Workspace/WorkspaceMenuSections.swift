@@ -110,7 +110,7 @@ struct WorkspaceMenuList: View {
             ("업무 대시보드", .workspaceDashboard),
             ("내 활동", .comingSoon(title: "내 활동")),
             ("참여 프로젝트", .workspaceProjects),
-            ("예정된 일정", .comingSoon(title: "일정"))
+            ("예정된 일정", .workspaceSchedules)
         ]
     }
 

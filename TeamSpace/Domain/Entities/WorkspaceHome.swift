@@ -63,7 +63,7 @@ struct WorkspaceProject: Equatable, Identifiable, Sendable {
 }
 
 /// 일정 구분 — 개인 업무 · Native 전체 일정
-enum WorkspaceScheduleScope: String, UnknownCaseDecodable, Hashable, Sendable {
+enum WorkspaceScheduleScope: String, UnknownCaseDecodable, Encodable, Hashable, Sendable {
     case personal = "PERSONAL"
     case team = "TEAM"
     case unknown = "UNKNOWN"

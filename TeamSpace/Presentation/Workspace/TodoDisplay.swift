@@ -63,7 +63,7 @@ extension TodoItem {
         case .checklist:
             return .comingSoon(title: "체크리스트")
         case .schedule:
-            return .comingSoon(title: "일정 상세")
+            return .workspaceSchedules
         case .manual, .unknown:
             return nil
         }

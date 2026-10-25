@@ -224,4 +224,70 @@ final class WorkspaceTests: XCTestCase {
             XCTAssertEqual(error as? AppError, .invalidInput("제출한 문서는 삭제할 수 없어요. 결재 상세에서 요청을 취소해 주세요."))
         }
     }
+
+    // MARK: 07-7 ~ 07-9 일정
+
+    func testCalendarShowsTodayEvents() async {
+        let viewModel = makeContainer().makeScheduleCalendarViewModel()
+
+        await viewModel.load()
+
+        XCTAssertEqual(viewModel.selectedEvents.map(\.title), ["Book-on 디자인 리뷰", "iOS 스터디"])
+        XCTAssertEqual(viewModel.selectedEvents.first?.listMetaText, "15:00 – 16:00 · 온라인")
+        XCTAssertFalse(viewModel.selectedEvents.first?.opensFullDetail ?? true, "개인 일정은 07-9 시트")
+        XCTAssertTrue(viewModel.selectedEvents.last?.opensFullDetail ?? false, "Native 일정은 07-8 상세")
+        let monthDays = viewModel.days.compactMap(\.date)
+        XCTAssertEqual(monthDays.count, Calendar.current.range(of: .day, in: .month, for: Date())?.count)
+        XCTAssertEqual(viewModel.days.count - monthDays.count, Calendar.current.component(.weekday, from: monthDays[0]) - 1, "일요일부터 시작")
+    }
+
+    func testRespondFromSheet() async {
+        // 오늘 0시 기준으로 보면 오늘 일정은 아직 끝나지 않았어요. (테스트 실행 시각과 무관하게)
+        let container = makeContainer()
+        let viewModel = ScheduleCalendarViewModel(
+            fetchSchedulesUseCase: container.fetchSchedulesUseCase,
+            respondScheduleUseCase: container.respondScheduleUseCase,
+            now: { Calendar.current.startOfDay(for: Date()) }
+        )
+        await viewModel.load()
+        viewModel.sheetEvent = viewModel.selectedEvents.first
+
+        await viewModel.respond(.attend)
+
+        XCTAssertNil(viewModel.sheetEvent, "응답하면 시트를 닫아요")
+        XCTAssertEqual(viewModel.selectedEvents.first?.myResponse, .attend)
+    }
+
+    func testCannotRespondToEndedSchedule() async {
+        let ended = ScheduleEvent(
+            id: 5, scope: .personal, title: "지난 일정", startsAt: date(2026, 10, 1, 10), endsAt: date(2026, 10, 1, 11),
+            place: "온라인", placeDetail: nil, organizerName: "a", participantCount: 1, isChanged: false
+        )
+        do {
+            _ = try await makeContainer().respondScheduleUseCase.execute(ended, response: .attend, now: date(2026, 10, 2))
+            XCTFail("끝난 일정에는 응답할 수 없어요")
+        } catch {
+            XCTAssertEqual(error as? AppError, .invalidInput("이미 끝난 일정이에요."))
+        }
+    }
+
+    func testScheduleDetailAndReminders() async {
+        let viewModel = makeContainer().makeScheduleDetailViewModel(scheduleId: 2)
+
+        await viewModel.load()
+
+        XCTAssertEqual(viewModel.detail?.event.title, "Native 전체 회의")
+        XCTAssertEqual(viewModel.detail?.agenda.count, 4)
+        XCTAssertEqual(viewModel.detail?.history.first?.title, "장소 변경", "최근 변경이 위로")
+        XCTAssertNotNil(viewModel.savedResponseText)
+        XCTAssertEqual(ReminderTiming.summary(viewModel.detail?.reminders ?? []), "하루 전 · 1시간 전")
+
+        viewModel.openReminderEditor()
+        viewModel.toggleReminder(.hourBefore)
+        viewModel.toggleReminder(.tenMinutesBefore)
+        await viewModel.saveReminders()
+
+        XCTAssertEqual(viewModel.detail?.reminders, [.dayBefore, .tenMinutesBefore], "이른 순으로 저장")
+        XCTAssertFalse(viewModel.isReminderEditorPresented)
+    }
 }

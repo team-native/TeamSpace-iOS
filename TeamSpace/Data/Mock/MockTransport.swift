@@ -16,17 +16,20 @@ import Foundation
 /// - GET /workspace/home · /workspace/projects: Figma 07 내 공간 예시 (MockWorkspaceFixture)
 /// - GET /workspace/documents · DELETE /documents/{id}: 07-4 · 07-5 (MockApprovalStore 의 내 결재)
 /// - GET · POST /workspace/todos · PATCH /workspace/todos/{id}: Figma 07-2 (MockTodoStore, 메모리에 기억)
+/// - /workspace/schedules/~: Figma 07-7 ~ 07-9 (MockScheduleStore, 참석 응답 · 리마인더 기억)
 /// - POST /notifications/push-token: Authorization 헤더가 없으면 401
 struct MockTransport: HTTPTransport {
     static let baseURL = URL(fileURLWithPath: "/mock-api")
     static let failingPassword = "wrong"
     /// FA 계정으로 로그인했을 때 받는 가짜 토큰
     static let faToken = "mock-fa-token"
+    private static let scheduleNotFound = #"{"code":404,"message":"해당 일정을 찾을 수 없습니다."}"#
 
     var latencyNanoseconds: UInt64 = 700_000_000
     private let notificationStore = MockNotificationStore()
     private let approvalStore = MockApprovalStore()
     private let todoStore = MockTodoStore()
+    private let scheduleStore = MockScheduleStore()
 
     func send(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
         try await Task.sleep(nanoseconds: latencyNanoseconds)
@@ -183,6 +186,35 @@ struct MockTransport: HTTPTransport {
                 todayTodoTitles: summary.today,
                 completedTodoCount: summary.completed
             ))
+        case ("GET", "schedules"):
+            let month = URLComponents(url: url, resolvingAgainstBaseURL: false)?
+                .queryItems?.first { $0.name == "month" }?.value
+            return try respond(request, status: 200, json: scheduleStore.listJSON(monthText: month))
+        case ("GET", _) where parent == "schedules":
+            guard let id = Int(path), let json = scheduleStore.detailJSON(id: id) else {
+                return try respond(request, status: 404, json: Self.scheduleNotFound)
+            }
+            return try respond(request, status: 200, json: json)
+        case ("POST", "response"):
+            guard
+                let id = Int(parent),
+                let body = request.httpBody,
+                let dto = try? JSONCoder.makeDecoder().decode(ScheduleResponseRequestDTO.self, from: body),
+                let json = scheduleStore.respond(id: id, response: dto.response)
+            else {
+                return try respond(request, status: 404, json: Self.scheduleNotFound)
+            }
+            return try respond(request, status: 200, json: json)
+        case ("PATCH", "reminders"):
+            guard
+                let id = Int(parent),
+                let body = request.httpBody,
+                let dto = try? JSONCoder.makeDecoder().decode(ScheduleRemindersDTO.self, from: body),
+                let json = scheduleStore.updateReminders(id: id, values: dto.reminders)
+            else {
+                return try respond(request, status: 404, json: Self.scheduleNotFound)
+            }
+            return try respond(request, status: 200, json: json)
         case ("GET", "documents"):
             return try respond(request, status: 200, json: approvalStore.myDocumentsJSON())
         case ("GET", "projects"):

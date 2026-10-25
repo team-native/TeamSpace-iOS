@@ -20,7 +20,8 @@ struct AppRouteView: View {
             financeScreen
         case .approvalDetail, .approvalCompose, .approvalResume, .librarySearch, .templateDetail, .templateCompose:
             documentScreen
-        case .workspaceDashboard, .workspaceTodos, .workspaceDocuments, .workspaceDrafts, .workspaceProjects:
+        case .workspaceDashboard, .workspaceTodos, .workspaceDocuments, .workspaceDrafts, .workspaceProjects,
+             .workspaceSchedules, .workspaceScheduleDetail:
             workspaceScreen
         case .comingSoon(let title):
             ComingSoonView(title: title, showsBackButton: true)
@@ -116,6 +117,10 @@ struct AppRouteView: View {
             MyDocumentsView(viewModel: container.makeMyDocumentsViewModel(), onNavigate: onNavigate)
         case .workspaceDrafts:
             DraftDocumentsView(viewModel: container.makeDraftDocumentsViewModel(), onNavigate: onNavigate)
+        case .workspaceSchedules:
+            ScheduleCalendarView(viewModel: container.makeScheduleCalendarViewModel(), onNavigate: onNavigate)
+        case .workspaceScheduleDetail(let id):
+            ScheduleDetailView(viewModel: container.makeScheduleDetailViewModel(scheduleId: id), onNavigate: onNavigate)
         case .workspaceProjects:
             WorkspaceProjectsView(viewModel: container.makeWorkspaceProjectsViewModel(), onNavigate: onNavigate)
         default:
