@@ -9,6 +9,33 @@ enum MockFinanceFixture {
         return 1.0 - Double((10 - value + 12) % 12) * 0.06
     }
 
+    /// GET /finance/projects — Figma 04-9 예시. FA 토큰이 아니면 금액을 null 로 가립니다. (04-8)
+    static func projects(yearText: String?, isFA: Bool, now: Date = Date()) -> String {
+        let year = yearText.flatMap(Int.init) ?? Calendar.current.component(.year, from: now)
+        let rows: [(String, String, Int, Int)] = [
+            ("예약 서비스 앱 UI 제작", "IN_PROGRESS", 4_200_000, 2_100_000),
+            ("학과 행사 웹페이지", "IN_PROGRESS", 1_600_000, 800_000),
+            ("모바일 앱 유지보수", "IN_PROGRESS", 5_400_000, 2_700_000),
+            ("브랜드 소개 랜딩페이지", "COMPLETED", 8_720_000, 8_720_000),
+            ("동아리 행사 굿즈 디자인", "COMPLETED", 2_000_000, 2_000_000),
+            ("교내 설문 웹앱", "COMPLETED", 1_500_000, 1_500_000),
+            ("스타트업 IR 자료 디자인", "COMPLETED", 1_800_000, 1_800_000),
+            ("카페 주문 키오스크 UI", "IN_PROGRESS", 1_680_000, 240_000),
+            ("지역 축제 안내 페이지", "IN_PROGRESS", 1_500_000, 0)
+        ]
+        func amount(_ value: Int) -> String { isFA ? String(value) : "null" }
+        let list = rows.enumerated().map { index, row in
+            #"{"id":\#(index + 1),"name":"\#(row.0)","status":"\#(row.1)","contractAmount":\#(amount(row.2)),"paidAmount":\#(amount(row.3))}"#
+        }.joined(separator: ",")
+        let total = rows.reduce(0) { $0 + $1.2 }
+        let paid = rows.reduce(0) { $0 + $1.3 }
+        return """
+        {"code":200,"message":"조회 성공","data":{"year":\(year),"yearCount":\(rows.count),\
+        "totalContractAmount":\(amount(total)),"totalPaidAmount":\(amount(paid)),\
+        "monthNewContracts":2,"monthDeposits":3,"list":[\(list)]}}
+        """
+    }
+
     /// GET /finance/flows — Figma 04-5 막대 높이 비율 그대로 (마지막 달 = 7,260,000 / 3,480,000)
     static func flows(toText: String?, countText: String?, now: Date = Date()) -> String {
         let calendar = Calendar.current

@@ -138,6 +138,10 @@ final class DIContainer {
     var fetchMonthlyFlowsUseCase: FetchMonthlyFlowsUseCase {
         FetchMonthlyFlowsUseCase(financeRepository: financeRepository)
     }
+
+    var fetchProjectAmountsUseCase: FetchProjectAmountsUseCase {
+        FetchProjectAmountsUseCase(financeRepository: financeRepository)
+    }
 }
 
 @MainActor
@@ -221,5 +225,13 @@ extension DIContainer {
 
     func makeFinanceCompositionViewModel(month: Date) -> FinanceCompositionViewModel {
         FinanceCompositionViewModel(month: month, fetchFinanceOverviewUseCase: fetchFinanceOverviewUseCase)
+    }
+
+    func makeFinanceAccessViewModel(user: AuthUser, year: Int = Calendar.current.component(.year, from: Date())) -> FinanceAccessViewModel {
+        FinanceAccessViewModel(year: year, user: user, fetchContractLedgerUseCase: fetchContractLedgerUseCase)
+    }
+
+    func makeProjectAmountsViewModel(year: Int, user: AuthUser) -> ProjectAmountsViewModel {
+        ProjectAmountsViewModel(year: year, user: user, fetchProjectAmountsUseCase: fetchProjectAmountsUseCase)
     }
 }

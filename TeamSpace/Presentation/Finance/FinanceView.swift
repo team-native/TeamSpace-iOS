@@ -54,7 +54,13 @@ struct FinanceView: View {
             FinanceTrackerCard(overview: overview)
             FinanceSummarySection(overview: overview)
             FinanceMenuList(month: viewModel.selectedMonth, onSelect: { onNavigate($0) })
-            InfoBanner(message: viewModel.permissionNotice, icon: .lock, style: .muted)
+            Button {
+                onNavigate(.financeAccess)
+            } label: {
+                InfoBanner(message: viewModel.permissionNotice, icon: .lock, style: .muted)
+            }
+            .buttonStyle(.plain)
+            .accessibilityHint("공개 범위 자세히 보기")
             Button {
                 onSelectTab(.approval)
             } label: {

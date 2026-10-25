@@ -28,6 +28,15 @@ final class FinanceRepositoryImpl: FinanceRepository, @unchecked Sendable {
         return try await request(endpoint, as: MonthlyFlowListResponseDTO.self).list.map { $0.toEntity() }
     }
 
+    func fetchProjectAmounts(year: Int) async throws -> ProjectAmountSummary {
+        let endpoint = Endpoint(
+            method: .get,
+            path: "finance/projects",
+            queryItems: [URLQueryItem(name: "year", value: String(year))]
+        )
+        return try await request(endpoint, as: ProjectAmountSummaryResponseDTO.self).toEntity()
+    }
+
     func fetchContracts(year: Int) async throws -> ContractLedger {
         let endpoint = Endpoint(
             method: .get,

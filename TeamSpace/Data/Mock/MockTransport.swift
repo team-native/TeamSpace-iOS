@@ -3,7 +3,7 @@ import Foundation
 /// 서버 없이 개발하기 위한 가짜 서버. 명세서의 응답 예시를 그대로 돌려줍니다.
 /// - 비밀번호 `wrong` → 401 (계정 불일치)
 /// - 이메일 형식 오류 → 400 (errors[].reason)
-/// - 그 외 → 200 로그인 성공
+/// - 그 외 → 200 로그인 성공 (이메일이 `fa` 로 시작하면 FA 권한 → 04-9 금액이 보여요)
 /// - GET /users/me: Authorization 헤더가 없으면 401
 /// - GET /notifications · PATCH /notifications/{id}/read: 읽음 상태를 메모리에 기억
 /// - 계정 요청: 이메일이 `taken@` 으로 시작하면 409 (이미 요청됨)
@@ -14,6 +14,8 @@ import Foundation
 struct MockTransport: HTTPTransport {
     static let baseURL = URL(fileURLWithPath: "/mock-api")
     static let failingPassword = "wrong"
+    /// FA 계정으로 로그인했을 때 받는 가짜 토큰
+    static let faToken = "mock-fa-token"
 
     var latencyNanoseconds: UInt64 = 700_000_000
     private let notificationStore = MockNotificationStore()
@@ -64,9 +66,12 @@ struct MockTransport: HTTPTransport {
         if dto.password == Self.failingPassword {
             return try respond(request, status: 401, json: #"{"code":401,"message":"이메일 또는 비밀번호가 일치하지 않습니다."}"#)
         }
+        let isFA = dto.email.lowercased().hasPrefix("fa")
+        let token = isFA ? Self.faToken : "mock-access-token"
+        let roles = isFA ? #"["FA"]"# : #"["Member"]"#
         return try respond(request, status: 200, json: """
-        {"code":200,"message":"로그인 성공","data":{"accessToken":"mock-access-token","refreshToken":"mock-refresh-token",\
-        "user":{"id":1,"name":"홍길동","roles":["Member"]}}}
+        {"code":200,"message":"로그인 성공","data":{"accessToken":"\(token)","refreshToken":"mock-refresh-token",\
+        "user":{"id":1,"name":"홍길동","roles":\(roles)}}}
         """)
     }
 
@@ -100,6 +105,10 @@ struct MockTransport: HTTPTransport {
             let to = query?.first { $0.name == "to" }?.value
             let count = query?.first { $0.name == "months" }?.value
             return try respond(request, status: 200, json: MockFinanceFixture.flows(toText: to, countText: count))
+        case "projects":
+            let year = query?.first { $0.name == "year" }?.value
+            let isFA = request.value(forHTTPHeaderField: "Authorization")?.contains(Self.faToken) == true
+            return try respond(request, status: 200, json: MockFinanceFixture.projects(yearText: year, isFA: isFA))
         case "contracts":
             let year = query?.first { $0.name == "year" }?.value
             return try respond(request, status: 200, json: MockFinanceFixture.ledger(yearText: year))
@@ -150,9 +159,12 @@ struct MockTransport: HTTPTransport {
         guard request.value(forHTTPHeaderField: "Authorization") != nil else {
             return try respond(request, status: 401, json: #"{"code":401,"message":"유효하지 않거나 만료된 토큰입니다. 로그인해 주세요."}"#)
         }
+        let isFA = request.value(forHTTPHeaderField: "Authorization")?.contains(Self.faToken) == true
+        let department = isFA ? "FA" : "NativeOps"
+        let roles = isFA ? #"["FA"]"# : #"["Member","PM"]"#
         return try respond(request, status: 200, json: """
         {"code":200,"message":"조회 성공","data":{"id":1,"name":"홍길동","email":"s00000@gsm.hs.kr",\
-        "department":"NativeOps","roles":["Member","PM"]}}
+        "department":"\(department)","roles":\(roles)}}
         """)
     }
 

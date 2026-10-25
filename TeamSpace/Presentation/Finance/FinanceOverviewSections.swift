@@ -179,7 +179,8 @@ struct FinanceMenuList: View {
         [
             ("월별 흐름", .financeMonthlyFlow(month: month)),
             ("돈의 구성", .financeComposition(month: month)),
-            ("이번 달 수금 현황", .financeContractLedger)
+            ("이번 달 수금 현황", .financeContractLedger),
+            ("프로젝트별 금액", .financeProjectAmounts)
         ]
     }
 
