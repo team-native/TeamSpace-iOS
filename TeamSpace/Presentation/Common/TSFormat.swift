@@ -78,6 +78,8 @@ enum TSFormat {
     private static let weekdayFormatter = formatter("EEEE")
     private static let shortDateFormatter = formatter("MM.dd")
     private static let fullDateFormatter = formatter("yyyy.MM.dd")
+    private static let longDateFormatter = formatter("yyyy년 M월 d일")
+    private static let timeFormatter = formatter("HH:mm")
 
     /// 10월 21일
     static func monthDay(_ date: Date) -> String {
@@ -107,6 +109,21 @@ enum TSFormat {
     /// 2026.10.18
     static func fullDate(_ date: Date) -> String {
         fullDateFormatter.string(from: date)
+    }
+
+    /// 2026년 10월 16일
+    static func longDate(_ date: Date) -> String {
+        longDateFormatter.string(from: date)
+    }
+
+    /// 15:00
+    static func time(_ date: Date) -> String {
+        timeFormatter.string(from: date)
+    }
+
+    /// 15:00–16:00
+    static func timeRange(_ start: Date, _ end: Date) -> String {
+        "\(time(start))–\(time(end))"
     }
 
     /// 월요일

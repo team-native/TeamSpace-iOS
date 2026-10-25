@@ -14,6 +14,7 @@ final class DIContainer {
     private let approvalRepository: ApprovalRepository
     private let libraryRepository: LibraryRepository
     private let recentSearchRepository: RecentSearchRepository
+    private let workspaceRepository: WorkspaceRepository
 
     init(
         apiClient: APIClient,
@@ -34,6 +35,7 @@ final class DIContainer {
         self.approvalRepository = ApprovalRepositoryImpl(client: apiClient)
         self.libraryRepository = LibraryRepositoryImpl(client: apiClient)
         self.recentSearchRepository = recentSearchRepository
+        self.workspaceRepository = WorkspaceRepositoryImpl(client: apiClient)
     }
 
     /// xcconfig 의 USE_MOCK_API / API_BASE_URL 에 따라 실서버 또는 Mock 서버를 씁니다.
@@ -195,6 +197,10 @@ final class DIContainer {
     var recentSearchUseCase: RecentSearchUseCase {
         RecentSearchUseCase(recentSearchRepository: recentSearchRepository)
     }
+
+    var fetchWorkspaceHomeUseCase: FetchWorkspaceHomeUseCase {
+        FetchWorkspaceHomeUseCase(workspaceRepository: workspaceRepository)
+    }
 }
 
 @MainActor
@@ -327,5 +333,9 @@ extension DIContainer {
             templateId: templateId,
             fetchTemplateUseCase: FetchLibraryTemplateUseCase(libraryRepository: libraryRepository)
         )
+    }
+
+    func makeWorkspaceHomeViewModel(user: AuthUser) -> WorkspaceHomeViewModel {
+        WorkspaceHomeViewModel(user: user, fetchWorkspaceHomeUseCase: fetchWorkspaceHomeUseCase)
     }
 }

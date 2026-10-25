@@ -65,7 +65,10 @@ struct MainTabView: View {
         case .documents:
             LibraryView(viewModel: container.makeLibraryViewModel(), onNavigate: { push($0, in: .documents) })
         case .workspace:
-            ComingSoonView(title: tab.title, showsBackButton: false)
+            WorkspaceHomeView(
+                viewModel: container.makeWorkspaceHomeViewModel(user: user),
+                onNavigate: { push($0, in: .workspace) }
+            )
         }
     }
 

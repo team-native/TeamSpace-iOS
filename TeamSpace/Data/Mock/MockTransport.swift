@@ -13,6 +13,7 @@ import Foundation
 /// - GET /finance/~: Figma 04 재무 예시 (MockFinanceFixture)
 /// - GET /dashboard/home: Figma 02-1 홈 예시 (MockDashboardFixture)
 /// - GET /library · /library/search: Figma 06 문서함 예시 (MockLibraryFixture)
+/// - GET /workspace/home: Figma 07 내 공간 예시 (MockWorkspaceFixture)
 /// - POST /notifications/push-token: Authorization 헤더가 없으면 401
 struct MockTransport: HTTPTransport {
     static let baseURL = URL(fileURLWithPath: "/mock-api")
@@ -37,6 +38,9 @@ struct MockTransport: HTTPTransport {
             return response
         }
         if let response = try libraryRoute(request, path: path) {
+            return response
+        }
+        if let response = try workspaceRoute(request, path: path) {
             return response
         }
         switch (request.httpMethod, path) {
@@ -155,6 +159,20 @@ struct MockTransport: HTTPTransport {
                 return try respond(request, status: 404, json: notFound)
             }
             return try respond(request, status: 200, json: #"{"code":200,"message":"요청 취소 완료","data":{"success":true}}"#)
+        default:
+            return nil
+        }
+    }
+
+    /// 07 내 공간 — GET /workspace/~ (dashboard/home 과 마지막 경로가 같아서 먼저 걸러요)
+    private func workspaceRoute(_ request: URLRequest, path: String) throws -> (Data, HTTPURLResponse)? {
+        guard
+            request.httpMethod == "GET",
+            request.url?.deletingLastPathComponent().lastPathComponent == "workspace"
+        else { return nil }
+        switch path {
+        case "home":
+            return try respond(request, status: 200, json: MockWorkspaceFixture.home())
         default:
             return nil
         }
