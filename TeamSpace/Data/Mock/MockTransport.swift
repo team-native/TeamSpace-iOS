@@ -19,6 +19,7 @@ import Foundation
 /// - /workspace/schedules/~: Figma 07-7 ~ 07-9 (MockScheduleStore, 참석 응답 · 리마인더 기억)
 /// - GET /workspace/activity · posts · proposals: Figma 07-10 ~ 07-12 (MockActivityFixture)
 /// - GET · PATCH /workspace/profile: Figma 07-13 (MockProfileStore, 저장 내용 기억)
+/// - GET /projects · /projects/{id} · /projects/{id}/schedule: Figma 08 (MockProjectStore)
 /// - POST /notifications/push-token: Authorization 헤더가 없으면 401
 struct MockTransport: HTTPTransport {
     static let baseURL = URL(fileURLWithPath: "/mock-api")
@@ -33,6 +34,7 @@ struct MockTransport: HTTPTransport {
     private let todoStore = MockTodoStore()
     private let scheduleStore = MockScheduleStore()
     private let profileStore = MockProfileStore()
+    private let projectStore = MockProjectStore()
 
     func send(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
         try await Task.sleep(nanoseconds: latencyNanoseconds)
@@ -50,6 +52,9 @@ struct MockTransport: HTTPTransport {
             return response
         }
         if let response = try workspaceRoute(request, path: path) {
+            return response
+        }
+        if let response = try projectRoute(request, path: path) {
             return response
         }
         switch (request.httpMethod, path) {
@@ -173,6 +178,30 @@ struct MockTransport: HTTPTransport {
                 return try respond(request, status: 404, json: notFound)
             }
             return try respond(request, status: 200, json: #"{"code":200,"message":"요청 취소 완료","data":{"success":true}}"#)
+        default:
+            return nil
+        }
+    }
+
+    /// 08 프로젝트 — /projects/~ (재무 · 내 공간의 projects 와 구분하려고 첫 경로를 확인해요)
+    private func projectRoute(_ request: URLRequest, path: String) throws -> (Data, HTTPURLResponse)? {
+        guard let url = request.url else { return nil }
+        let components = url.pathComponents.filter { $0 != "/" && $0 != MockTransport.baseURL.lastPathComponent }
+        guard components.first == "projects" else { return nil }
+        let notFound = #"{"code":404,"message":"해당 프로젝트를 찾을 수 없습니다."}"#
+        switch (request.httpMethod ?? "", components.count) {
+        case ("GET", 1):
+            return try respond(request, status: 200, json: projectStore.listJSON())
+        case ("GET", 2):
+            guard let id = Int(components[1]), let json = projectStore.detailJSON(id: id) else {
+                return try respond(request, status: 404, json: notFound)
+            }
+            return try respond(request, status: 200, json: json)
+        case ("GET", 3) where path == "schedule":
+            guard let id = Int(components[1]), let json = projectStore.timelineJSON(id: id) else {
+                return try respond(request, status: 404, json: notFound)
+            }
+            return try respond(request, status: 200, json: json)
         default:
             return nil
         }
