@@ -47,13 +47,15 @@ struct HomeScheduleCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             CardSectionHeader(title: "주요 일정", count: schedules.count, linkTitle: "캘린더", onLink: onShowCalendar)
-                .padding(.vertical, Spacing.md)
+                .padding(.vertical, Spacing.sm)
             ForEach(Array(schedules.enumerated()), id: \.element.id) { index, schedule in
                 if index > 0 { TSDivider() }
                 ScheduleRow(schedule: schedule, isFirst: index == 0, action: onShowCalendar)
             }
         }
-        .tsCard(padding: Spacing.lg)
+        .padding(.horizontal, Spacing.card)
+        .padding(.vertical, Spacing.xs)
+        .tsCard(padding: 0)
     }
 }
 

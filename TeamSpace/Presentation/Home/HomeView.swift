@@ -33,11 +33,10 @@ struct HomeView: View {
                     onAvatar: { isLogoutConfirmPresented = true }
                 )
                 HomeGreeting(message: viewModel.greeting(for: user.name))
-                    .padding(.vertical, Spacing.sm)
                 content
             }
             .padding(.horizontal, Spacing.screen)
-            .padding(.top, Spacing.sm)
+            .padding(.top, Spacing.xs)
             .padding(.bottom, Spacing.tabBarInset)
         }
         .background(Color.tsBackground.ignoresSafeArea())

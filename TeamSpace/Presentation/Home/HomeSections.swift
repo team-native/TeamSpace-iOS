@@ -35,24 +35,11 @@ struct HomeSections: View {
                     onNavigate(.comingSoon(title: "캘린더"))
                 }
             }
-            HomeShortcutList(onSelect: open)
-                .padding(.top, Spacing.md)
             if !home.notices.isEmpty {
                 HomeNoticeList(notices: home.notices) {
                     onNavigate(.comingSoon(title: "공지"))
                 }
-                .padding(.top, Spacing.md)
             }
-        }
-    }
-
-    private func open(_ shortcut: HomeShortcut) {
-        switch shortcut {
-        case .submitApproval: onSelectTab(.approval)
-        case .findDocument: onSelectTab(.documents)
-        case .teamBoard: onNavigate(.comingSoon(title: "팀 게시판"))
-        case .inquiry: onNavigate(.comingSoon(title: "문의 · 건의"))
-        case .members: onNavigate(.memberDirectory)
         }
     }
 }
