@@ -206,6 +206,14 @@ final class DIContainer {
         FetchJoinedProjectsUseCase(workspaceRepository: workspaceRepository)
     }
 
+    var fetchMyDocumentsUseCase: FetchMyDocumentsUseCase {
+        FetchMyDocumentsUseCase(workspaceRepository: workspaceRepository)
+    }
+
+    var deleteDraftUseCase: DeleteDraftUseCase {
+        DeleteDraftUseCase(workspaceRepository: workspaceRepository)
+    }
+
     var fetchTodosUseCase: FetchTodosUseCase {
         FetchTodosUseCase(workspaceRepository: workspaceRepository)
     }
@@ -374,5 +382,13 @@ extension DIContainer {
 
     func makeWorkspaceProjectsViewModel() -> WorkspaceProjectsViewModel {
         WorkspaceProjectsViewModel(fetchJoinedProjectsUseCase: fetchJoinedProjectsUseCase)
+    }
+
+    func makeMyDocumentsViewModel() -> MyDocumentsViewModel {
+        MyDocumentsViewModel(fetchMyDocumentsUseCase: fetchMyDocumentsUseCase)
+    }
+
+    func makeDraftDocumentsViewModel() -> DraftDocumentsViewModel {
+        DraftDocumentsViewModel(fetchMyDocumentsUseCase: fetchMyDocumentsUseCase, deleteDraftUseCase: deleteDraftUseCase)
     }
 }

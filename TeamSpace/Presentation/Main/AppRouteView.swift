@@ -18,9 +18,9 @@ struct AppRouteView: View {
         case .financeContractLedger, .financeContractDetail, .financeMonthlyFlow, .financeComposition,
              .financeAccess, .financeProjectAmounts:
             financeScreen
-        case .approvalDetail, .approvalCompose, .librarySearch, .templateDetail, .templateCompose:
+        case .approvalDetail, .approvalCompose, .approvalResume, .librarySearch, .templateDetail, .templateCompose:
             documentScreen
-        case .workspaceDashboard, .workspaceTodos, .workspaceProjects:
+        case .workspaceDashboard, .workspaceTodos, .workspaceDocuments, .workspaceDrafts, .workspaceProjects:
             workspaceScreen
         case .comingSoon(let title):
             ComingSoonView(title: title, showsBackButton: true)
@@ -84,6 +84,8 @@ struct AppRouteView: View {
         switch route {
         case .approvalDetail(let documentId):
             ApprovalDetailView(viewModel: container.makeApprovalDetailViewModel(documentId: documentId), onNavigate: onNavigate)
+        case .approvalResume(let kind, let title):
+            ApprovalComposeView(container: container, onNavigate: onNavigate, initialKind: kind, templateTitle: title)
         case .librarySearch:
             LibrarySearchView(viewModel: container.makeLibrarySearchViewModel(), onNavigate: onNavigate)
         case .templateDetail(let id):
@@ -110,6 +112,10 @@ struct AppRouteView: View {
         switch route {
         case .workspaceTodos:
             TodoListView(viewModel: container.makeTodoListViewModel(userName: user.name), onNavigate: onNavigate)
+        case .workspaceDocuments:
+            MyDocumentsView(viewModel: container.makeMyDocumentsViewModel(), onNavigate: onNavigate)
+        case .workspaceDrafts:
+            DraftDocumentsView(viewModel: container.makeDraftDocumentsViewModel(), onNavigate: onNavigate)
         case .workspaceProjects:
             WorkspaceProjectsView(viewModel: container.makeWorkspaceProjectsViewModel(), onNavigate: onNavigate)
         default:

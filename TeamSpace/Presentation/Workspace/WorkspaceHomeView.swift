@@ -66,7 +66,7 @@ private struct WorkspaceHomeCards: View {
             received: home.receivedApproval,
             submitted: home.submittedDocument,
             onReview: { onNavigate(.approvalDetail(documentId: $0)) },
-            onSubmitted: { onNavigate(.comingSoon(title: "내가 제출한 문서")) }
+            onSubmitted: { onNavigate(.workspaceDocuments) }
         )
         WorkspaceProjectsCard(projects: home.projects, onOpen: { onNavigate(.comingSoon(title: "참여 프로젝트")) })
         WorkspaceSchedulesCard(schedules: schedules, onOpen: { onNavigate(.comingSoon(title: "일정")) })

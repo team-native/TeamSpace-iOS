@@ -159,4 +159,69 @@ final class WorkspaceTests: XCTestCase {
         XCTAssertEqual(viewModel.projects.first?.periodText, "독서 기록 앱 · 07.01 – 11.30")
         XCTAssertEqual(ProjectRunStatus.inProgress.badgeTitle, "진행 중")
     }
+
+    // MARK: 07-4 내가 제출한 문서 · 07-5 임시 저장
+
+    func testMyDocumentsFilterAndSearch() async {
+        let viewModel = makeContainer().makeMyDocumentsViewModel()
+        await viewModel.load()
+
+        XCTAssertEqual(viewModel.documents.count, 7, "내가 올린 결재와 같은 문서")
+        XCTAssertEqual(viewModel.kindFilters, [nil, .expense])
+
+        viewModel.statusFilter = .draft
+        XCTAssertEqual(viewModel.documents.map(\.title), ["11월 워크숍 장소 대관"])
+        XCTAssertEqual(viewModel.documents.first?.linkRoute, .workspaceDrafts)
+
+        viewModel.statusFilter = nil
+        viewModel.query = "book-on"
+        XCTAssertEqual(viewModel.documents.map(\.title), ["Book-on 테스트 기기 구매"], "대소문자 구분 없이 제목 · 프로젝트 검색")
+    }
+
+    func testMyDocumentProgressText() {
+        let reviewing = MyDocument(
+            id: 1, kind: .expense, title: "Book-on 테스트 기기 구매", amount: 420_000, status: .reviewing,
+            projectName: "Book-on", summary: nil, submittedAt: date(2026, 10, 14), updatedAt: date(2026, 10, 14),
+            currentApprover: DocumentPerson(name: "이시우", department: "PMO"), currentStepTitle: nil,
+            decidedBy: nil, decidedAt: nil, rejectReason: nil
+        )
+        XCTAssertEqual(reviewing.headerText, "예산 품의서 · 제출 2026.10.14")
+        XCTAssertEqual(reviewing.progressText, "420,000원 · 현재 결재자 이시우 · PMO")
+        XCTAssertEqual(reviewing.linkTitle, "진행 상황 확인")
+
+        let rejected = MyDocument(
+            id: 3, kind: .expense, title: "디자인 툴 구독 예산", amount: nil, status: .rejected,
+            projectName: nil, summary: nil, submittedAt: date(2026, 10, 10), updatedAt: date(2026, 10, 12),
+            currentApprover: nil, currentStepTitle: nil, decidedBy: DocumentPerson(name: "김민준", department: "FA"),
+            decidedAt: date(2026, 10, 12), rejectReason: "산출 근거를 보완해 주세요."
+        )
+        XCTAssertEqual(rejected.progressText, "김민준 · FA · 10.12 반려 사유: 산출 근거를 보완해 주세요.")
+        XCTAssertEqual(rejected.linkRoute, .approvalDetail(documentId: 3))
+    }
+
+    func testDraftDeleteRemovesOnlyDrafts() async {
+        let container = makeContainer()
+        let viewModel = container.makeDraftDocumentsViewModel()
+        await viewModel.load()
+        XCTAssertEqual(viewModel.drafts.map(\.title), ["11월 워크숍 장소 대관"])
+        XCTAssertEqual(viewModel.drafts.first?.kind.composeKind, .expense)
+
+        viewModel.pendingDelete = viewModel.drafts.first
+        await viewModel.confirmDelete()
+
+        guard case .empty = viewModel.state else { return XCTFail("지우고 나면 빈 화면") }
+        XCTAssertNil(viewModel.pendingDelete)
+
+        let submitted = MyDocument(
+            id: 1, kind: .expense, title: "t", amount: nil, status: .pending, projectName: nil, summary: nil,
+            submittedAt: Date(), updatedAt: Date(), currentApprover: nil, currentStepTitle: nil,
+            decidedBy: nil, decidedAt: nil, rejectReason: nil
+        )
+        do {
+            try await container.deleteDraftUseCase.execute(submitted)
+            XCTFail("제출한 문서는 지울 수 없어요")
+        } catch {
+            XCTAssertEqual(error as? AppError, .invalidInput("제출한 문서는 삭제할 수 없어요. 결재 상세에서 요청을 취소해 주세요."))
+        }
+    }
 }

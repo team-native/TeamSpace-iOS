@@ -21,6 +21,7 @@ enum AppRoute: Hashable {
     // 05 결재
     case approvalDetail(documentId: Int) // 05-3 내 결재 상세 · 05-4 받은 결재 검토
     case approvalCompose                 // 05-0 결재 올리기 · 종류 선택
+    case approvalResume(kind: ApprovalComposeKind, title: String) // 07-5 임시 저장 문서 이어서 작성
     // 06 문서함
     case librarySearch                   // 06-2 문서 검색
     case templateDetail(id: Int)          // 06-3 템플릿 상세
@@ -28,6 +29,8 @@ enum AppRoute: Hashable {
     // 07 내 공간
     case workspaceDashboard              // 07-1 내 공간 대시보드
     case workspaceTodos                  // 07-2 나의 To-do
+    case workspaceDocuments              // 07-4 내가 제출한 문서
+    case workspaceDrafts                 // 07-5 임시 저장 문서
     case workspaceProjects               // 07-6 참여 프로젝트
     // 아직 만들지 않은 화면
     case comingSoon(title: String)

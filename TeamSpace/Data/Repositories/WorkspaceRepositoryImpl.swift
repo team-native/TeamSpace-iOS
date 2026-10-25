@@ -16,6 +16,21 @@ final class WorkspaceRepositoryImpl: WorkspaceRepository, @unchecked Sendable {
             .list.map { $0.toEntity() }
     }
 
+    func fetchMyDocuments() async throws -> [MyDocument] {
+        try await request(Endpoint(method: .get, path: "workspace/documents"), as: MyDocumentListResponseDTO.self)
+            .list.map { $0.toEntity() }
+    }
+
+    func deleteDraft(documentId: Int) async throws {
+        do {
+            _ = try await client.request(Endpoint(method: .delete, path: "documents/\(documentId)"), as: EmptyResponseDTO.self)
+        } catch NetworkError.emptyData {
+            return
+        } catch let error as NetworkError {
+            throw error.asAppError
+        }
+    }
+
     func fetchTodos() async throws -> [TodoItem] {
         try await request(Endpoint(method: .get, path: "workspace/todos"), as: TodoListResponseDTO.self)
             .list.map { $0.toEntity() }

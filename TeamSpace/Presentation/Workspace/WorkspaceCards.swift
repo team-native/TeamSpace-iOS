@@ -141,14 +141,16 @@ struct WorkspaceProfileCard: View {
     }
 }
 
-/// 07-1 하단 안내
+/// 07 하단 안내 (연한 파란 배경 + 정보 아이콘)
 struct WorkspaceNote: View {
+    var message = "내 익명 활동은 내 공간에서만 확인해요. 알림 읽음, 할 일 완료, 결재 승인은 각각 다른 상태예요."
+
     var body: some View {
         HStack(alignment: .top, spacing: 9) {
             TSIcon.infoCircle.sized(.base)
                 .foregroundStyle(Color.tsPrimary)
                 .accessibilityHidden(true)
-            Text("내 익명 활동은 내 공간에서만 확인해요. 알림 읽음, 할 일 완료, 결재 승인은 각각 다른 상태예요.")
+            Text(message)
                 .tsFont(.caption)
                 .foregroundStyle(Color.tsInk2)
                 .fixedSize(horizontal: false, vertical: true)
@@ -156,5 +158,24 @@ struct WorkspaceNote: View {
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color.tsPrimarySoft, in: RoundedRectangle(cornerRadius: Radius.lg, style: .continuous))
+    }
+}
+
+/// 07 화면 위 작은 파란 설명 + 큰 제목
+struct WorkspacePageTitle: View {
+    let eyebrow: String
+    let title: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Spacing.xs) {
+            Text(eyebrow)
+                .tsFont(.micro)
+                .foregroundStyle(Color.tsPrimary)
+            Text(title)
+                .tsFont(.title3)
+                .foregroundStyle(Color.tsInk)
+                .accessibilityAddTraits(.isHeader)
+        }
+        .padding(.top, Spacing.sm)
     }
 }

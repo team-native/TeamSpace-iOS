@@ -7,6 +7,10 @@ protocol WorkspaceRepository: Sendable {
     func fetchHome() async throws -> WorkspaceHome
     /// GET /workspace/projects — 07-6 참여 프로젝트 (명세서에 없음)
     func fetchJoinedProjects() async throws -> [JoinedProject]
+    /// GET /workspace/documents — 07-4 · 07-5 내가 작성 · 제출한 문서 (명세서에 없음)
+    func fetchMyDocuments() async throws -> [MyDocument]
+    /// DELETE /documents/{documentId} — 임시 저장 문서 삭제 (명세서에 없음)
+    func deleteDraft(documentId: Int) async throws
     /// GET /workspace/todos — 사용자 할 일 목록 (명세서)
     func fetchTodos() async throws -> [TodoItem]
     /// POST /workspace/todos — 할 일 추가 (명세서에 없음)

@@ -14,6 +14,7 @@ import Foundation
 /// - GET /dashboard/home: Figma 02-1 홈 예시 (MockDashboardFixture)
 /// - GET /library · /library/search: Figma 06 문서함 예시 (MockLibraryFixture)
 /// - GET /workspace/home · /workspace/projects: Figma 07 내 공간 예시 (MockWorkspaceFixture)
+/// - GET /workspace/documents · DELETE /documents/{id}: 07-4 · 07-5 (MockApprovalStore 의 내 결재)
 /// - GET · POST /workspace/todos · PATCH /workspace/todos/{id}: Figma 07-2 (MockTodoStore, 메모리에 기억)
 /// - POST /notifications/push-token: Authorization 헤더가 없으면 401
 struct MockTransport: HTTPTransport {
@@ -120,6 +121,11 @@ struct MockTransport: HTTPTransport {
                 return try respond(request, status: 404, json: notFound)
             }
             return try respond(request, status: 200, json: json)
+        case ("DELETE", _) where parent == "documents":
+            guard let id = Int(path), approvalStore.deleteDraft(id: id) else {
+                return try respond(request, status: 404, json: notFound)
+            }
+            return try respond(request, status: 200, json: #"{"code":200,"message":"삭제 완료","data":{"documentId":\#(path)}}"#)
         case ("POST", "decide"):
             guard
                 let id = Int(parent),
@@ -177,6 +183,8 @@ struct MockTransport: HTTPTransport {
                 todayTodoTitles: summary.today,
                 completedTodoCount: summary.completed
             ))
+        case ("GET", "documents"):
+            return try respond(request, status: 200, json: approvalStore.myDocumentsJSON())
         case ("GET", "projects"):
             return try respond(request, status: 200, json: MockWorkspaceFixture.projects())
         case ("GET", "todos"):
