@@ -57,9 +57,20 @@ enum LibraryFilter: String, CaseIterable, Identifiable, Hashable {
 }
 
 extension LibraryDocument {
-    /// 문서를 눌렀을 때 갈 화면 (09 규칙 상세를 만들기 전까지 준비 중 화면)
+    /// 템플릿은 06-3으로, 규칙 · 가이드는 후속 섹션 구현 전까지 준비 중 화면으로 이동합니다.
     var route: AppRoute {
-        .comingSoon(title: title)
+        category == .template ? .templateDetail(id: id) : .comingSoon(title: title)
+    }
+}
+
+extension TemplateFormKind {
+    var composeKind: ApprovalComposeKind? {
+        switch self {
+        case .expense: return .expense
+        case .staffing: return .staffing
+        case .settlement: return .etcDocument
+        case .unknown: return nil
+        }
     }
 }
 

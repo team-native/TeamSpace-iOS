@@ -16,6 +16,12 @@ enum TSIcon: String {
     case close = "xmark"
     case sparkles = "sparkles"
     case pencil = "pencil"
+    // 06-3 템플릿 상세 — Figma 원본 SVG
+    case templateBack = "template-back"
+    case templateField = "template-field"
+    case templateReason = "template-reason"
+    case templateUsers = "template-users"
+    case templateCompose = "template-compose"
     // 02 알림 — Figma 원본 SVG
     case clipboard = "ic-clipboard"
     case creditCard = "ic-credit-card"
@@ -55,6 +61,7 @@ enum TSIcon: String {
 
     /// Figma 에서 가져온 SVG 에셋 아이콘
     private static let assetIcons: Set<TSIcon> = [
+        .templateBack, .templateField, .templateReason, .templateUsers, .templateCompose,
         .chevronLeft, .clipboard, .creditCard, .calendar, .bookOpen, .bell, .checkCircle, .settings,
         .bellRing, .bellOff, .clipboardCheck, .wallet, .megaphone, .infoCircle, .checkSmall, .moon,
         .chevronRight, .arrowRight, .search, .link, .mailOutline, .message, .organization, .lock, .file, .filter,

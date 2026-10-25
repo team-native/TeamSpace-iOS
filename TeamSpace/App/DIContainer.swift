@@ -310,8 +310,8 @@ extension DIContainer {
         StaffingRequestViewModel(submitDocumentUseCase: submitDocumentUseCase)
     }
 
-    func makeRequestFormViewModel(kind: RequestFormKind) -> RequestFormViewModel {
-        RequestFormViewModel(kind: kind, submitDocumentUseCase: submitDocumentUseCase)
+    func makeRequestFormViewModel(kind: RequestFormKind, initialTitle: String = "") -> RequestFormViewModel {
+        RequestFormViewModel(kind: kind, submitDocumentUseCase: submitDocumentUseCase, initialTitle: initialTitle)
     }
 
     func makeLibraryViewModel() -> LibraryViewModel {
@@ -320,5 +320,12 @@ extension DIContainer {
 
     func makeLibrarySearchViewModel() -> LibrarySearchViewModel {
         LibrarySearchViewModel(searchLibraryUseCase: searchLibraryUseCase, recentSearchUseCase: recentSearchUseCase)
+    }
+
+    func makeTemplateDetailViewModel(templateId: Int) -> TemplateDetailViewModel {
+        TemplateDetailViewModel(
+            templateId: templateId,
+            fetchTemplateUseCase: FetchLibraryTemplateUseCase(libraryRepository: libraryRepository)
+        )
     }
 }

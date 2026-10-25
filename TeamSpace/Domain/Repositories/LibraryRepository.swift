@@ -7,4 +7,6 @@ protocol LibraryRepository: Sendable {
     func fetchLibrary() async throws -> LibraryOverview
     /// GET /library/search?keyword= — 제목 · 요약 · 본문에서 검색. 본문 일부(excerpt)를 함께 돌려줘요.
     func searchLibrary(keyword: String) async throws -> [LibraryDocument]
+    /// GET /library/templates/{id} — 임시 경로, 백엔드 확정 필요
+    func fetchTemplate(id: Int) async throws -> LibraryTemplate
 }

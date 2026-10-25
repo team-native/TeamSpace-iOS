@@ -49,6 +49,19 @@ struct AppRouteView: View {
             ApprovalComposeView(container: container, onNavigate: onNavigate)
         case .librarySearch:
             LibrarySearchView(viewModel: container.makeLibrarySearchViewModel(), onNavigate: onNavigate)
+        case .templateDetail(let id):
+            TemplateDetailView(viewModel: container.makeTemplateDetailViewModel(templateId: id), onNavigate: onNavigate)
+        case .templateCompose(let kind, let title):
+            if let composeKind = kind.composeKind {
+                ApprovalComposeView(
+                    container: container,
+                    onNavigate: onNavigate,
+                    initialKind: composeKind,
+                    templateTitle: title
+                )
+            } else {
+                InfoBanner(message: "아직 지원하지 않는 템플릿이에요.", icon: .infoCircle, style: .muted)
+            }
         case .comingSoon(let title):
             ComingSoonView(title: title, showsBackButton: true)
         }

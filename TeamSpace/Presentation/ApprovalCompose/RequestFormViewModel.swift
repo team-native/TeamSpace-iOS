@@ -76,10 +76,16 @@ final class RequestFormViewModel {
 
     private let submitDocumentUseCase: SubmitDocumentUseCase
 
-    init(kind: RequestFormKind, submitDocumentUseCase: SubmitDocumentUseCase, now: Date = Date()) {
+    init(
+        kind: RequestFormKind,
+        submitDocumentUseCase: SubmitDocumentUseCase,
+        now: Date = Date(),
+        initialTitle: String = ""
+    ) {
         self.kind = kind
         self.submitDocumentUseCase = submitDocumentUseCase
         self.desiredDate = now
+        self.title = initialTitle
         switch kind {
         case .project: targets = ["Book-on", "Native 팀스페이스", "MoSS"]
         case .operation: targets = ["NativeOps", "PMO", "FA", "Leader"]

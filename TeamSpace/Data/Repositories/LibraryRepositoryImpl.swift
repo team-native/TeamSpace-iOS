@@ -20,6 +20,13 @@ final class LibraryRepositoryImpl: LibraryRepository, @unchecked Sendable {
         return try await request(endpoint, as: LibrarySearchResponseDTO.self).list.map { $0.toEntity() }
     }
 
+    func fetchTemplate(id: Int) async throws -> LibraryTemplate {
+        try await request(
+            Endpoint(method: .get, path: "library/templates/\(id)"),
+            as: LibraryTemplateResponseDTO.self
+        ).toEntity()
+    }
+
     private func request<Response: Decodable>(_ endpoint: Endpoint, as type: Response.Type) async throws -> Response {
         do {
             return try await client.request(endpoint, as: type)

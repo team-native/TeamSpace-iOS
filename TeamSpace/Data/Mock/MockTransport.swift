@@ -167,6 +167,12 @@ struct MockTransport: HTTPTransport {
             let url = request.url,
             url.pathComponents.contains("library")
         else { return nil }
+        if url.pathComponents.contains("templates"), let id = Int(path) {
+            guard let json = MockTemplateFixture.template(id: id) else {
+                return try respond(request, status: 404, json: #"{"code":404,"message":"템플릿을 찾을 수 없어요","data":null}"#)
+            }
+            return try respond(request, status: 200, json: json)
+        }
         switch path {
         case "library":
             return try respond(request, status: 200, json: MockLibraryFixture.library())

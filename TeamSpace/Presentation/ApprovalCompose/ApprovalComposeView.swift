@@ -44,14 +44,22 @@ enum ApprovalComposeKind: String, CaseIterable, Identifiable {
 struct ApprovalComposeView: View {
     private let container: DIContainer
     private let onNavigate: (AppRoute) -> Void
+    private let templateTitle: String?
 
     @State private var activeSheet: ApprovalComposeKind?
     @State private var submitted: SubmittedDocument?
     @Environment(\.dismiss) private var dismiss
 
-    init(container: DIContainer, onNavigate: @escaping (AppRoute) -> Void) {
+    init(
+        container: DIContainer,
+        onNavigate: @escaping (AppRoute) -> Void,
+        initialKind: ApprovalComposeKind? = nil,
+        templateTitle: String? = nil
+    ) {
         self.container = container
         self.onNavigate = onNavigate
+        self.templateTitle = templateTitle
+        _activeSheet = State(initialValue: initialKind)
     }
 
     var body: some View {
@@ -117,7 +125,10 @@ struct ApprovalComposeView: View {
         case .operationRequest:
             RequestFormSheet(viewModel: container.makeRequestFormViewModel(kind: .operation), onFinish: onFinish)
         case .etcDocument:
-            RequestFormSheet(viewModel: container.makeRequestFormViewModel(kind: .etc), onFinish: onFinish)
+            RequestFormSheet(
+                viewModel: container.makeRequestFormViewModel(kind: .etc, initialTitle: templateTitle ?? ""),
+                onFinish: onFinish
+            )
         }
     }
 }
