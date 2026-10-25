@@ -121,7 +121,7 @@ extension WorkspaceRecords {
 extension ProjectRunStatus: BadgeRepresentable {
     var badgeTitle: String {
         switch self {
-        case .planned: return "시작 전"
+        case .planned: return "예정"
         case .inProgress: return "진행 중"
         case .completed: return "완료"
         case .unknown: return "확인 중"
@@ -132,7 +132,8 @@ extension ProjectRunStatus: BadgeRepresentable {
         switch self {
         case .inProgress: return .primary
         case .completed: return .positive
-        case .planned, .unknown: return .neutral
+        case .planned: return .violet
+        case .unknown: return .neutral
         }
     }
 }

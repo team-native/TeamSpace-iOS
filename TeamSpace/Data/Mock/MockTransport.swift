@@ -19,6 +19,7 @@ import Foundation
 /// - /workspace/schedules/~: Figma 07-7 ~ 07-9 (MockScheduleStore, 참석 응답 · 리마인더 기억)
 /// - GET /workspace/activity · posts · proposals: Figma 07-10 ~ 07-12 (MockActivityFixture)
 /// - GET · PATCH /workspace/profile: Figma 07-13 (MockProfileStore, 저장 내용 기억)
+/// - /projects/~ · /applications/~: Figma 08 (MockProjectStore, 신청 · 결과 등록 기억)
 /// - POST /notifications/push-token: Authorization 헤더가 없으면 401
 struct MockTransport: HTTPTransport {
     static let baseURL = URL(fileURLWithPath: "/mock-api")
@@ -33,6 +34,7 @@ struct MockTransport: HTTPTransport {
     private let todoStore = MockTodoStore()
     private let scheduleStore = MockScheduleStore()
     private let profileStore = MockProfileStore()
+    private let projectStore = MockProjectStore()
 
     func send(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
         try await Task.sleep(nanoseconds: latencyNanoseconds)
@@ -50,6 +52,9 @@ struct MockTransport: HTTPTransport {
             return response
         }
         if let response = try workspaceRoute(request, path: path) {
+            return response
+        }
+        if let response = try projectRoute(request, path: path) {
             return response
         }
         switch (request.httpMethod, path) {
@@ -173,6 +178,80 @@ struct MockTransport: HTTPTransport {
                 return try respond(request, status: 404, json: notFound)
             }
             return try respond(request, status: 200, json: #"{"code":200,"message":"요청 취소 완료","data":{"success":true}}"#)
+        default:
+            return nil
+        }
+    }
+
+    /// 08 프로젝트 — /projects/~ (재무 · 내 공간의 projects 와 구분하려고 첫 경로를 확인해요)
+    private func projectRoute(_ request: URLRequest, path: String) throws -> (Data, HTTPURLResponse)? {
+        guard let url = request.url else { return nil }
+        let components = url.pathComponents.filter { $0 != "/" && $0 != MockTransport.baseURL.lastPathComponent }
+        if components.first == "applications" {
+            return try applicationRoute(request, components: components)
+        }
+        guard components.first == "projects" else { return nil }
+        let notFound = #"{"code":404,"message":"해당 프로젝트를 찾을 수 없습니다."}"#
+        let projectId = components.count > 1 ? Int(components[1]) : nil
+        switch (request.httpMethod ?? "", components.count) {
+        case ("GET", 1):
+            return try respond(request, status: 200, json: projectStore.listJSON())
+        case ("GET", 2):
+            guard let id = projectId, let json = projectStore.detailJSON(id: id) else {
+                return try respond(request, status: 404, json: notFound)
+            }
+            return try respond(request, status: 200, json: json)
+        case ("GET", 3) where path == "schedule":
+            guard let id = projectId, let json = projectStore.timelineJSON(id: id) else {
+                return try respond(request, status: 404, json: notFound)
+            }
+            return try respond(request, status: 200, json: json)
+        case ("GET", 3) where path == "recruitment":
+            guard let id = projectId, let json = projectStore.recruitmentJSON(id: id) else {
+                return try respond(request, status: 404, json: #"{"code":404,"message":"모집 중인 자리가 없어요."}"#)
+            }
+            return try respond(request, status: 200, json: json)
+        case ("GET", 3) where path == "applicants":
+            guard let id = projectId, let json = projectStore.applicantsJSON(projectId: id) else {
+                return try respond(request, status: 404, json: notFound)
+            }
+            return try respond(request, status: 200, json: json)
+        case ("POST", 3) where path == "apply":
+            guard
+                let id = projectId,
+                let body = request.httpBody,
+                let dto = try? JSONCoder.makeDecoder().decode(ApplyRequestDTO.self, from: body)
+            else {
+                return try respond(request, status: 400, json: #"{"code":400,"message":"잘못된 요청입니다."}"#)
+            }
+            let result = projectStore.apply(projectId: id, request: dto)
+            return try respond(request, status: result.0, json: result.1)
+        case ("POST", 5) where path == "decision":
+            guard
+                let id = projectId,
+                let applicantId = Int(components[3]),
+                let body = request.httpBody,
+                let dto = try? JSONCoder.makeDecoder().decode(ApplicantDecisionRequestDTO.self, from: body),
+                let json = projectStore.decide(projectId: id, applicantId: applicantId, request: dto)
+            else {
+                return try respond(request, status: 404, json: notFound)
+            }
+            return try respond(request, status: 200, json: json)
+        default:
+            return nil
+        }
+    }
+
+    /// 08-6 내 참여 신청 — GET /applications/mine · DELETE /applications/{id}
+    private func applicationRoute(_ request: URLRequest, components: [String]) throws -> (Data, HTTPURLResponse)? {
+        switch (request.httpMethod ?? "", components.count) {
+        case ("GET", 2) where components[1] == "mine":
+            return try respond(request, status: 200, json: projectStore.myApplicationsJSON())
+        case ("DELETE", 2):
+            guard let id = Int(components[1]), projectStore.cancelApplication(id: id) else {
+                return try respond(request, status: 409, json: #"{"code":409,"message":"취소할 수 없는 신청이에요."}"#)
+            }
+            return try respond(request, status: 200, json: #"{"code":200,"message":"취소 완료","data":{"success":true}}"#)
         default:
             return nil
         }

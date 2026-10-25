@@ -27,7 +27,7 @@ struct HomeSections: View {
             }
             if !home.projects.isEmpty {
                 HomeProjectCard(projects: home.projects) {
-                    onNavigate(.comingSoon(title: "프로젝트"))
+                    onNavigate(.projects)
                 }
             }
             if !home.schedules.isEmpty {
