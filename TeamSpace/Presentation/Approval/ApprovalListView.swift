@@ -69,7 +69,7 @@ struct ApprovalListView: View {
     }
 
     private func open(_ item: ApprovalItem) {
-        onNavigate(.comingSoon(title: "결재 상세"))
+        onNavigate(.approvalDetail(documentId: item.id))
     }
 }
 

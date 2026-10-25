@@ -8,6 +8,7 @@ import Foundation
 /// - GET /notifications · PATCH /notifications/{id}/read: 읽음 상태를 메모리에 기억
 /// - 계정 요청: 이메일이 `taken@` 으로 시작하면 409 (이미 요청됨)
 /// - GET /users · /users/{id} · /organization/tree: Figma 03 팀원 예시 (MockMemberFixture)
+/// - GET /documents/{id} · POST /approvals/{id}/decide · POST /documents/{id}/comments · withdraw
 /// - GET /approvals/~: Figma 05 결재 예시 (MockApprovalStore, 처리 결과를 메모리에 기억)
 /// - GET /finance/~: Figma 04 재무 예시 (MockFinanceFixture)
 /// - GET /dashboard/home: Figma 02-1 홈 예시 (MockDashboardFixture)
@@ -93,14 +94,45 @@ struct MockTransport: HTTPTransport {
         return try respond(request, status: 200, json: #"{"code":200,"message":"읽음 처리 완료","data":{"success":true,"updatedId":\#(id)}}"#)
     }
 
-    /// 05 결재 — GET /approvals/mine · /approvals/received
+    /// 05 결재 — /approvals/~ · /documents/~
     private func approvalRoute(_ request: URLRequest, path: String) throws -> (Data, HTTPURLResponse)? {
-        guard request.httpMethod == "GET", request.url?.pathComponents.contains("approvals") == true else { return nil }
-        switch path {
-        case "mine":
+        guard let url = request.url else { return nil }
+        let components = url.pathComponents
+        let parent = url.deletingLastPathComponent().lastPathComponent
+        let notFound = #"{"code":404,"message":"해당 문서를 찾을 수 없습니다."}"#
+        switch (request.httpMethod ?? "", path) {
+        case ("GET", "mine") where components.contains("approvals"):
             return try respond(request, status: 200, json: approvalStore.listJSON(mine: true))
-        case "received":
+        case ("GET", "received") where components.contains("approvals"):
             return try respond(request, status: 200, json: approvalStore.listJSON(mine: false))
+        case ("GET", _) where parent == "documents":
+            guard let id = Int(path), let json = approvalStore.detailJSON(id: id) else {
+                return try respond(request, status: 404, json: notFound)
+            }
+            return try respond(request, status: 200, json: json)
+        case ("POST", "decide"):
+            guard
+                let id = Int(parent),
+                let body = request.httpBody,
+                let dto = try? JSONDecoder().decode(ApprovalDecisionRequestDTO.self, from: body)
+            else { return try respond(request, status: 400, json: #"{"code":400,"message":"잘못된 요청입니다."}"#) }
+            guard let json = approvalStore.decideJSON(approvalId: id, decision: dto.decision, comment: dto.comment) else {
+                return try respond(request, status: 404, json: notFound)
+            }
+            return try respond(request, status: 200, json: json)
+        case ("POST", "comments"):
+            guard
+                let id = Int(parent),
+                let body = request.httpBody,
+                let dto = try? JSONDecoder().decode(ApprovalCommentRequestDTO.self, from: body),
+                let json = approvalStore.commentJSON(documentId: id, body: dto.body)
+            else { return try respond(request, status: 404, json: notFound) }
+            return try respond(request, status: 201, json: json)
+        case ("POST", "withdraw"):
+            guard let id = Int(parent), approvalStore.update(id: id, status: "DRAFT") else {
+                return try respond(request, status: 404, json: notFound)
+            }
+            return try respond(request, status: 200, json: #"{"code":200,"message":"요청 취소 완료","data":{"success":true}}"#)
         default:
             return nil
         }

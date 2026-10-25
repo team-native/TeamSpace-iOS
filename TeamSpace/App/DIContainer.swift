@@ -148,6 +148,22 @@ final class DIContainer {
     var fetchApprovalBoxUseCase: FetchApprovalBoxUseCase {
         FetchApprovalBoxUseCase(approvalRepository: approvalRepository)
     }
+
+    var fetchApprovalDetailUseCase: FetchApprovalDetailUseCase {
+        FetchApprovalDetailUseCase(approvalRepository: approvalRepository)
+    }
+
+    var decideApprovalUseCase: DecideApprovalUseCase {
+        DecideApprovalUseCase(approvalRepository: approvalRepository)
+    }
+
+    var addApprovalCommentUseCase: AddApprovalCommentUseCase {
+        AddApprovalCommentUseCase(approvalRepository: approvalRepository)
+    }
+
+    var withdrawApprovalUseCase: WithdrawApprovalUseCase {
+        WithdrawApprovalUseCase(approvalRepository: approvalRepository)
+    }
 }
 
 @MainActor
@@ -243,5 +259,15 @@ extension DIContainer {
 
     func makeApprovalListViewModel() -> ApprovalListViewModel {
         ApprovalListViewModel(fetchApprovalBoxUseCase: fetchApprovalBoxUseCase)
+    }
+
+    func makeApprovalDetailViewModel(documentId: Int) -> ApprovalDetailViewModel {
+        ApprovalDetailViewModel(
+            documentId: documentId,
+            fetchApprovalDetailUseCase: fetchApprovalDetailUseCase,
+            decideApprovalUseCase: decideApprovalUseCase,
+            addApprovalCommentUseCase: addApprovalCommentUseCase,
+            withdrawApprovalUseCase: withdrawApprovalUseCase
+        )
     }
 }

@@ -7,4 +7,12 @@ protocol ApprovalRepository: Sendable {
     func fetchMyApprovals() async throws -> [ApprovalItem]
     /// GET /approvals/received — 내가 결재자인 결재 (대기 + 처리한 것)
     func fetchReceivedApprovals() async throws -> [ApprovalItem]
+    /// GET /documents/{documentId} — 문서 상세 및 결재 이력
+    func fetchDetail(documentId: Int) async throws -> ApprovalDetail
+    /// POST /approvals/{approvalId}/decide — 승인 · 반려 (반려는 사유 필수)
+    func decide(approvalId: Int, decision: ApprovalDecision, comment: String?) async throws -> ApprovalDecisionResult
+    /// POST /documents/{documentId}/comments — 의견 남기기 (명세서에 없음)
+    func addComment(documentId: Int, body: String) async throws -> ApprovalComment
+    /// POST /documents/{documentId}/withdraw — 요청 취소 (명세서에 없음)
+    func withdraw(documentId: Int) async throws
 }
