@@ -42,7 +42,9 @@ final class MockRuleStore: @unchecked Sendable {
         lock.lock()
         defer { lock.unlock() }
         guard let rule = rules.first(where: { $0.id == id }) else { return nil }
-        return envelope(RuleDetailDTO(rule: rule, articles: articles(for: rule), acknowledgedAt: acknowledgedAt[id]))
+        return envelope(RuleDetailDTO(
+            rule: rule, articles: articles(for: rule), acknowledgedAt: acknowledgedAt[id], revisions: revisions(for: rule)
+        ))
     }
 
     func acknowledge(id: Int) -> String? {
@@ -72,13 +74,42 @@ final class MockRuleStore: @unchecked Sendable {
                            isRevised: false, changeNote: nil),
             RuleArticleDTO(number: 2, title: "아이디어 제안",
                            body: "누구나 제안서를 올릴 수 있어요. 제안서는 문서함의 템플릿으로 작성하고, PO가 2주 안에 진행 여부를 결정해요.",
-                           isRevised: true, changeNote: "검토 기한 3주 → 2주로 단축"),
+                           isRevised: true, changeNote: "검토 기한 3주 → 2주로 단축",
+                           comparison: RuleArticleComparisonDTO(
+                               label: "검토 기한 단축",
+                               previousBody: "누구나 제안서를 올릴 수 있어요. 제안서는 문서함의 템플릿으로 작성하고, PO가 3주 안에 진행 여부를 결정해요.",
+                               highlight: "3주 → 2주",
+                               reason: "제안 검토 대기 시간을 줄이고 다음 단계 착수를 빠르게 하기 위해 기한을 단축해요."
+                           )),
             RuleArticleDTO(number: 3, title: "팀 구성",
                            body: "PM은 프로젝트 시작 전 필요한 직군과 인원을 결재로 요청해요. 인력 지원 요청은 PMO가 1차로 검토해요.",
                            isRevised: false, changeNote: nil),
             RuleArticleDTO(number: 4, title: "출시와 회고",
                            body: "출시 후 2주 안에 회고를 진행하고 결과를 문서함에 남겨요.",
                            isRevised: false, changeNote: nil)
+        ]
+    }
+
+    /// 09-3 변경 내역 — 프로젝트 운영 원칙은 Figma 내용, 나머지는 버전 수만큼 만들어요.
+    private func revisions(for rule: RuleSummaryDTO) -> [RuleRevisionDTO] {
+        func daysBefore(_ days: Double) -> Date { rule.revisedAt.addingTimeInterval(-days * 86_400) }
+        guard rule.id != 1 else {
+            return [
+                RuleRevisionDTO(version: "v1.3", revisedAt: rule.revisedAt, summary: "제2조 검토 기한 3주 → 2주",
+                                department: rule.department, author: "안율"),
+                RuleRevisionDTO(version: "v1.2", revisedAt: daysBefore(70), summary: "제3조 인력 요청을 결재로 일원화",
+                                department: rule.department, author: "양지우"),
+                RuleRevisionDTO(version: "v1.0", revisedAt: daysBefore(210), summary: "최초 제정",
+                                department: "Leader", author: "김민준")
+            ]
+        }
+        let first = RuleRevisionDTO(version: "v1.0", revisedAt: daysBefore(Double(rule.revisionCount - 1) * 60),
+                                    summary: "최초 제정", department: "Leader", author: "김민준")
+        guard rule.revisionCount > 1 else { return [first] }
+        return [
+            RuleRevisionDTO(version: rule.version, revisedAt: rule.revisedAt, summary: "제2조 적용 범위 정리",
+                            department: rule.department, author: "안율"),
+            first
         ]
     }
 

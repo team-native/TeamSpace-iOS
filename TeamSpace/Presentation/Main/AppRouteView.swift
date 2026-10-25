@@ -29,7 +29,7 @@ struct AppRouteView: View {
             accountScreen
         case .projects, .projectDetail, .projectTimeline, .projectRecruitment, .myApplications, .applicantReview:
             projectScreen
-        case .rules, .ruleDetail:
+        case .rules, .ruleDetail, .ruleComparison:
             ruleScreen
         case .comingSoon(let title):
             ComingSoonView(title: title, showsBackButton: true)
@@ -181,9 +181,12 @@ struct AppRouteView: View {
     /// 09 규칙
     @ViewBuilder
     private var ruleScreen: some View {
-        if case .ruleDetail(let id) = route {
+        switch route {
+        case .ruleDetail(let id):
             RuleDetailView(viewModel: container.makeRuleDetailViewModel(ruleId: id), onNavigate: onNavigate)
-        } else {
+        case .ruleComparison(let id):
+            RuleComparisonView(viewModel: container.makeRuleDetailViewModel(ruleId: id), onNavigate: onNavigate)
+        default:
             RuleListView(viewModel: container.makeRuleListViewModel(), onNavigate: onNavigate)
         }
     }

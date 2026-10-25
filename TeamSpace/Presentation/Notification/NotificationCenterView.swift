@@ -81,7 +81,7 @@ struct NotificationCenterView: View {
                 },
                 onOpenTarget: { notification in
                     Task { await viewModel.markAsRead(notification) }
-                    onNavigate(notification.type.targetRoute)
+                    onNavigate(notification.type.targetRoute(deepLink: notification.deepLink))
                 }
             )
             NotificationReadNotice(filter: viewModel.filter)

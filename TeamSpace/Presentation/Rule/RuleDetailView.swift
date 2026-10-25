@@ -1,10 +1,12 @@
 import SwiftUI
 
 /// 09-2 문서 상세 · 규칙 — 조항 칩을 누르면 그 조항으로 이동해요.
+/// "N건 보기"는 09-3 변경 내역 시트, 바뀐 조항의 "전후 비교 보기"는 09-4로 가요.
 struct RuleDetailView: View {
     @State private var viewModel: RuleDetailViewModel
     private let onNavigate: (AppRoute) -> Void
 
+    @State private var isShowingRevisions = false
     @Environment(\.dismiss) private var dismiss
 
     init(viewModel: RuleDetailViewModel, onNavigate: @escaping (AppRoute) -> Void) {
@@ -40,6 +42,10 @@ struct RuleDetailView: View {
         }
         .background(Color.tsBackground.ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)
+        .sheet(isPresented: $isShowingRevisions) {
+            RuleRevisionSheet(revisions: viewModel.detail?.revisions ?? [])
+                .presentationDetents([.height(420)])
+        }
         .task { await viewModel.load() }
         .refreshable { await viewModel.load() }
         .alert(viewModel.errorMessage ?? "", isPresented: Binding(
@@ -60,12 +66,12 @@ struct RuleDetailView: View {
         case .failed(let error):
             RetryView(message: error.userMessage) { Task { await viewModel.load() } }
         case .loaded(let detail):
-            RuleDetailHeader(rule: detail.rule, onShowRevisions: { onNavigate(.comingSoon(title: "변경 내역")) })
+            RuleDetailHeader(rule: detail.rule, onShowRevisions: { isShowingRevisions = true })
             RuleArticleChips(articles: detail.articles) { number in
                 withAnimation { proxy.scrollTo(number, anchor: .top) }
             }
             ForEach(detail.articles) { article in
-                RuleArticleView(article: article)
+                RuleArticleView(article: article, onCompare: { onNavigate(.ruleComparison(id: detail.rule.id)) })
                     .id(article.number)
             }
         }

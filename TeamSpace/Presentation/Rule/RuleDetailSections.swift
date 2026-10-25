@@ -78,6 +78,8 @@ struct RuleArticleChips: View {
 /// 조항 한 개 — 제N조 · 제목 · (개정) · 본문 · 바뀐 점
 struct RuleArticleView: View {
     let article: RuleArticle
+    /// 09-4 개정 전후 비교로 이동 — 비교 내용이 있는 조항에만 보여요.
+    let onCompare: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
@@ -103,6 +105,17 @@ struct RuleArticleView: View {
                         .tsFont(.caption2Bold)
                     Text(note)
                         .tsFont(.caption2)
+                    if article.comparison != nil {
+                        Button(action: onCompare) {
+                            HStack(spacing: Spacing.xxs) {
+                                Text("전후 비교 보기")
+                                    .tsFont(.caption2Bold)
+                                TSIcon.chevronRight.sized(.sm)
+                            }
+                            .padding(.top, Spacing.xxs)
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
                 .foregroundStyle(Color.tsPrimary)
                 .padding(Spacing.md)

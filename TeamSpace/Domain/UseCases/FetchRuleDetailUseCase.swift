@@ -1,6 +1,6 @@
 import Foundation
 
-/// 09-2 규칙 상세 — 조항은 번호 순
+/// 09-2 규칙 상세 — 조항은 번호 순, 변경 내역은 최신순
 struct FetchRuleDetailUseCase {
     private let ruleRepository: RuleRepository
 
@@ -13,7 +13,8 @@ struct FetchRuleDetailUseCase {
         return RuleDetail(
             rule: detail.rule,
             articles: detail.articles.sorted { $0.number < $1.number },
-            acknowledgedAt: detail.acknowledgedAt
+            acknowledgedAt: detail.acknowledgedAt,
+            revisions: detail.revisions.sorted { $0.revisedAt > $1.revisedAt }
         )
     }
 }

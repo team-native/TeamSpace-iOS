@@ -46,7 +46,7 @@ struct MainTabView: View {
     private func openPendingEntry() {
         guard let entry = entryRouter.take() else { return }
         selectedTab = .home
-        paths[.home] = [.notificationCenter, entry.type.targetRoute]
+        paths[.home] = [.notificationCenter, entry.type.targetRoute(deepLink: entry.deepLink)]
     }
 
     @ViewBuilder

@@ -57,8 +57,32 @@ struct RuleArticle: Equatable, Identifiable, Sendable {
     let isRevised: Bool
     /// 바뀐 점 (예: "검토 기한 3주 → 2주로 단축")
     let changeNote: String?
+    /// 09-4 개정 전후 비교 — 바뀐 조항에만 있어요.
+    var comparison: RuleArticleComparison? = nil
 
     var id: Int { number }
+}
+
+/// 09-4 바뀐 조항의 이전 본문 · 핵심 변경 · 사유
+struct RuleArticleComparison: Equatable, Sendable {
+    /// 배지 (예: "검토 기한 단축")
+    let label: String
+    let previousBody: String
+    /// 핵심 변경 (예: "3주 → 2주")
+    let highlight: String
+    let reason: String?
+}
+
+/// 09-3 변경 내역 한 건
+struct RuleRevision: Equatable, Identifiable, Sendable {
+    let version: String
+    let revisedAt: Date
+    /// 예) "제2조 검토 기한 3주 → 2주"
+    let summary: String
+    let department: String
+    let author: String
+
+    var id: String { version }
 }
 
 /// 09-2 규칙 상세
@@ -66,4 +90,14 @@ struct RuleDetail: Equatable, Sendable {
     var rule: RuleSummary
     let articles: [RuleArticle]
     var acknowledgedAt: Date?
+    /// 09-3 변경 내역 — 최신 버전이 먼저
+    var revisions: [RuleRevision] = []
+
+    /// 09-4 "v1.2 → v1.3" 의 이전 버전
+    var previousVersion: String? {
+        revisions.first { $0.version != rule.version }?.version
+    }
+
+    var changedArticles: [RuleArticle] { articles.filter { $0.comparison != nil } }
+    var unchangedArticles: [RuleArticle] { articles.filter { $0.comparison == nil } }
 }

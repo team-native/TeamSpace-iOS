@@ -67,10 +67,44 @@ final class RuleTests: XCTestCase {
         XCTAssertEqual(list.rules.first?.id, 1, "읽은 뒤에도 시행 예정이라 맨 위")
     }
 
+    // MARK: 09-3 변경 내역 · 09-4 개정 비교
+
+    func testRuleRevisionsAndComparison() async throws {
+        let viewModel = makeContainer().makeRuleDetailViewModel(ruleId: 1)
+        await viewModel.load()
+        let detail = try XCTUnwrap(viewModel.detail)
+
+        XCTAssertEqual(detail.revisions.map(\.version), ["v1.3", "v1.2", "v1.0"], "최신순")
+        XCTAssertEqual(detail.revisions.count, detail.rule.revisionCount, "N건 보기와 같은 수")
+        XCTAssertEqual(detail.previousVersion, "v1.2")
+        XCTAssertEqual(detail.changedArticles.map(\.number), [2])
+        XCTAssertEqual(detail.unchangedArticles.map(\.number), [1, 3, 4])
+
+        let comparison = try XCTUnwrap(detail.changedArticles.first?.comparison)
+        XCTAssertEqual(comparison.highlight, "3주 → 2주")
+        XCTAssertTrue(comparison.previousBody.contains("3주 안에"))
+        XCTAssertEqual(detail.comparisonBadgeTitle, "중요 · 읽음 미확인")
+
+        await viewModel.acknowledge()
+        XCTAssertEqual(viewModel.detail?.comparisonBadgeTitle, "읽음 확인 완료")
+    }
+
+    func testRuleWithoutRevisionHasNothingToCompare() async throws {
+        let viewModel = makeContainer().makeRuleDetailViewModel(ruleId: 8)
+        await viewModel.load()
+        let detail = try XCTUnwrap(viewModel.detail)
+
+        XCTAssertEqual(detail.revisions.map(\.summary), ["최초 제정"])
+        XCTAssertNil(detail.previousVersion)
+        XCTAssertTrue(detail.changedArticles.isEmpty)
+    }
+
     // MARK: 연결
 
     func testRuleEntryRoutes() {
-        XCTAssertEqual(NotificationType.rule.targetRoute, .rules)
-        XCTAssertEqual(NotificationType.schedule.targetRoute, .workspaceSchedules)
+        XCTAssertEqual(NotificationType.rule.targetRoute(deepLink: "/rules/1"), .ruleDetail(id: 1), "02-2 규칙 알림 → 09-2")
+        XCTAssertEqual(NotificationType.rule.targetRoute(deepLink: "/rules"), .rules)
+        XCTAssertEqual(NotificationType.rule.targetRoute(deepLink: nil), .rules)
+        XCTAssertEqual(NotificationType.schedule.targetRoute(deepLink: nil), .workspaceSchedules)
     }
 }

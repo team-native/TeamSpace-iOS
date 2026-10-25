@@ -5,7 +5,7 @@ import Foundation
 protocol RuleRepository: Sendable {
     /// GET /rules — 규정 목록 및 분류 (명세서)
     func fetchRules() async throws -> [RuleSummary]
-    /// GET /rules/{ruleId} — 규정 본문 상세 및 개정 이력 (명세서)
+    /// GET /rules/{ruleId} — 규정 본문 상세 및 개정 이력 (명세서). 09-4 비교용 이전 본문도 여기에 담아요.
     func fetchRuleDetail(id: Int) async throws -> RuleDetail
     /// POST /rules/{ruleId}/acknowledge — 읽음 확인 (명세서에 없음). 확인한 시각을 돌려줘요.
     func acknowledge(ruleId: Int) async throws -> Date

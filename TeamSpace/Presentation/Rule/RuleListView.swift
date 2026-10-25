@@ -53,7 +53,7 @@ struct RuleListView: View {
             RetryView(message: error.userMessage) { Task { await viewModel.load() } }
         case .loaded:
             if let urgent = viewModel.urgentRule {
-                UrgentRuleCard(rule: urgent) { onNavigate(.ruleDetail(id: urgent.id)) }
+                UrgentRuleCard(rule: urgent) { onNavigate(.ruleComparison(id: urgent.id)) }
             }
             if viewModel.rules.isEmpty {
                 InfoBanner(message: "조건에 맞는 규칙이 없어요. 검색어나 필터를 바꿔 보세요.", icon: .search, style: .muted)
@@ -96,7 +96,7 @@ private struct UrgentRuleCard: View {
             WorkspaceCardTitle(title: "시행 전 꼭 읽어주세요")
             StatusBadge(title: "중요 개정 · 읽음 미확인", tone: .primary, size: .small)
             WorkspaceItemText(title: "\(rule.title) \(rule.version)", meta: rule.urgentText)
-            Button("본문 읽고 읽음 확인", action: onOpen)
+            Button("개정 비교 · 읽음 확인", action: onOpen)
                 .buttonStyle(.tsPrimary)
         }
     }

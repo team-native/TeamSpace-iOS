@@ -35,20 +35,49 @@ struct RuleArticleDTO: Codable {
     let body: String
     let isRevised: Bool
     let changeNote: String?
+    var comparison: RuleArticleComparisonDTO? = nil
+
+    func toEntity() -> RuleArticle {
+        RuleArticle(
+            number: number, title: title, body: body, isRevised: isRevised, changeNote: changeNote,
+            comparison: comparison.map {
+                RuleArticleComparison(label: $0.label, previousBody: $0.previousBody, highlight: $0.highlight, reason: $0.reason)
+            }
+        )
+    }
+}
+
+struct RuleArticleComparisonDTO: Codable {
+    let label: String
+    let previousBody: String
+    let highlight: String
+    let reason: String?
+}
+
+struct RuleRevisionDTO: Codable {
+    let version: String
+    let revisedAt: Date
+    let summary: String
+    let department: String
+    let author: String
+
+    func toEntity() -> RuleRevision {
+        RuleRevision(version: version, revisedAt: revisedAt, summary: summary, department: department, author: author)
+    }
 }
 
 struct RuleDetailDTO: Codable {
     let rule: RuleSummaryDTO
     let articles: [RuleArticleDTO]
     let acknowledgedAt: Date?
+    var revisions: [RuleRevisionDTO]? = nil
 
     func toEntity() -> RuleDetail {
         RuleDetail(
             rule: rule.toEntity(),
-            articles: articles.map {
-                RuleArticle(number: $0.number, title: $0.title, body: $0.body, isRevised: $0.isRevised, changeNote: $0.changeNote)
-            },
-            acknowledgedAt: acknowledgedAt
+            articles: articles.map { $0.toEntity() },
+            acknowledgedAt: acknowledgedAt,
+            revisions: (revisions ?? []).map { $0.toEntity() }
         )
     }
 }

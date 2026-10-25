@@ -83,3 +83,11 @@ enum RuleStatusFilter: CaseIterable, Hashable {
         }
     }
 }
+
+extension RuleDetail {
+    /// "중요 · 읽음 미확인" / "읽음 확인 완료"
+    var comparisonBadgeTitle: String {
+        guard acknowledgedAt == nil else { return "읽음 확인 완료" }
+        return rule.isImportant ? "중요 · 읽음 미확인" : "읽음 미확인"
+    }
+}

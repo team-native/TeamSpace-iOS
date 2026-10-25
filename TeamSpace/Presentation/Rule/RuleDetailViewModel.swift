@@ -1,7 +1,7 @@
 import Foundation
 import Observation
 
-/// 09-2 규칙 상세 — 조항별 본문 · 읽음 확인
+/// 09-2 규칙 상세 · 09-4 개정 비교 — 조항별 본문 · 읽음 확인
 @Observable
 @MainActor
 final class RuleDetailViewModel {
