@@ -24,7 +24,7 @@ struct ProjectListView: View {
                 SearchField(placeholder: "프로젝트명, 설명, PM 검색", text: $viewModel.query)
                 ProjectFilterBar(viewModel: viewModel)
                 content
-                Button("내 참여 신청 현황") { onNavigate(.comingSoon(title: "내 참여 신청 현황")) }
+                Button("내 참여 신청 현황") { onNavigate(.myApplications) }
                     .buttonStyle(.tsSecondary)
             }
             .padding(.horizontal, Spacing.screen)
@@ -64,7 +64,9 @@ struct ProjectListView: View {
                 InfoBanner(message: viewModel.emptyMessage, icon: .search, style: .muted)
             }
             ForEach(viewModel.projects) { project in
-                ProjectCard(project: project) { onNavigate(.projectDetail(id: project.id)) }
+                ProjectCard(project: project) {
+                    onNavigate(project.isRecruiting ? .projectRecruitment(id: project.id) : .projectDetail(id: project.id))
+                }
             }
         }
     }

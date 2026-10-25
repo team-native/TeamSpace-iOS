@@ -44,6 +44,9 @@ enum AppRoute: Hashable {
     case projects                        // 08-1 전체 프로젝트 탐색
     case projectDetail(id: Int)          // 08-2 프로젝트 상세
     case projectTimeline(id: Int)        // 08-8 프로젝트 일정과 변경 이력
+    case projectRecruitment(id: Int)     // 08-3 모집 공고 (08-4 신청 시트 · 08-5 완료)
+    case myApplications                  // 08-6 내 참여 신청 현황
+    case applicantReview(projectId: Int) // 08-7 PM 지원자 검토
     // 아직 만들지 않은 화면
     case comingSoon(title: String)
 }

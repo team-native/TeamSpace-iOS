@@ -264,6 +264,30 @@ final class DIContainer {
         FetchProjectTimelineUseCase(projectRepository: projectRepository)
     }
 
+    var fetchRecruitmentUseCase: FetchRecruitmentUseCase {
+        FetchRecruitmentUseCase(projectRepository: projectRepository)
+    }
+
+    var applyProjectUseCase: ApplyProjectUseCase {
+        ApplyProjectUseCase(projectRepository: projectRepository)
+    }
+
+    var fetchMyApplicationsUseCase: FetchMyApplicationsUseCase {
+        FetchMyApplicationsUseCase(projectRepository: projectRepository)
+    }
+
+    var cancelApplicationUseCase: CancelApplicationUseCase {
+        CancelApplicationUseCase(projectRepository: projectRepository)
+    }
+
+    var fetchApplicantsUseCase: FetchApplicantsUseCase {
+        FetchApplicantsUseCase(projectRepository: projectRepository)
+    }
+
+    var decideApplicantUseCase: DecideApplicantUseCase {
+        DecideApplicantUseCase(projectRepository: projectRepository)
+    }
+
     var fetchTodosUseCase: FetchTodosUseCase {
         FetchTodosUseCase(workspaceRepository: workspaceRepository)
     }
@@ -488,5 +512,28 @@ extension DIContainer {
 
     func makeProjectTimelineViewModel(projectId: Int) -> ProjectTimelineViewModel {
         ProjectTimelineViewModel(projectId: projectId, fetchProjectTimelineUseCase: fetchProjectTimelineUseCase)
+    }
+
+    func makeRecruitmentViewModel(projectId: Int) -> RecruitmentViewModel {
+        RecruitmentViewModel(
+            projectId: projectId,
+            fetchRecruitmentUseCase: fetchRecruitmentUseCase,
+            applyProjectUseCase: applyProjectUseCase
+        )
+    }
+
+    func makeMyApplicationsViewModel() -> MyApplicationsViewModel {
+        MyApplicationsViewModel(
+            fetchMyApplicationsUseCase: fetchMyApplicationsUseCase,
+            cancelApplicationUseCase: cancelApplicationUseCase
+        )
+    }
+
+    func makeApplicantReviewViewModel(projectId: Int) -> ApplicantReviewViewModel {
+        ApplicantReviewViewModel(
+            projectId: projectId,
+            fetchApplicantsUseCase: fetchApplicantsUseCase,
+            decideApplicantUseCase: decideApplicantUseCase
+        )
     }
 }

@@ -79,4 +79,76 @@ final class ProjectTests: XCTestCase {
         viewModel.toggle(older)
         XCTAssertTrue(viewModel.expandedChangeIds.contains(older.id))
     }
+
+    // MARK: 08-3 ~ 08-6 모집 · 참여 신청
+
+    func testRecruitmentAndApply() async {
+        let container = makeContainer()
+        let joined = container.makeRecruitmentViewModel(projectId: 1)
+        await joined.load()
+        XCTAssertEqual(joined.post?.roleBadgeText, "iOS · 1명")
+        XCTAssertEqual(joined.post?.canApply, false, "이미 참여 중인 프로젝트")
+        XCTAssertEqual(joined.post?.applyButtonTitle, "이미 참여 중인 프로젝트예요")
+
+        let viewModel = container.makeRecruitmentViewModel(projectId: 4)
+        await viewModel.load()
+        XCTAssertEqual(viewModel.post?.canApply, true)
+
+        viewModel.message = "   "
+        XCTAssertFalse(viewModel.canSubmit, "한 마디가 비어 있으면 신청할 수 없어요")
+        viewModel.availability = .twentyHours
+        viewModel.message = "온보딩 문서를 다듬어 본 경험이 있어요."
+        await viewModel.submit()
+
+        XCTAssertTrue(viewModel.isSubmittedAlertPresented)
+        XCTAssertEqual(viewModel.post?.myApplicationStatus, .submitted, "다시 불러오면 신청 완료")
+
+        let mine = container.makeMyApplicationsViewModel()
+        await mine.load()
+        XCTAssertEqual(mine.applications.first?.projectName, "Native 팀 가이드", "방금 낸 신청이 맨 위")
+        XCTAssertEqual(mine.count(of: .submitted), 2)
+    }
+
+    func testMyApplicationsCancel() async {
+        let viewModel = makeContainer().makeMyApplicationsViewModel()
+        await viewModel.load()
+
+        XCTAssertEqual(ApplicationFilter.allCases.map { viewModel.count(of: $0) }, [4, 1, 1, 1, 1])
+        guard let reviewing = viewModel.applications.first(where: { $0.status == .reviewing }) else {
+            return XCTFail("검토 중인 신청이 있어야 해요")
+        }
+        XCTAssertTrue(viewModel.isExpanded(reviewing), "검토 중인 신청은 펼쳐서 보여줘요")
+        XCTAssertEqual(reviewing.progressSteps.map(\.isDone), [true, true, false])
+
+        viewModel.pendingCancel = reviewing
+        await viewModel.confirmCancel()
+        XCTAssertEqual(viewModel.count(of: .all), 3)
+
+        guard let accepted = viewModel.applications.first(where: { $0.status == .accepted }) else {
+            return XCTFail("참여 확정 신청이 있어야 해요")
+        }
+        viewModel.pendingCancel = accepted
+        await viewModel.confirmCancel()
+        XCTAssertEqual(viewModel.errorMessage, "결과가 확정된 신청은 취소할 수 없어요.")
+    }
+
+    // MARK: 08-7 PM 지원자 검토
+
+    func testApplicantReview() async {
+        let viewModel = makeContainer().makeApplicantReviewViewModel(projectId: 1)
+        await viewModel.load()
+
+        XCTAssertEqual(viewModel.board?.applicants.map(\.name), ["옥물결", "오잉", "잉오"], "검토 중 → 접수, 먼저 신청한 순")
+        XCTAssertEqual(viewModel.selected?.name, "옥물결", "첫 검토 대상을 미리 골라둬요")
+        XCTAssertEqual(viewModel.headcountText, "1명 · 확정 0명")
+        XCTAssertEqual(viewModel.progressText, "접수 1 · 검토 중 2")
+        XCTAssertFalse(viewModel.canSubmit, "사유를 적어야 등록할 수 있어요")
+
+        viewModel.reason = "위젯 개발 경험과 일정이 잘 맞아요."
+        await viewModel.submit()
+
+        XCTAssertEqual(viewModel.headcountText, "1명 · 확정 1명")
+        XCTAssertNotNil(viewModel.doneMessage)
+        XCTAssertNil(viewModel.selectedId)
+    }
 }

@@ -117,6 +117,156 @@ final class MockProjectStore: @unchecked Sendable {
         ))
     }
 
+    // MARK: 08-3 ~ 08-7 모집 · 참여
+
+    private var applications: [ApplicationDTO] = []
+    private var applicants: [Int: [ApplicantDTO]] = [:]
+    private var nextApplicationId = 200
+
+    private func later(_ days: Double) -> Date { now.addingTimeInterval(days * 86_400) }
+
+    /// 08-6 · 08-7 예시 — 처음 한 번만 만들어요.
+    private func seedApplicationsIfNeeded() {
+        guard applications.isEmpty else { return }
+        func app(
+            _ id: Int, _ projectId: Int, _ name: String, _ role: String, _ department: String, _ status: ApplicationStatus,
+            applied: Double, pm: String, message: String, portfolio: String? = nil, reviewed: Double? = nil,
+            due: Double? = nil, decided: Double? = nil, reason: String? = nil
+        ) -> ApplicationDTO {
+            ApplicationDTO(
+                id: id, projectId: projectId, projectName: name, role: role, department: department, status: status,
+                appliedAt: ago(applied), headcount: 1, pmName: pm, message: message, portfolioUrl: portfolio,
+                reviewedAt: reviewed.map(ago), resultDueDate: due.map(later), decidedAt: decided.map(ago), resultReason: reason
+            )
+        }
+        applications = [
+            app(101, 6, "토벌 보수 앱", "iOS 개발", "NativeLab", .reviewing, applied: 3, pm: "이시우",
+                message: "SwiftUI로 토벌 기록 앱을 만들어 봤어요. 위젯 개발과 QA에 참여하고 싶습니다. 주 6시간, 11월부터 참여 가능해요.",
+                portfolio: "github.com/chiikawatodal-demo/capybara", reviewed: 2, due: 2),
+            app(102, 2, "BRIDGE", "디자인", "NativeLab", .submitted, applied: 1, pm: "안율",
+                message: "프로토타입 화면 디자인을 함께하고 싶어요."),
+            app(103, 3, "Native 팀스페이스", "QA", "NativeOps", .accepted, applied: 28, pm: "양지우",
+                message: "QA 체크리스트 작성과 실기기 테스트를 맡고 싶어요.", decided: 24, reason: "QA 경험이 역할에 잘 맞아요."),
+            app(104, 5, "Inspace 리서치", "인터뷰", "Design", .declined, applied: 67, pm: "오잉",
+                message: "사용자 인터뷰 진행을 돕고 싶어요.", decided: 60, reason: "이번 모집은 인원이 마감됐어요.")
+        ]
+        let message = "SwiftUI로 토벌 기록 앱을 만들어 봤어요. 위젯 개발과 QA에 참여하고 싶습니다. 주 6시간, 11월부터 참여 가능해요."
+        applicants[1] = [
+            ApplicantDTO(id: 1, name: "옥물결", role: "iOS 개발", status: .reviewing, appliedAt: ago(3), availability: .tenHours,
+                         message: message, portfolioUrl: "https://github.com/chiikawatodal-demo/capybara", resultReason: nil),
+            ApplicantDTO(id: 2, name: "오잉", role: "iOS 개발", status: .reviewing, appliedAt: ago(2), availability: .tenHours,
+                         message: "SwiftUI 화면 개발과 실기기 QA 경험", portfolioUrl: nil, resultReason: nil),
+            ApplicantDTO(id: 3, name: "잉오", role: "iOS 개발", status: .submitted, appliedAt: ago(1), availability: .twentyHours,
+                         message: "위젯을 꼭 만들어 보고 싶어요.", portfolioUrl: nil, resultReason: nil)
+        ]
+    }
+
+    /// GET /projects/{id}/recruitment — 모집 중인 자리가 없으면 nil
+    func recruitmentJSON(id: Int) -> String? {
+        lock.lock()
+        defer { lock.unlock() }
+        seedApplicationsIfNeeded()
+        guard let project = projects.first(where: { $0.id == id }), let opening = project.openings.first else { return nil }
+        let isBookOn = id == 1
+        let mine = applications.first { $0.projectId == id && $0.status != .canceled }
+        return envelope(RecruitmentDTO(
+            projectId: id,
+            projectName: project.name,
+            opening: opening,
+            headline: isBookOn ? "Book-on의 다음 기능을\n함께 만들어요" : "\(project.name)를\n함께 만들어요",
+            introduction: isBookOn
+                ? "독서 기록과 습관 만들기를 돕는 iOS 앱에서 위젯 개발과 출시 전 QA를 함께할 동료를 찾아요."
+                : "\(project.summary)에 함께할 동료를 찾아요.",
+            activityPeriod: isBookOn ? "11–12월 · 출시 후 안정화 포함" : "11–12월",
+            activityHours: "주 6시간 내외 · 협의 가능",
+            recruitStart: ago(10),
+            recruitEnd: later(3),
+            department: project.department,
+            duties: isBookOn
+                ? ["독서 목표와 기록을 보여주는 위젯 개발", "SwiftUI 화면의 접근성·상태 처리 개선", "실기기 QA와 출시 후 오류 수정"]
+                : ["온보딩 문서 구조 정리", "신규 구성원 인터뷰 정리"],
+            requirements: isBookOn
+                ? "Swift·SwiftUI로 화면을 구현해 본 분, Git으로 협업 가능한 분을 찾아요. WidgetKit 경험이 있으면 좋아요."
+                : "문서를 읽기 쉽게 다듬는 것을 좋아하는 분을 찾아요.",
+            applyTip: "지원 시 작업물 링크와 참여 가능한 시간을 알려주세요. 학습 경험도 충분한 소개가 될 수 있어요.",
+            pmName: project.pmName,
+            documentTitle: "\(project.name) 킥오프 문서",
+            isJoined: joinedIds.contains(id),
+            myApplicationStatus: mine?.status
+        ))
+    }
+
+    /// POST /projects/{id}/apply — (상태 코드, 응답)
+    func apply(projectId: Int, request: ApplyRequestDTO) -> (Int, String) {
+        lock.lock()
+        defer { lock.unlock() }
+        seedApplicationsIfNeeded()
+        guard let project = projects.first(where: { $0.id == projectId }),
+              let opening = project.openings.first(where: { $0.id == request.openingId }) else {
+            return (404, #"{"code":404,"message":"모집 중인 자리를 찾을 수 없습니다."}"#)
+        }
+        if joinedIds.contains(projectId) {
+            return (409, #"{"code":409,"message":"이미 참여 중인 프로젝트예요."}"#)
+        }
+        if applications.contains(where: { $0.projectId == projectId && $0.status != .canceled }) {
+            return (409, #"{"code":409,"message":"이미 신청한 자리예요. 내 참여 신청에서 확인해 주세요."}"#)
+        }
+        nextApplicationId += 1
+        let application = ApplicationDTO(
+            id: nextApplicationId, projectId: projectId, projectName: project.name, role: opening.title,
+            department: project.department, status: .submitted, appliedAt: now, headcount: opening.headcount,
+            pmName: project.pmName, message: request.message, portfolioUrl: nil, reviewedAt: nil,
+            resultDueDate: later(5), decidedAt: nil, resultReason: nil
+        )
+        applications.append(application)
+        applicants[projectId, default: []].append(ApplicantDTO(
+            id: nextApplicationId, name: "홍길동", role: opening.title, status: .submitted, appliedAt: now,
+            availability: Availability(rawValue: request.availability) ?? .tenHours, message: request.message,
+            portfolioUrl: nil, resultReason: nil
+        ))
+        return (201, envelope(application))
+    }
+
+    func myApplicationsJSON() -> String {
+        lock.lock()
+        defer { lock.unlock() }
+        seedApplicationsIfNeeded()
+        return envelope(ApplicationListResponseDTO(list: applications))
+    }
+
+    func cancelApplication(id: Int) -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        seedApplicationsIfNeeded()
+        guard let index = applications.firstIndex(where: { $0.id == id }), applications[index].status.isCancelable else {
+            return false
+        }
+        applications[index].status = .canceled
+        return true
+    }
+
+    func applicantsJSON(projectId: Int) -> String? {
+        lock.lock()
+        defer { lock.unlock() }
+        seedApplicationsIfNeeded()
+        guard let project = projects.first(where: { $0.id == projectId }), let opening = project.openings.first else { return nil }
+        return envelope(ApplicantBoardDTO(
+            projectName: project.name, pmName: project.pmName, opening: opening, recruitStart: ago(10),
+            recruitEnd: later(3), resultDueDate: later(5), applicants: applicants[projectId, default: []]
+        ))
+    }
+
+    func decide(projectId: Int, applicantId: Int, request: ApplicantDecisionRequestDTO) -> String? {
+        lock.lock()
+        defer { lock.unlock() }
+        seedApplicationsIfNeeded()
+        guard var list = applicants[projectId], let index = list.firstIndex(where: { $0.id == applicantId }) else { return nil }
+        list[index].status = request.decision == "ACCEPT" ? .accepted : .declined
+        list[index].resultReason = request.reason
+        applicants[projectId] = list
+        return envelope(list[index])
+    }
+
     private func members(for project: ProjectSummaryDTO) -> [ProjectDetailDTO.MemberDTO] {
         let people: [(String, String)] = [
             (project.pmName, "PM"), ("오잉", "Design"), ("잉오", "iOS"), ("오이무침", "Web"),

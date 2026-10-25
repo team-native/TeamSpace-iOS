@@ -4,11 +4,14 @@ import SwiftUI
 struct ProjectDetailView: View {
     @State private var viewModel: ProjectDetailViewModel
     private let onNavigate: (AppRoute) -> Void
+    /// PM · Admin — 08-7 지원자 검토 버튼
+    private let canReviewApplicants: Bool
 
     @Environment(\.dismiss) private var dismiss
 
-    init(viewModel: ProjectDetailViewModel, onNavigate: @escaping (AppRoute) -> Void) {
+    init(viewModel: ProjectDetailViewModel, canReviewApplicants: Bool = false, onNavigate: @escaping (AppRoute) -> Void) {
         _viewModel = State(initialValue: viewModel)
+        self.canReviewApplicants = canReviewApplicants
         self.onNavigate = onNavigate
     }
 
@@ -49,6 +52,10 @@ struct ProjectDetailView: View {
             ProjectMembersRow(members: detail.members)
             if let opening = detail.project.openings.first {
                 ProjectOpeningCard(opening: opening)
+                if canReviewApplicants {
+                    Button("지원자 검토 (PM)") { onNavigate(.applicantReview(projectId: detail.project.id)) }
+                        .buttonStyle(.tsSecondary)
+                }
             }
             ProjectRelatedCard(items: detail.relatedItems) { item in
                 switch item.kind {
@@ -64,7 +71,7 @@ struct ProjectDetailView: View {
         if let detail = viewModel.detail {
             Group {
                 if viewModel.canApply {
-                    Button("참여 신청하기") { onNavigate(.comingSoon(title: "참여 신청")) }
+                    Button("참여 신청하기") { onNavigate(.projectRecruitment(id: detail.project.id)) }
                         .buttonStyle(.tsPrimaryLarge)
                 } else if detail.isJoined {
                     Button("프로젝트 일정 보기") { onNavigate(.projectTimeline(id: detail.project.id)) }

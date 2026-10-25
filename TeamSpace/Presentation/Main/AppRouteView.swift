@@ -27,7 +27,7 @@ struct AppRouteView: View {
             workspaceScreen
         case .workspaceProfile, .workspaceSettings, .workspacePermissions:
             accountScreen
-        case .projects, .projectDetail, .projectTimeline:
+        case .projects, .projectDetail, .projectTimeline, .projectRecruitment, .myApplications, .applicantReview:
             projectScreen
         case .comingSoon(let title):
             ComingSoonView(title: title, showsBackButton: true)
@@ -158,7 +158,17 @@ struct AppRouteView: View {
     private var projectScreen: some View {
         switch route {
         case .projectDetail(let id):
-            ProjectDetailView(viewModel: container.makeProjectDetailViewModel(projectId: id), onNavigate: onNavigate)
+            ProjectDetailView(
+                viewModel: container.makeProjectDetailViewModel(projectId: id),
+                canReviewApplicants: user.can(.manageProject),
+                onNavigate: onNavigate
+            )
+        case .projectRecruitment(let id):
+            RecruitmentView(viewModel: container.makeRecruitmentViewModel(projectId: id), onNavigate: onNavigate)
+        case .myApplications:
+            MyApplicationsView(viewModel: container.makeMyApplicationsViewModel(), onNavigate: onNavigate)
+        case .applicantReview(let projectId):
+            ApplicantReviewView(viewModel: container.makeApplicantReviewViewModel(projectId: projectId))
         case .projectTimeline(let id):
             ProjectTimelineView(viewModel: container.makeProjectTimelineViewModel(projectId: id), onNavigate: onNavigate)
         default:
