@@ -7,4 +7,11 @@ enum TSGradient {
         startPoint: .topLeading,
         endPoint: .bottomTrailing
     )
+
+    /// 02-6 알림 미리보기 카드
+    static let notificationPreview = LinearGradient(
+        colors: [Color.tsPreviewStart, Color.tsPreviewEnd],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
 }
