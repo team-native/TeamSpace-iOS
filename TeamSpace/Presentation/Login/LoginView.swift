@@ -6,17 +6,23 @@ struct LoginView: View {
     @State private var passwordResetViewModel: PasswordResetViewModel
     @FocusState private var isEmailFocused: Bool
     @FocusState private var isPasswordFocused: Bool
+    private let entry: NotificationEntry?
+    private let onCancelEntry: () -> Void
     private let onLoginSucceeded: (AuthUser) -> Void
     private let onRequestAccount: () -> Void
 
     init(
         viewModel: LoginViewModel,
         passwordResetViewModel: PasswordResetViewModel,
+        entry: NotificationEntry? = nil,
+        onCancelEntry: @escaping () -> Void = {},
         onLoginSucceeded: @escaping (AuthUser) -> Void = { _ in },
         onRequestAccount: @escaping () -> Void = {}
     ) {
         _viewModel = State(initialValue: viewModel)
         _passwordResetViewModel = State(initialValue: passwordResetViewModel)
+        self.entry = entry
+        self.onCancelEntry = onCancelEntry
         self.onLoginSucceeded = onLoginSucceeded
         self.onRequestAccount = onRequestAccount
     }
@@ -26,7 +32,7 @@ struct LoginView: View {
             VStack(alignment: .leading, spacing: 0) {
                 BrandLogo()
                     .padding(.bottom, Spacing.xxxl + Spacing.md)
-                LoginHeader()
+                header
                     .padding(.bottom, Spacing.xxxl + Spacing.sm)
                 LoginFormSection(
                     viewModel: viewModel,
@@ -35,6 +41,10 @@ struct LoginView: View {
                     onSubmit: submit,
                     onFindPassword: findPassword
                 )
+                if entry != nil {
+                    NotificationEntryFooter(onCancel: onCancelEntry)
+                        .padding(.top, Spacing.xxl)
+                }
             }
             .padding(.horizontal, Spacing.xxl)
             .padding(.top, Spacing.xxl)
@@ -59,6 +69,16 @@ struct LoginView: View {
         .passwordResetAlert(passwordResetViewModel)
         .onChange(of: viewModel.email) { _, _ in viewModel.clearError() }
         .onChange(of: viewModel.password) { _, _ in viewModel.clearError() }
+    }
+
+    /// 알림으로 들어왔으면 02-8 안내, 아니면 01-1 기본 인사
+    @ViewBuilder
+    private var header: some View {
+        if let entry {
+            NotificationEntryHeader(entry: entry)
+        } else {
+            LoginHeader()
+        }
     }
 
     private func submit() {
@@ -100,6 +120,15 @@ private struct LoginHeader: View {
     return LoginView(
         viewModel: container.makeLoginViewModel(),
         passwordResetViewModel: container.makePasswordResetViewModel()
+    )
+}
+
+#Preview("02-8 알림 진입") {
+    let container = DIContainer.preview()
+    return LoginView(
+        viewModel: container.makeLoginViewModel(),
+        passwordResetViewModel: container.makePasswordResetViewModel(),
+        entry: NotificationEntry(type: "APPROVAL", deepLink: "/approvals/12")
     )
 }
 

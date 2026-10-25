@@ -1,48 +1,103 @@
 import SwiftUI
 
-/// 홈 (임시) — 02-1 홈 디자인이 확정되면 교체합니다.
+/// 02-1 홈
 struct HomeView: View {
-    let user: AuthUser
-    let onNavigate: (AppRoute) -> Void
-    let onLogout: () -> Void
+    @State private var viewModel: HomeViewModel
+    private let user: AuthUser
+    private let onNavigate: (AppRoute) -> Void
+    private let onSelectTab: (MainTab) -> Void
+    private let onLogout: () -> Void
 
     @State private var isLogoutConfirmPresented = false
 
+    init(
+        viewModel: HomeViewModel,
+        user: AuthUser,
+        onNavigate: @escaping (AppRoute) -> Void,
+        onSelectTab: @escaping (MainTab) -> Void,
+        onLogout: @escaping () -> Void
+    ) {
+        _viewModel = State(initialValue: viewModel)
+        self.user = user
+        self.onNavigate = onNavigate
+        self.onSelectTab = onSelectTab
+        self.onLogout = onLogout
+    }
+
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: Spacing.xl) {
-                HStack {
-                    BrandLogo()
-                    Spacer()
-                    CircleIconButton(icon: .bell, accessibilityLabel: "알림", background: .tsSurface, hasBorder: true) {
-                        onNavigate(.notificationCenter)
-                    }
-                }
-                VStack(alignment: .leading, spacing: Spacing.xs) {
-                    Text("\(user.name) 님, 반가워요.")
-                        .tsFont(.title2)
-                        .foregroundStyle(Color.tsInk)
-                    Text("홈 화면은 디자인이 확정되면 채워질 예정이에요.")
-                        .tsFont(.callout)
-                        .foregroundStyle(Color.tsInk2)
-                }
-                InfoBanner(message: "알림 · 팀원 · 재무 화면은 다음 이슈에서 하나씩 연결돼요.")
-                Button("로그아웃") { isLogoutConfirmPresented = true }
-                    .buttonStyle(.tsSecondary)
+            VStack(alignment: .leading, spacing: Spacing.md) {
+                HomeHeader(
+                    unreadCount: viewModel.unreadNotificationCount,
+                    onBell: { onNavigate(.notificationCenter) },
+                    onAvatar: { isLogoutConfirmPresented = true }
+                )
+                HomeGreeting(message: viewModel.greeting(for: user.name))
+                    .padding(.vertical, Spacing.sm)
+                content
             }
             .padding(.horizontal, Spacing.screen)
-            .padding(.top, Spacing.lg)
+            .padding(.top, Spacing.sm)
             .padding(.bottom, Spacing.tabBarInset)
         }
         .background(Color.tsBackground.ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)
+        .task { await viewModel.load() }
+        .refreshable { await viewModel.load() }
         .confirmationDialog("로그아웃할까요?", isPresented: $isLogoutConfirmPresented, titleVisibility: .visible) {
             Button("로그아웃", role: .destructive, action: onLogout)
             Button("취소", role: .cancel) {}
         }
     }
+
+    @ViewBuilder
+    private var content: some View {
+        switch viewModel.state {
+        case .idle, .loading:
+            ProgressView()
+                .frame(maxWidth: .infinity, minHeight: 240)
+        case .loaded(let home):
+            HomeSections(
+                home: home,
+                financeMode: $viewModel.financeMode,
+                financeAmount: home.finance.map { viewModel.financeAmount($0) } ?? 0,
+                onNavigate: onNavigate,
+                onSelectTab: onSelectTab
+            )
+        case .empty, .forbidden:
+            InfoBanner(message: "홈 정보를 볼 수 있는 권한이 없어요. 운영진에게 문의해 주세요.", icon: .infoCircle, style: .muted)
+        case .failed(let error):
+            HomeErrorView(message: error.userMessage) {
+                Task { await viewModel.load() }
+            }
+        }
+    }
+}
+
+/// 불러오기 실패 — 재시도 버튼 (컨벤션: 오류 화면 재시도 제공)
+private struct HomeErrorView: View {
+    let message: String
+    let onRetry: () -> Void
+
+    var body: some View {
+        VStack(spacing: Spacing.md) {
+            Text(message)
+                .tsFont(.footnote)
+                .foregroundStyle(Color.tsInk2)
+                .multilineTextAlignment(.center)
+            Button("다시 시도", action: onRetry)
+                .buttonStyle(.ts(.soft, size: .small, fullWidth: false))
+        }
+        .frame(maxWidth: .infinity, minHeight: 200)
+    }
 }
 
 #Preview {
-    HomeView(user: AuthUser(id: 1, name: "홍길동", roles: [.member]), onNavigate: { _ in }, onLogout: {})
+    HomeView(
+        viewModel: DIContainer.preview().makeHomeViewModel(),
+        user: AuthUser(id: 1, name: "옥물결", roles: [.member]),
+        onNavigate: { _ in },
+        onSelectTab: { _ in },
+        onLogout: {}
+    )
 }

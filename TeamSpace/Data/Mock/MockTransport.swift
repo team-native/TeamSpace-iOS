@@ -7,6 +7,8 @@ import Foundation
 /// - GET /users/me: Authorization 헤더가 없으면 401
 /// - GET /notifications · PATCH /notifications/{id}/read: 읽음 상태를 메모리에 기억
 /// - 계정 요청: 이메일이 `taken@` 으로 시작하면 409 (이미 요청됨)
+/// - GET /users · /users/{id} · /organization/tree: Figma 03 팀원 예시 (MockMemberFixture)
+/// - GET /dashboard/home: Figma 02-1 홈 예시 (MockDashboardFixture)
 /// - POST /notifications/push-token: Authorization 헤더가 없으면 401
 struct MockTransport: HTTPTransport {
     static let baseURL = URL(fileURLWithPath: "/mock-api")
@@ -18,6 +20,9 @@ struct MockTransport: HTTPTransport {
     func send(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
         try await Task.sleep(nanoseconds: latencyNanoseconds)
         let path = request.url?.lastPathComponent ?? ""
+        if let response = try memberRoute(request, path: path) {
+            return response
+        }
         switch (request.httpMethod, path) {
         case ("POST", "login"):
             return try login(request)
@@ -29,6 +34,8 @@ struct MockTransport: HTTPTransport {
             return try markRead(request)
         case ("GET", "me"):
             return try me(request)
+        case ("GET", "home"):
+            return try respond(request, status: 200, json: MockDashboardFixture.json())
         case ("POST", "push-token"):
             return try pushToken(request)
         case ("POST", "password-reset"):
@@ -70,6 +77,26 @@ struct MockTransport: HTTPTransport {
             return try respond(request, status: 404, json: #"{"code":404,"message":"해당 알림을 찾을 수 없습니다."}"#)
         }
         return try respond(request, status: 200, json: #"{"code":200,"message":"읽음 처리 완료","data":{"success":true,"updatedId":\#(id)}}"#)
+    }
+
+    /// 03 팀원 — GET /users, /users/{id}, /organization/tree
+    private func memberRoute(_ request: URLRequest, path: String) throws -> (Data, HTTPURLResponse)? {
+        guard request.httpMethod == "GET" else { return nil }
+        let parent = request.url?.deletingLastPathComponent().lastPathComponent
+        let body: Data?
+        if path == "users" {
+            body = MockMemberFixture.list()
+        } else if parent == "users", let id = Int(path) {
+            body = MockMemberFixture.detail(id: id)
+        } else if parent == "organization", path == "tree" {
+            body = MockMemberFixture.tree()
+        } else {
+            return nil
+        }
+        guard let body else {
+            return try respond(request, status: 404, json: #"{"code":404,"message":"해당 팀원을 찾을 수 없습니다."}"#)
+        }
+        return try respond(request, status: 200, json: String(decoding: body, as: UTF8.self))
     }
 
     private func pushToken(_ request: URLRequest) throws -> (Data, HTTPURLResponse) {
@@ -146,7 +173,7 @@ private struct MockAccountRequestData: Encodable {
     let requestedAt: String
 }
 
-/// Mock 알림 — Figma 02-2 알림 센터 예시 내용
+/// Mock 알림 — Figma 02-2 · 02-3 · 02-4 알림 센터 예시 내용
 private final class MockNotificationStore: @unchecked Sendable {
     struct Item: Encodable {
         let id: Int
@@ -156,6 +183,7 @@ private final class MockNotificationStore: @unchecked Sendable {
         let deepLink: String?
         var isRead: Bool
         let createdAt: String
+        var effectiveAt: String?
     }
 
     private let lock = NSLock()
@@ -164,6 +192,7 @@ private final class MockNotificationStore: @unchecked Sendable {
     init(now: Date = Date()) {
         let formatter = ISO8601DateFormatter()
         func ago(_ seconds: TimeInterval) -> String { formatter.string(from: now.addingTimeInterval(-seconds)) }
+        func later(days: Double) -> String { formatter.string(from: now.addingTimeInterval(days * 86_400)) }
         storage = [
             Item(id: 101, type: "APPROVAL", title: "새 결재 요청이 도착했어요",
                  message: "이시우 님이 Book-on 프로젝트 인력 지원(iOS 1명)을 요청했어요.",
@@ -174,9 +203,15 @@ private final class MockNotificationStore: @unchecked Sendable {
             Item(id: 103, type: "SCHEDULE", title: "디자인 리뷰 시간이 바뀌었어요",
                  message: "10월 14일(화) 14:00 → 15:00 · 온라인",
                  deepLink: nil, isRead: false, createdAt: ago(2 * 3_600)),
+            Item(id: 107, type: "INQUIRY_ANSWER", title: "내 문의에 답변이 도착했어요",
+                 message: "활동 보고서 제출 기한은 다음 주 금요일까지 연장했어요. 자세한 내용은 공식 답변을 확인해 주세요.",
+                 deepLink: "/inquiries/42", isRead: false, createdAt: ago(3 * 3_600)),
             Item(id: 104, type: "RULE", title: "프로젝트 운영 원칙이 개정됐어요",
-                 message: "시행 10월 20일 · NativeOps · 변경 3건",
-                 deepLink: "/rules/3", isRead: true, createdAt: ago(3 * 86_400)),
+                 message: "제안 검토 기한이 3주에서 2주로 바뀌어요. 시행 전에 달라진 조항을 확인해 주세요!",
+                 deepLink: "/rules/3", isRead: false, createdAt: ago(1 * 86_400), effectiveAt: later(days: 5)),
+            Item(id: 108, type: "RULE", title: "프로젝트 문서 분류 안내",
+                 message: "문서 분류 기준이 정리됐어요.",
+                 deepLink: "/rules/4", isRead: true, createdAt: ago(6 * 86_400), effectiveAt: ago(2 * 86_400)),
             Item(id: 105, type: "NOTICE", title: "10월 정기 회의 장소 안내",
                  message: "이번 달 회의는 4층 홈베이스에서 진행해요.",
                  deepLink: "/posts/77", isRead: true, createdAt: ago(4 * 86_400)),
