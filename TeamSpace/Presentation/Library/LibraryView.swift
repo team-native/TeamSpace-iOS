@@ -15,7 +15,7 @@ struct LibraryView: View {
             VStack(alignment: .leading, spacing: Spacing.lg) {
                 LibraryHeader()
                     .padding(.top, Spacing.sm)
-                Button { onNavigate(.comingSoon(title: "문서 검색")) } label: {
+                Button { onNavigate(.librarySearch) } label: {
                     LibrarySearchBar()
                 }
                 .buttonStyle(.plain)
@@ -58,7 +58,7 @@ struct LibraryView: View {
     }
 
     private func open(_ document: LibraryDocument) {
-        onNavigate(.comingSoon(title: document.title))
+        onNavigate(document.route)
     }
 }
 

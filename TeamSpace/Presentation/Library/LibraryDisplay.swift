@@ -56,6 +56,13 @@ enum LibraryFilter: String, CaseIterable, Identifiable, Hashable {
     }
 }
 
+extension LibraryDocument {
+    /// 문서를 눌렀을 때 갈 화면 (09 규칙 상세를 만들기 전까지 준비 중 화면)
+    var route: AppRoute {
+        .comingSoon(title: title)
+    }
+}
+
 extension LibraryRevision {
     /// "프로젝트 운영 원칙 · 10월 20일 시행"
     var bannerText: String {

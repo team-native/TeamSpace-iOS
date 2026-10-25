@@ -12,7 +12,7 @@ import Foundation
 /// - GET /approvals/~: Figma 05 결재 예시 (MockApprovalStore, 처리 결과를 메모리에 기억)
 /// - GET /finance/~: Figma 04 재무 예시 (MockFinanceFixture)
 /// - GET /dashboard/home: Figma 02-1 홈 예시 (MockDashboardFixture)
-/// - GET /library: Figma 06 문서함 예시 (MockLibraryFixture)
+/// - GET /library · /library/search: Figma 06 문서함 예시 (MockLibraryFixture)
 /// - POST /notifications/push-token: Authorization 헤더가 없으면 401
 struct MockTransport: HTTPTransport {
     static let baseURL = URL(fileURLWithPath: "/mock-api")
@@ -160,12 +160,20 @@ struct MockTransport: HTTPTransport {
         }
     }
 
-    /// 06 문서함 — GET /library
+    /// 06 문서함 — GET /library · /library/search
     private func libraryRoute(_ request: URLRequest, path: String) throws -> (Data, HTTPURLResponse)? {
-        guard request.httpMethod == "GET", request.url?.pathComponents.contains("library") == true else { return nil }
+        guard
+            request.httpMethod == "GET",
+            let url = request.url,
+            url.pathComponents.contains("library")
+        else { return nil }
         switch path {
         case "library":
             return try respond(request, status: 200, json: MockLibraryFixture.library())
+        case "search":
+            let keyword = URLComponents(url: url, resolvingAgainstBaseURL: false)?
+                .queryItems?.first { $0.name == "keyword" }?.value ?? ""
+            return try respond(request, status: 200, json: MockLibraryFixture.search(keyword: keyword))
         default:
             return nil
         }

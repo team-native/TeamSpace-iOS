@@ -11,6 +11,11 @@ struct LibraryResponseDTO: Decodable {
     }
 }
 
+/// GET /library/search 응답의 `data` (06-2)
+struct LibrarySearchResponseDTO: Decodable {
+    let list: [LibraryDocumentDTO]
+}
+
 struct LibraryDocumentDTO: Decodable {
     let id: Int
     let category: LibraryCategory

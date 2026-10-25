@@ -13,6 +13,9 @@ enum MockLibraryFixture {
         let daysAgo: Double
     }
 
+    /// Figma 06-2 최근 검색어 (처음 실행할 때만)
+    static let recentKeywords = ["수금", "품의서", "회의"]
+
     static let items: [Item] = [
         Item(id: 1, category: "RULE", title: "Native 프로젝트 운영 원칙", summary: "아이디어 제안부터 출시까지의 기준",
              body: "제안 · 검토 · 개발 · 출시 단계별로 지켜야 할 기준", daysAgo: 5),
@@ -51,6 +54,36 @@ enum MockLibraryFixture {
         {"code":200,"message":"조회 성공","data":{"list":[\(list)],\
         "latestRevision":{"documentId":1,"title":"프로젝트 운영 원칙","effectiveAt":"\(date(5))"}}}
         """
+    }
+
+    /// GET /library/search — 제목 · 요약 · 본문에 검색어가 있는 문서 (최근 수정 순)
+    static func search(keyword: String, now: Date = Date()) -> String {
+        let formatter = ISO8601DateFormatter()
+        let trimmed = keyword.trimmingCharacters(in: .whitespacesAndNewlines)
+        let matched = trimmed.isEmpty ? [] : items.filter {
+            $0.title.contains(trimmed) || $0.summary.contains(trimmed) || $0.body.contains(trimmed)
+        }
+        let list = matched
+            .sorted { $0.daysAgo < $1.daysAgo }
+            .map { item in
+                let date = formatter.string(from: now.addingTimeInterval(-item.daysAgo * 86_400))
+                return documentJSON(item, excerpt: excerpt(of: item.body, keyword: trimmed), date: date)
+            }
+            .joined(separator: ",")
+        return #"{"code":200,"message":"조회 성공","data":{"list":[\#(list)]}}"#
+    }
+
+    /// 본문에서 검색어 앞 네 글자(단어 처음)부터 잘라요. 검색어가 앞쪽에 있으면 본문 그대로. ("…배분과 정산 방식을 정리해요")
+    static func excerpt(of body: String, keyword: String) -> String? {
+        guard let range = body.range(of: keyword) else { return nil }
+        let offset = body.distance(from: body.startIndex, to: range.lowerBound)
+        guard offset > 10 else { return body }
+        var start = body.index(range.lowerBound, offsetBy: -4)
+        // 단어 중간에서 잘리지 않게 앞 단어의 처음까지 넓혀요.
+        while start > body.startIndex, body[body.index(before: start)] != " " {
+            start = body.index(before: start)
+        }
+        return "…" + String(body[start...])
     }
 
     static func documentJSON(_ item: Item, excerpt: String?, date: String) -> String {

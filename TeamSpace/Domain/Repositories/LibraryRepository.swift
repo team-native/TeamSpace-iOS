@@ -5,4 +5,6 @@ import Foundation
 protocol LibraryRepository: Sendable {
     /// GET /library — 문서 목록 + 최근 개정된 규칙
     func fetchLibrary() async throws -> LibraryOverview
+    /// GET /library/search?keyword= — 제목 · 요약 · 본문에서 검색. 본문 일부(excerpt)를 함께 돌려줘요.
+    func searchLibrary(keyword: String) async throws -> [LibraryDocument]
 }
