@@ -12,6 +12,7 @@ final class DIContainer {
     private let memberRepository: MemberRepository
     private let financeRepository: FinanceRepository
     private let approvalRepository: ApprovalRepository
+    private let libraryRepository: LibraryRepository
 
     init(
         apiClient: APIClient,
@@ -29,6 +30,7 @@ final class DIContainer {
         self.memberRepository = MemberRepositoryImpl(client: apiClient)
         self.financeRepository = FinanceRepositoryImpl(client: apiClient)
         self.approvalRepository = ApprovalRepositoryImpl(client: apiClient)
+        self.libraryRepository = LibraryRepositoryImpl(client: apiClient)
     }
 
     /// xcconfig 의 USE_MOCK_API / API_BASE_URL 에 따라 실서버 또는 Mock 서버를 씁니다.
@@ -168,6 +170,10 @@ final class DIContainer {
     var submitDocumentUseCase: SubmitDocumentUseCase {
         SubmitDocumentUseCase(approvalRepository: approvalRepository)
     }
+
+    var fetchLibraryUseCase: FetchLibraryUseCase {
+        FetchLibraryUseCase(libraryRepository: libraryRepository)
+    }
 }
 
 @MainActor
@@ -285,5 +291,9 @@ extension DIContainer {
 
     func makeRequestFormViewModel(kind: RequestFormKind) -> RequestFormViewModel {
         RequestFormViewModel(kind: kind, submitDocumentUseCase: submitDocumentUseCase)
+    }
+
+    func makeLibraryViewModel() -> LibraryViewModel {
+        LibraryViewModel(fetchLibraryUseCase: fetchLibraryUseCase)
     }
 }

@@ -14,6 +14,8 @@ enum TSIcon: String {
     case users = "person.2"
     case plus = "plus"
     case close = "xmark"
+    case sparkles = "sparkles"
+    case pencil = "pencil"
     // 02 알림 — Figma 원본 SVG
     case clipboard = "ic-clipboard"
     case creditCard = "ic-credit-card"

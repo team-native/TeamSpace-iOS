@@ -62,7 +62,9 @@ struct MainTabView: View {
             )
         case .approval:
             ApprovalListView(viewModel: container.makeApprovalListViewModel(), onNavigate: { push($0, in: .approval) })
-        case .documents, .workspace:
+        case .documents:
+            LibraryView(viewModel: container.makeLibraryViewModel(), onNavigate: { push($0, in: .documents) })
+        case .workspace:
             ComingSoonView(title: tab.title, showsBackButton: false)
         }
     }
