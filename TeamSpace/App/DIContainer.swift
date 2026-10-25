@@ -8,6 +8,7 @@ final class DIContainer {
     private let notificationSettingsRepository: NotificationSettingsRepository
     private let notificationPermissionRepository: NotificationPermissionRepository
     private let pushTokenRepository: PushTokenRepository
+    private let dashboardRepository: DashboardRepository
 
     init(
         apiClient: APIClient,
@@ -21,6 +22,7 @@ final class DIContainer {
         self.notificationSettingsRepository = notificationSettingsRepository
         self.notificationPermissionRepository = notificationPermissionRepository
         self.pushTokenRepository = PushTokenRepositoryImpl(client: apiClient)
+        self.dashboardRepository = DashboardRepositoryImpl(client: apiClient)
     }
 
     /// xcconfig 의 USE_MOCK_API / API_BASE_URL 에 따라 실서버 또는 Mock 서버를 씁니다.
@@ -100,6 +102,10 @@ final class DIContainer {
     var registerPushTokenUseCase: RegisterPushTokenUseCase {
         RegisterPushTokenUseCase(pushTokenRepository: pushTokenRepository)
     }
+
+    var fetchDashboardHomeUseCase: FetchDashboardHomeUseCase {
+        FetchDashboardHomeUseCase(dashboardRepository: dashboardRepository)
+    }
 }
 
 @MainActor
@@ -148,5 +154,9 @@ extension DIContainer {
             fetchSettingsUseCase: fetchNotificationSettingsUseCase,
             checkPermissionUseCase: checkNotificationPermissionUseCase
         )
+    }
+
+    func makeHomeViewModel() -> HomeViewModel {
+        HomeViewModel(fetchDashboardHomeUseCase: fetchDashboardHomeUseCase)
     }
 }

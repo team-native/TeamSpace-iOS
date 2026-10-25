@@ -36,7 +36,13 @@ struct MainTabView: View {
     private func rootView(for tab: MainTab) -> some View {
         switch tab {
         case .home:
-            HomeView(user: user, onNavigate: { push($0, in: .home) }, onLogout: onLogout)
+            HomeView(
+                viewModel: container.makeHomeViewModel(),
+                user: user,
+                onNavigate: { push($0, in: .home) },
+                onSelectTab: { selectedTab = $0 },
+                onLogout: onLogout
+            )
         case .finance, .approval, .documents, .workspace:
             ComingSoonView(title: tab.title, showsBackButton: false)
         }

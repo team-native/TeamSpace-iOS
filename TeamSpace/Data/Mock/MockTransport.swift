@@ -7,6 +7,7 @@ import Foundation
 /// - GET /users/me: Authorization 헤더가 없으면 401
 /// - GET /notifications · PATCH /notifications/{id}/read: 읽음 상태를 메모리에 기억
 /// - 계정 요청: 이메일이 `taken@` 으로 시작하면 409 (이미 요청됨)
+/// - GET /dashboard/home: Figma 02-1 홈 예시 (MockDashboardFixture)
 /// - POST /notifications/push-token: Authorization 헤더가 없으면 401
 struct MockTransport: HTTPTransport {
     static let baseURL = URL(fileURLWithPath: "/mock-api")
@@ -29,6 +30,8 @@ struct MockTransport: HTTPTransport {
             return try markRead(request)
         case ("GET", "me"):
             return try me(request)
+        case ("GET", "home"):
+            return try respond(request, status: 200, json: MockDashboardFixture.json())
         case ("POST", "push-token"):
             return try pushToken(request)
         case ("POST", "password-reset"):
