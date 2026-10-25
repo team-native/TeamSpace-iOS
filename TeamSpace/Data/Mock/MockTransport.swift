@@ -18,6 +18,7 @@ import Foundation
 /// - GET · POST /workspace/todos · PATCH /workspace/todos/{id}: Figma 07-2 (MockTodoStore, 메모리에 기억)
 /// - /workspace/schedules/~: Figma 07-7 ~ 07-9 (MockScheduleStore, 참석 응답 · 리마인더 기억)
 /// - GET /workspace/activity · posts · proposals: Figma 07-10 ~ 07-12 (MockActivityFixture)
+/// - GET · PATCH /workspace/profile: Figma 07-13 (MockProfileStore, 저장 내용 기억)
 /// - POST /notifications/push-token: Authorization 헤더가 없으면 401
 struct MockTransport: HTTPTransport {
     static let baseURL = URL(fileURLWithPath: "/mock-api")
@@ -31,6 +32,7 @@ struct MockTransport: HTTPTransport {
     private let approvalStore = MockApprovalStore()
     private let todoStore = MockTodoStore()
     private let scheduleStore = MockScheduleStore()
+    private let profileStore = MockProfileStore()
 
     func send(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
         try await Task.sleep(nanoseconds: latencyNanoseconds)
@@ -216,6 +218,16 @@ struct MockTransport: HTTPTransport {
                 return try respond(request, status: 404, json: Self.scheduleNotFound)
             }
             return try respond(request, status: 200, json: json)
+        case ("GET", "profile"):
+            return try respond(request, status: 200, json: profileStore.json())
+        case ("PATCH", "profile"):
+            guard
+                let body = request.httpBody,
+                let dto = try? JSONCoder.makeDecoder().decode(ProfileUpdateRequestDTO.self, from: body)
+            else {
+                return try respond(request, status: 400, json: #"{"code":400,"message":"잘못된 요청입니다."}"#)
+            }
+            return try respond(request, status: 200, json: profileStore.update(dto))
         case ("GET", "activity"):
             let unread = notificationStore.items().filter { !$0.isRead }.count
             let submitted = approvalStore.items(mine: true).filter { $0.status != "DRAFT" }.count

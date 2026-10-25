@@ -37,6 +37,9 @@ enum AppRoute: Hashable {
     case workspaceMyPosts                // 07-10 내가 쓴 게시글 · 댓글
     case workspaceMyProposals            // 07-11 내가 작성한 운영 제안
     case workspaceActivity               // 07-12 내 활동
+    case workspaceProfile                // 07-13 프로필 편집 (07-16 미모티콘 바꾸기)
+    case workspaceSettings               // 07-14 설정 (07-17 로그아웃 확인)
+    case workspacePermissions            // 07-15 내 권한 · 접근 범위
     // 아직 만들지 않은 화면
     case comingSoon(title: String)
 }

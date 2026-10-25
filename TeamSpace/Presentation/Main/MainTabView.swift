@@ -16,7 +16,13 @@ struct MainTabView: View {
                 NavigationStack(path: pathBinding(for: tab)) {
                     rootView(for: tab)
                         .navigationDestination(for: AppRoute.self) { route in
-                            AppRouteView(route: route, container: container, user: user, onNavigate: { push($0, in: tab) })
+                            AppRouteView(
+                                route: route,
+                                container: container,
+                                user: user,
+                                onNavigate: { push($0, in: tab) },
+                                onLogout: onLogout
+                            )
                         }
                 }
                 .toolbar(.hidden, for: .tabBar)

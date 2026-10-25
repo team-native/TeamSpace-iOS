@@ -18,7 +18,7 @@ struct WorkspaceHomeView: View {
                 WorkspaceProfileCard(
                     user: viewModel.user,
                     affiliation: viewModel.state.value?.affiliation,
-                    onEdit: { onNavigate(.comingSoon(title: "프로필 편집")) }
+                    onEdit: { onNavigate(.workspaceProfile) }
                 )
                 ScreenTitle(title: viewModel.greeting, subtitle: viewModel.dateLine())
                 content
@@ -28,7 +28,7 @@ struct WorkspaceHomeView: View {
             .padding(.bottom, Spacing.xxxl)
         }
         .safeAreaInset(edge: .top, spacing: 0) {
-            WorkspaceTopBar(onBack: { dismiss() }, onMenu: { onNavigate(.comingSoon(title: "설정")) })
+            WorkspaceTopBar(onBack: { dismiss() }, onMenu: { onNavigate(.workspaceSettings) })
         }
         .background(Color.tsBackground.ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)
@@ -68,7 +68,7 @@ private struct WorkspaceHomeCards: View {
             onReview: { onNavigate(.approvalDetail(documentId: $0)) },
             onSubmitted: { onNavigate(.workspaceDocuments) }
         )
-        WorkspaceProjectsCard(projects: home.projects, onOpen: { onNavigate(.comingSoon(title: "참여 프로젝트")) })
+        WorkspaceProjectsCard(projects: home.projects, onOpen: { onNavigate(.workspaceProjects) })
         WorkspaceSchedulesCard(schedules: schedules, onOpen: { onNavigate(.workspaceSchedules) })
         WorkspaceRecordsCard(records: home.records, onOpen: onNavigate)
         WorkspaceNote()

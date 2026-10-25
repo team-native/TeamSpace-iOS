@@ -8,6 +8,8 @@ struct AppRouteView: View {
     /// 권한에 따라 화면이 달라지는 곳(04 재무)과 내 이름이 필요한 곳(07 내 공간)에서 사용
     let user: AuthUser
     let onNavigate: (AppRoute) -> Void
+    /// 07-17 로그아웃
+    var onLogout: () -> Void = {}
 
     var body: some View {
         switch route {
@@ -23,6 +25,8 @@ struct AppRouteView: View {
         case .workspaceDashboard, .workspaceTodos, .workspaceDocuments, .workspaceDrafts, .workspaceProjects,
              .workspaceSchedules, .workspaceScheduleDetail, .workspaceMyPosts, .workspaceMyProposals, .workspaceActivity:
             workspaceScreen
+        case .workspaceProfile, .workspaceSettings, .workspacePermissions:
+            accountScreen
         case .comingSoon(let title):
             ComingSoonView(title: title, showsBackButton: true)
         }
@@ -131,6 +135,19 @@ struct AppRouteView: View {
             WorkspaceProjectsView(viewModel: container.makeWorkspaceProjectsViewModel(), onNavigate: onNavigate)
         default:
             WorkspaceHomeView(viewModel: container.makeWorkspaceHomeViewModel(user: user), onNavigate: onNavigate)
+        }
+    }
+
+    /// 07-13 ~ 07-17 프로필 · 설정 · 권한
+    @ViewBuilder
+    private var accountScreen: some View {
+        switch route {
+        case .workspaceProfile:
+            ProfileEditView(viewModel: container.makeProfileEditViewModel())
+        case .workspacePermissions:
+            PermissionsView(viewModel: container.makePermissionsViewModel(user: user), onNavigate: onNavigate)
+        default:
+            SettingsView(user: user, onNavigate: onNavigate, onLogout: onLogout)
         }
     }
 }

@@ -74,6 +74,15 @@ final class WorkspaceRepositoryImpl: WorkspaceRepository, @unchecked Sendable {
         try await request(Endpoint(method: .get, path: "workspace/proposals"), as: MyProposalListResponseDTO.self).toEntity()
     }
 
+    func fetchProfile() async throws -> MyProfile {
+        try await request(Endpoint(method: .get, path: "workspace/profile"), as: MyProfileDTO.self).toEntity()
+    }
+
+    func updateProfile(_ update: ProfileUpdate) async throws -> MyProfile {
+        let endpoint = Endpoint(method: .patch, path: "workspace/profile", body: ProfileUpdateRequestDTO(update))
+        return try await request(endpoint, as: MyProfileDTO.self).toEntity()
+    }
+
     func fetchTodos() async throws -> [TodoItem] {
         try await request(Endpoint(method: .get, path: "workspace/todos"), as: TodoListResponseDTO.self)
             .list.map { $0.toEntity() }

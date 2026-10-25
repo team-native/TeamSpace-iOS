@@ -65,7 +65,7 @@ struct FinanceAccessView: View {
 
     private var actions: some View {
         VStack(spacing: Spacing.sm) {
-            Button("공개 범위 · 내 권한 확인") { onNavigate(.comingSoon(title: "내 권한 · 접근 범위")) }
+            Button("공개 범위 · 내 권한 확인") { onNavigate(.workspacePermissions) }
                 .buttonStyle(.ts(.secondary, size: .medium))
             if viewModel.canRequestAccess {
                 Button("FA에 접근 권한 문의") { onNavigate(.comingSoon(title: "문의 · 건의")) }

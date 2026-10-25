@@ -329,4 +329,54 @@ final class WorkspaceTests: XCTestCase {
         XCTAssertEqual(viewModel.proposals.map(\.title), ["집중 업무 시간을 캘린더에 표시해요"])
         XCTAssertEqual(viewModel.proposals.first?.linkTitle, "운영 답변 확인")
     }
+
+    // MARK: 07-13 ~ 07-17 프로필 · 설정 · 권한
+
+    func testProfileEditAndSave() async {
+        let container = makeContainer()
+        let viewModel = container.makeProfileEditViewModel()
+        await viewModel.load()
+
+        XCTAssertEqual(viewModel.profile?.affiliation, "Native · Design")
+        XCTAssertEqual(viewModel.interests, ["UI", "타이포"])
+        XCTAssertFalse(viewModel.hasChanges, "처음에는 저장할 게 없어요")
+
+        viewModel.newInterest = " #모션 "
+        viewModel.addInterest()
+        XCTAssertEqual(viewModel.interests, ["UI", "타이포", "모션"], "# 과 공백은 빼고 저장")
+
+        viewModel.newInterest = "UI"
+        viewModel.addInterest()
+        XCTAssertEqual(viewModel.errorMessage, "이미 추가한 관심사예요.")
+
+        viewModel.intro = "  디자인 시스템 좋아해요  "
+        viewModel.changeBackground()
+        XCTAssertEqual(viewModel.avatarBackground, .blue)
+        await viewModel.save()
+
+        let reloaded = container.makeProfileEditViewModel()
+        await reloaded.load()
+        XCTAssertEqual(reloaded.profile?.intro, "디자인 시스템 좋아해요", "저장한 내용이 다시 불러와져요")
+        XCTAssertEqual(reloaded.profile?.avatarBackground, .blue)
+        XCTAssertEqual(reloaded.interests.count, 3)
+    }
+
+    func testProfileValidation() {
+        XCTAssertThrowsError(try UpdateProfileUseCase.normalizedInterest("열한글자가넘는관심사입니다", existing: []))
+        XCTAssertThrowsError(try UpdateProfileUseCase.normalizedInterest("새것", existing: ["a", "b", "c", "d", "e"]))
+        XCTAssertEqual(AvatarBackground.pink.next, .gray, "마지막 색 다음은 처음 색")
+    }
+
+    func testPermissionsTexts() {
+        let member = AuthUser(id: 1, name: "옥물결", roles: [.member])
+        XCTAssertEqual(member.roleTitle, "구성원")
+        XCTAssertEqual(member.extraPermissionText, "없음")
+        XCTAssertEqual(member.allowedFeatures.count, 6)
+
+        let pm = AuthUser(id: 2, name: "이시우", roles: [.member, .pm])
+        XCTAssertEqual(pm.roleTitle, "PM")
+        XCTAssertEqual(pm.extraPermissionText, "결재 · 프로젝트 관리")
+        XCTAssertEqual(AppAppearance.system.colorScheme, nil)
+        XCTAssertEqual(AppAppearance.dark.colorScheme, .dark)
+    }
 }

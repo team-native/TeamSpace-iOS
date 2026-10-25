@@ -242,6 +242,14 @@ final class DIContainer {
         FetchMyProposalsUseCase(workspaceRepository: workspaceRepository)
     }
 
+    var fetchProfileUseCase: FetchProfileUseCase {
+        FetchProfileUseCase(workspaceRepository: workspaceRepository)
+    }
+
+    var updateProfileUseCase: UpdateProfileUseCase {
+        UpdateProfileUseCase(workspaceRepository: workspaceRepository)
+    }
+
     var fetchTodosUseCase: FetchTodosUseCase {
         FetchTodosUseCase(workspaceRepository: workspaceRepository)
     }
@@ -446,5 +454,13 @@ extension DIContainer {
 
     func makeMyProposalsViewModel(userName: String) -> MyProposalsViewModel {
         MyProposalsViewModel(userName: userName, fetchMyProposalsUseCase: fetchMyProposalsUseCase)
+    }
+
+    func makeProfileEditViewModel() -> ProfileEditViewModel {
+        ProfileEditViewModel(fetchProfileUseCase: fetchProfileUseCase, updateProfileUseCase: updateProfileUseCase)
+    }
+
+    func makePermissionsViewModel(user: AuthUser) -> PermissionsViewModel {
+        PermissionsViewModel(user: user, fetchProfileUseCase: fetchProfileUseCase)
     }
 }

@@ -26,7 +26,7 @@ struct WorkspaceMenuView: View {
                         .accessibilityAddTraits(.isHeader)
                     Spacer()
                     CircleIconButton(icon: .settings, accessibilityLabel: "설정", background: .tsSurface, hasBorder: true) {
-                        onNavigate(.comingSoon(title: "설정"))
+                        onNavigate(.workspaceSettings)
                     }
                 }
                 .frame(height: 44)
@@ -34,7 +34,7 @@ struct WorkspaceMenuView: View {
                 WorkspaceMenuProfileCard(
                     name: viewModel.user.name,
                     affiliation: viewModel.affiliation,
-                    onEdit: { onNavigate(.comingSoon(title: "프로필 편집")) }
+                    onEdit: { onNavigate(.workspaceProfile) }
                 )
                 ReceivedApprovalCard(
                     count: viewModel.waitingApprovals.count,
