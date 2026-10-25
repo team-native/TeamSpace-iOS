@@ -14,6 +14,7 @@ final class DIContainer {
     private let approvalRepository: ApprovalRepository
     private let libraryRepository: LibraryRepository
     private let recentSearchRepository: RecentSearchRepository
+    private let workspaceRepository: WorkspaceRepository
 
     init(
         apiClient: APIClient,
@@ -34,6 +35,7 @@ final class DIContainer {
         self.approvalRepository = ApprovalRepositoryImpl(client: apiClient)
         self.libraryRepository = LibraryRepositoryImpl(client: apiClient)
         self.recentSearchRepository = recentSearchRepository
+        self.workspaceRepository = WorkspaceRepositoryImpl(client: apiClient)
     }
 
     /// xcconfig 의 USE_MOCK_API / API_BASE_URL 에 따라 실서버 또는 Mock 서버를 씁니다.
@@ -195,6 +197,70 @@ final class DIContainer {
     var recentSearchUseCase: RecentSearchUseCase {
         RecentSearchUseCase(recentSearchRepository: recentSearchRepository)
     }
+
+    var fetchWorkspaceHomeUseCase: FetchWorkspaceHomeUseCase {
+        FetchWorkspaceHomeUseCase(workspaceRepository: workspaceRepository)
+    }
+
+    var fetchJoinedProjectsUseCase: FetchJoinedProjectsUseCase {
+        FetchJoinedProjectsUseCase(workspaceRepository: workspaceRepository)
+    }
+
+    var fetchMyDocumentsUseCase: FetchMyDocumentsUseCase {
+        FetchMyDocumentsUseCase(workspaceRepository: workspaceRepository)
+    }
+
+    var deleteDraftUseCase: DeleteDraftUseCase {
+        DeleteDraftUseCase(workspaceRepository: workspaceRepository)
+    }
+
+    var fetchSchedulesUseCase: FetchSchedulesUseCase {
+        FetchSchedulesUseCase(workspaceRepository: workspaceRepository)
+    }
+
+    var fetchScheduleDetailUseCase: FetchScheduleDetailUseCase {
+        FetchScheduleDetailUseCase(workspaceRepository: workspaceRepository)
+    }
+
+    var respondScheduleUseCase: RespondScheduleUseCase {
+        RespondScheduleUseCase(workspaceRepository: workspaceRepository)
+    }
+
+    var updateRemindersUseCase: UpdateRemindersUseCase {
+        UpdateRemindersUseCase(workspaceRepository: workspaceRepository)
+    }
+
+    var fetchActivitySummaryUseCase: FetchActivitySummaryUseCase {
+        FetchActivitySummaryUseCase(workspaceRepository: workspaceRepository)
+    }
+
+    var fetchMyPostsUseCase: FetchMyPostsUseCase {
+        FetchMyPostsUseCase(workspaceRepository: workspaceRepository)
+    }
+
+    var fetchMyProposalsUseCase: FetchMyProposalsUseCase {
+        FetchMyProposalsUseCase(workspaceRepository: workspaceRepository)
+    }
+
+    var fetchProfileUseCase: FetchProfileUseCase {
+        FetchProfileUseCase(workspaceRepository: workspaceRepository)
+    }
+
+    var updateProfileUseCase: UpdateProfileUseCase {
+        UpdateProfileUseCase(workspaceRepository: workspaceRepository)
+    }
+
+    var fetchTodosUseCase: FetchTodosUseCase {
+        FetchTodosUseCase(workspaceRepository: workspaceRepository)
+    }
+
+    var toggleTodoUseCase: ToggleTodoUseCase {
+        ToggleTodoUseCase(workspaceRepository: workspaceRepository)
+    }
+
+    var addTodoUseCase: AddTodoUseCase {
+        AddTodoUseCase(workspaceRepository: workspaceRepository)
+    }
 }
 
 @MainActor
@@ -327,5 +393,74 @@ extension DIContainer {
             templateId: templateId,
             fetchTemplateUseCase: FetchLibraryTemplateUseCase(libraryRepository: libraryRepository)
         )
+    }
+
+    func makeWorkspaceHomeViewModel(user: AuthUser) -> WorkspaceHomeViewModel {
+        WorkspaceHomeViewModel(user: user, fetchWorkspaceHomeUseCase: fetchWorkspaceHomeUseCase)
+    }
+
+    func makeTodoListViewModel(userName: String) -> TodoListViewModel {
+        TodoListViewModel(
+            userName: userName,
+            fetchTodosUseCase: fetchTodosUseCase,
+            toggleTodoUseCase: toggleTodoUseCase,
+            addTodoUseCase: addTodoUseCase
+        )
+    }
+
+    func makeWorkspaceMenuViewModel(user: AuthUser) -> WorkspaceMenuViewModel {
+        WorkspaceMenuViewModel(
+            user: user,
+            fetchApprovalBoxUseCase: fetchApprovalBoxUseCase,
+            fetchWorkspaceHomeUseCase: fetchWorkspaceHomeUseCase
+        )
+    }
+
+    func makeWorkspaceProjectsViewModel() -> WorkspaceProjectsViewModel {
+        WorkspaceProjectsViewModel(fetchJoinedProjectsUseCase: fetchJoinedProjectsUseCase)
+    }
+
+    func makeMyDocumentsViewModel() -> MyDocumentsViewModel {
+        MyDocumentsViewModel(fetchMyDocumentsUseCase: fetchMyDocumentsUseCase)
+    }
+
+    func makeDraftDocumentsViewModel() -> DraftDocumentsViewModel {
+        DraftDocumentsViewModel(fetchMyDocumentsUseCase: fetchMyDocumentsUseCase, deleteDraftUseCase: deleteDraftUseCase)
+    }
+
+    func makeScheduleCalendarViewModel() -> ScheduleCalendarViewModel {
+        ScheduleCalendarViewModel(
+            fetchSchedulesUseCase: fetchSchedulesUseCase,
+            respondScheduleUseCase: respondScheduleUseCase
+        )
+    }
+
+    func makeScheduleDetailViewModel(scheduleId: Int) -> ScheduleDetailViewModel {
+        ScheduleDetailViewModel(
+            scheduleId: scheduleId,
+            fetchScheduleDetailUseCase: fetchScheduleDetailUseCase,
+            respondScheduleUseCase: respondScheduleUseCase,
+            updateRemindersUseCase: updateRemindersUseCase
+        )
+    }
+
+    func makeActivitySummaryViewModel() -> ActivitySummaryViewModel {
+        ActivitySummaryViewModel(fetchActivitySummaryUseCase: fetchActivitySummaryUseCase)
+    }
+
+    func makeMyPostsViewModel(userName: String) -> MyPostsViewModel {
+        MyPostsViewModel(userName: userName, fetchMyPostsUseCase: fetchMyPostsUseCase)
+    }
+
+    func makeMyProposalsViewModel(userName: String) -> MyProposalsViewModel {
+        MyProposalsViewModel(userName: userName, fetchMyProposalsUseCase: fetchMyProposalsUseCase)
+    }
+
+    func makeProfileEditViewModel() -> ProfileEditViewModel {
+        ProfileEditViewModel(fetchProfileUseCase: fetchProfileUseCase, updateProfileUseCase: updateProfileUseCase)
+    }
+
+    func makePermissionsViewModel(user: AuthUser) -> PermissionsViewModel {
+        PermissionsViewModel(user: user, fetchProfileUseCase: fetchProfileUseCase)
     }
 }

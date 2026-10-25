@@ -16,7 +16,13 @@ struct MainTabView: View {
                 NavigationStack(path: pathBinding(for: tab)) {
                     rootView(for: tab)
                         .navigationDestination(for: AppRoute.self) { route in
-                            AppRouteView(route: route, container: container, user: user, onNavigate: { push($0, in: tab) })
+                            AppRouteView(
+                                route: route,
+                                container: container,
+                                user: user,
+                                onNavigate: { push($0, in: tab) },
+                                onLogout: onLogout
+                            )
                         }
                 }
                 .toolbar(.hidden, for: .tabBar)
@@ -65,7 +71,11 @@ struct MainTabView: View {
         case .documents:
             LibraryView(viewModel: container.makeLibraryViewModel(), onNavigate: { push($0, in: .documents) })
         case .workspace:
-            ComingSoonView(title: tab.title, showsBackButton: false)
+            WorkspaceMenuView(
+                viewModel: container.makeWorkspaceMenuViewModel(user: user),
+                onNavigate: { push($0, in: .workspace) },
+                onSelectTab: { selectedTab = $0 }
+            )
         }
     }
 

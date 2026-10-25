@@ -16,6 +16,9 @@ enum TSIcon: String {
     case close = "xmark"
     case sparkles = "sparkles"
     case pencil = "pencil"
+    case ellipsis = "ellipsis"
+    case circle = "circle"
+    case mapPin = "mappin.and.ellipse"
     // 06-3 템플릿 상세 — Figma 원본 SVG
     case templateBack = "template-back"
     case templateField = "template-field"
