@@ -47,6 +47,9 @@ enum AppRoute: Hashable {
     case projectRecruitment(id: Int)     // 08-3 모집 공고 (08-4 신청 시트 · 08-5 완료)
     case myApplications                  // 08-6 내 참여 신청 현황
     case applicantReview(projectId: Int) // 08-7 PM 지원자 검토
+    // 09 규칙
+    case rules                           // 09-1 규칙 · 제도
+    case ruleDetail(id: Int)             // 09-2 문서 상세 · 규칙
     // 아직 만들지 않은 화면
     case comingSoon(title: String)
 }

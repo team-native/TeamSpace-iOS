@@ -54,6 +54,15 @@ extension NotificationType {
     }
 
     /// 알림을 눌렀을 때 이동할 화면 이름 (해당 화면을 만들기 전까지 준비 중 화면)
+    /// "자세히 보기"로 이동할 화면. 규칙은 09-1, 일정은 07-7로 가고 나머지는 준비 중이에요.
+    var targetRoute: AppRoute {
+        switch self {
+        case .rule: return .rules
+        case .schedule: return .workspaceSchedules
+        default: return .comingSoon(title: targetTitle)
+        }
+    }
+
     var targetTitle: String {
         switch self {
         case .approval, .approvalResult: return "결재"

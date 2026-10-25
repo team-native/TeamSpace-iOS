@@ -43,7 +43,7 @@ struct LibraryView: View {
         case .loaded:
             LibraryCategoryGrid(viewModel: viewModel)
             if let revision = viewModel.latestRevision {
-                Button { onNavigate(.comingSoon(title: revision.title)) } label: {
+                Button { onNavigate(.ruleDetail(id: revision.documentId)) } label: {
                     RevisionBanner(revision: revision)
                 }
                 .buttonStyle(.plain)
