@@ -11,6 +11,7 @@ final class DIContainer {
     private let dashboardRepository: DashboardRepository
     private let memberRepository: MemberRepository
     private let financeRepository: FinanceRepository
+    private let approvalRepository: ApprovalRepository
 
     init(
         apiClient: APIClient,
@@ -27,6 +28,7 @@ final class DIContainer {
         self.dashboardRepository = DashboardRepositoryImpl(client: apiClient)
         self.memberRepository = MemberRepositoryImpl(client: apiClient)
         self.financeRepository = FinanceRepositoryImpl(client: apiClient)
+        self.approvalRepository = ApprovalRepositoryImpl(client: apiClient)
     }
 
     /// xcconfig 의 USE_MOCK_API / API_BASE_URL 에 따라 실서버 또는 Mock 서버를 씁니다.
@@ -142,6 +144,10 @@ final class DIContainer {
     var fetchProjectAmountsUseCase: FetchProjectAmountsUseCase {
         FetchProjectAmountsUseCase(financeRepository: financeRepository)
     }
+
+    var fetchApprovalBoxUseCase: FetchApprovalBoxUseCase {
+        FetchApprovalBoxUseCase(approvalRepository: approvalRepository)
+    }
 }
 
 @MainActor
@@ -233,5 +239,9 @@ extension DIContainer {
 
     func makeProjectAmountsViewModel(year: Int, user: AuthUser) -> ProjectAmountsViewModel {
         ProjectAmountsViewModel(year: year, user: user, fetchProjectAmountsUseCase: fetchProjectAmountsUseCase)
+    }
+
+    func makeApprovalListViewModel() -> ApprovalListViewModel {
+        ApprovalListViewModel(fetchApprovalBoxUseCase: fetchApprovalBoxUseCase)
     }
 }

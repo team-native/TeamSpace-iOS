@@ -8,6 +8,7 @@ import Foundation
 /// - GET /notifications · PATCH /notifications/{id}/read: 읽음 상태를 메모리에 기억
 /// - 계정 요청: 이메일이 `taken@` 으로 시작하면 409 (이미 요청됨)
 /// - GET /users · /users/{id} · /organization/tree: Figma 03 팀원 예시 (MockMemberFixture)
+/// - GET /approvals/~: Figma 05 결재 예시 (MockApprovalStore, 처리 결과를 메모리에 기억)
 /// - GET /finance/~: Figma 04 재무 예시 (MockFinanceFixture)
 /// - GET /dashboard/home: Figma 02-1 홈 예시 (MockDashboardFixture)
 /// - POST /notifications/push-token: Authorization 헤더가 없으면 401
@@ -19,6 +20,7 @@ struct MockTransport: HTTPTransport {
 
     var latencyNanoseconds: UInt64 = 700_000_000
     private let notificationStore = MockNotificationStore()
+    private let approvalStore = MockApprovalStore()
 
     func send(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
         try await Task.sleep(nanoseconds: latencyNanoseconds)
@@ -27,6 +29,9 @@ struct MockTransport: HTTPTransport {
             return response
         }
         if let response = try financeRoute(request, path: path) {
+            return response
+        }
+        if let response = try approvalRoute(request, path: path) {
             return response
         }
         switch (request.httpMethod, path) {
@@ -86,6 +91,19 @@ struct MockTransport: HTTPTransport {
             return try respond(request, status: 404, json: #"{"code":404,"message":"해당 알림을 찾을 수 없습니다."}"#)
         }
         return try respond(request, status: 200, json: #"{"code":200,"message":"읽음 처리 완료","data":{"success":true,"updatedId":\#(id)}}"#)
+    }
+
+    /// 05 결재 — GET /approvals/mine · /approvals/received
+    private func approvalRoute(_ request: URLRequest, path: String) throws -> (Data, HTTPURLResponse)? {
+        guard request.httpMethod == "GET", request.url?.pathComponents.contains("approvals") == true else { return nil }
+        switch path {
+        case "mine":
+            return try respond(request, status: 200, json: approvalStore.listJSON(mine: true))
+        case "received":
+            return try respond(request, status: 200, json: approvalStore.listJSON(mine: false))
+        default:
+            return nil
+        }
     }
 
     /// 04 재무 — GET /finance/~
