@@ -56,7 +56,7 @@ private struct WorkspaceHomeCards: View {
     let onNavigate: (AppRoute) -> Void
 
     var body: some View {
-        WorkspaceTodoCard(todo: home.todo, onOpen: { onNavigate(.comingSoon(title: "나의 To-do")) })
+        WorkspaceTodoCard(todo: home.todo, onOpen: { onNavigate(.workspaceTodos) })
         if let notification = home.notification {
             WorkspaceNotificationCard(notification: notification, onOpen: { onNavigate(.notificationCenter) })
         }

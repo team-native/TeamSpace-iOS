@@ -14,6 +14,7 @@ import Foundation
 /// - GET /dashboard/home: Figma 02-1 홈 예시 (MockDashboardFixture)
 /// - GET /library · /library/search: Figma 06 문서함 예시 (MockLibraryFixture)
 /// - GET /workspace/home: Figma 07 내 공간 예시 (MockWorkspaceFixture)
+/// - GET · POST /workspace/todos · PATCH /workspace/todos/{id}: Figma 07-2 (MockTodoStore, 메모리에 기억)
 /// - POST /notifications/push-token: Authorization 헤더가 없으면 401
 struct MockTransport: HTTPTransport {
     static let baseURL = URL(fileURLWithPath: "/mock-api")
@@ -24,6 +25,7 @@ struct MockTransport: HTTPTransport {
     var latencyNanoseconds: UInt64 = 700_000_000
     private let notificationStore = MockNotificationStore()
     private let approvalStore = MockApprovalStore()
+    private let todoStore = MockTodoStore()
 
     func send(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
         try await Task.sleep(nanoseconds: latencyNanoseconds)
@@ -164,15 +166,37 @@ struct MockTransport: HTTPTransport {
         }
     }
 
-    /// 07 내 공간 — GET /workspace/~ (dashboard/home 과 마지막 경로가 같아서 먼저 걸러요)
+    /// 07 내 공간 — /workspace/~ (dashboard/home 과 마지막 경로가 같아서 먼저 걸러요)
     private func workspaceRoute(_ request: URLRequest, path: String) throws -> (Data, HTTPURLResponse)? {
-        guard
-            request.httpMethod == "GET",
-            request.url?.deletingLastPathComponent().lastPathComponent == "workspace"
-        else { return nil }
-        switch path {
-        case "home":
-            return try respond(request, status: 200, json: MockWorkspaceFixture.home())
+        guard let url = request.url, url.pathComponents.contains("workspace") else { return nil }
+        let parent = url.deletingLastPathComponent().lastPathComponent
+        switch (request.httpMethod ?? "", path) {
+        case ("GET", "home"):
+            let summary = todoStore.summary()
+            return try respond(request, status: 200, json: MockWorkspaceFixture.home(
+                todayTodoTitles: summary.today,
+                completedTodoCount: summary.completed
+            ))
+        case ("GET", "todos"):
+            return try respond(request, status: 200, json: todoStore.listJSON())
+        case ("POST", "todos"):
+            guard
+                let body = request.httpBody,
+                let dto = try? JSONCoder.makeDecoder().decode(TodoCreateRequestDTO.self, from: body)
+            else {
+                return try respond(request, status: 400, json: #"{"code":400,"message":"잘못된 요청입니다."}"#)
+            }
+            return try respond(request, status: 201, json: todoStore.add(dto))
+        case ("PATCH", _) where parent == "todos":
+            guard
+                let id = Int(path),
+                let body = request.httpBody,
+                let dto = try? JSONCoder.makeDecoder().decode(TodoUpdateRequestDTO.self, from: body),
+                let json = todoStore.update(id: id, status: dto.status)
+            else {
+                return try respond(request, status: 404, json: #"{"code":404,"message":"해당 할 일을 찾을 수 없습니다."}"#)
+            }
+            return try respond(request, status: 200, json: json)
         default:
             return nil
         }

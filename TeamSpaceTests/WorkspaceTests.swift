@@ -72,4 +72,68 @@ final class WorkspaceTests: XCTestCase {
         XCTAssertEqual(AuthUser(id: 1, name: "a", roles: [.member, .pm]).workspaceRoleSummary, "PM · 프로젝트 관리 · 결재 권한")
         XCTAssertEqual(AuthUser(id: 1, name: "a", roles: [.fa]).workspaceRoleSummary, "FA · 재무 상세 열람 권한")
     }
+
+    // MARK: 07-2 나의 To-do
+
+    func testTodoSectionsMatchFigma() async {
+        let viewModel = makeContainer().makeTodoListViewModel(userName: "옥물결")
+
+        await viewModel.load()
+
+        XCTAssertEqual(viewModel.sections.map(\.kind), [.today, .upcoming, .done])
+        XCTAssertEqual(viewModel.sections.first?.items.map(\.title), ["인원 지원 요청 검토", "QA 체크리스트 정리"])
+        XCTAssertEqual(TodoSection.Kind.allCases.map { viewModel.count(of: $0) }, [2, 1, 1])
+        XCTAssertEqual(viewModel.sections.first?.items.first?.badgeTitle(), "미완료 · 결재 대기")
+        XCTAssertEqual(viewModel.sections.first?.items.first?.linkRoute, .approvalDetail(documentId: 11))
+    }
+
+    func testToggleMovesTodoToDoneAndBack() async {
+        let viewModel = makeContainer().makeTodoListViewModel(userName: "옥물결")
+        await viewModel.load()
+        guard let todo = viewModel.sections.first?.items.first else { return XCTFail("오늘 할 일이 있어야 해요") }
+
+        await viewModel.toggle(todo)
+        XCTAssertEqual(viewModel.count(of: .today), 1)
+        XCTAssertEqual(viewModel.count(of: .done), 2)
+
+        guard let done = viewModel.sections.last?.items.first(where: { $0.id == todo.id }) else {
+            return XCTFail("완료 섹션으로 옮겨져야 해요")
+        }
+        await viewModel.toggle(done)
+        XCTAssertEqual(viewModel.count(of: .today), 2)
+    }
+
+    func testQuickAddValidationAndAdd() async {
+        let viewModel = makeContainer().makeTodoListViewModel(userName: "옥물결")
+        await viewModel.load()
+
+        viewModel.newTitle = "   "
+        XCTAssertFalse(viewModel.canAdd)
+        XCTAssertEqual(AddTodoUseCase.validationMessage(title: String(repeating: "가", count: 41)), "제목은 40자까지 쓸 수 있어요.")
+
+        viewModel.newTitle = "  회의록 정리  "
+        viewModel.newProjectName = "Book-on"
+        await viewModel.add()
+
+        XCTAssertEqual(viewModel.count(of: .today), 3)
+        XCTAssertTrue(viewModel.sections.first?.items.contains { $0.title == "회의록 정리" } ?? false, "앞뒤 공백은 빼고 저장")
+        XCTAssertEqual(viewModel.newTitle, "", "추가하면 입력을 비워요")
+        XCTAssertNil(viewModel.newProjectName)
+    }
+
+    func testTodoMetaText() {
+        let now = date(2026, 10, 16, 12)
+        let checklist = TodoItem(
+            id: 1, title: "QA", dueAt: date(2026, 10, 16, 18), hasTime: true, endsAt: nil, place: nil,
+            projectName: "Book-on", linkKind: .checklist, linkedId: 1, status: .open, completedAt: nil
+        )
+        XCTAssertEqual(checklist.metaText(now: now), "오늘 18:00 · Book-on · 프로젝트 업무")
+
+        let schedule = TodoItem(
+            id: 2, title: "QA 점검", dueAt: date(2026, 10, 23, 15), hasTime: true, endsAt: date(2026, 10, 23, 16),
+            place: "온라인", projectName: "Book-on", linkKind: .schedule, linkedId: 1, status: .open, completedAt: nil
+        )
+        XCTAssertEqual(schedule.metaText(now: now), "10.23 15:00–16:00 · 온라인 · Book-on")
+        XCTAssertEqual(schedule.badgeTitle(now: now), "예정")
+    }
 }

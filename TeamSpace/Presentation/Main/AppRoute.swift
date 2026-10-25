@@ -25,6 +25,8 @@ enum AppRoute: Hashable {
     case librarySearch                   // 06-2 문서 검색
     case templateDetail(id: Int)          // 06-3 템플릿 상세
     case templateCompose(kind: TemplateFormKind, title: String)
+    // 07 내 공간
+    case workspaceTodos                  // 07-2 나의 To-do
     // 아직 만들지 않은 화면
     case comingSoon(title: String)
 }

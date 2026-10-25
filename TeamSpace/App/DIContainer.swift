@@ -201,6 +201,18 @@ final class DIContainer {
     var fetchWorkspaceHomeUseCase: FetchWorkspaceHomeUseCase {
         FetchWorkspaceHomeUseCase(workspaceRepository: workspaceRepository)
     }
+
+    var fetchTodosUseCase: FetchTodosUseCase {
+        FetchTodosUseCase(workspaceRepository: workspaceRepository)
+    }
+
+    var toggleTodoUseCase: ToggleTodoUseCase {
+        ToggleTodoUseCase(workspaceRepository: workspaceRepository)
+    }
+
+    var addTodoUseCase: AddTodoUseCase {
+        AddTodoUseCase(workspaceRepository: workspaceRepository)
+    }
 }
 
 @MainActor
@@ -337,5 +349,14 @@ extension DIContainer {
 
     func makeWorkspaceHomeViewModel(user: AuthUser) -> WorkspaceHomeViewModel {
         WorkspaceHomeViewModel(user: user, fetchWorkspaceHomeUseCase: fetchWorkspaceHomeUseCase)
+    }
+
+    func makeTodoListViewModel(userName: String) -> TodoListViewModel {
+        TodoListViewModel(
+            userName: userName,
+            fetchTodosUseCase: fetchTodosUseCase,
+            toggleTodoUseCase: toggleTodoUseCase,
+            addTodoUseCase: addTodoUseCase
+        )
     }
 }
