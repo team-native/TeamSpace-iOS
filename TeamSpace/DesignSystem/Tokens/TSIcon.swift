@@ -19,6 +19,15 @@ enum TSIcon: String {
     case bell = "ic-bell"
     case checkCircle = "ic-check-circle"
     case settings = "ic-settings"
+    // 02-6 · 02-7 · 02-9 알림 권한 · 설정 — Figma 원본 SVG
+    case bellRing = "ic-bell-ring"
+    case bellOff = "ic-bell-off"
+    case clipboardCheck = "ic-clipboard-check"
+    case wallet = "ic-wallet"
+    case megaphone = "ic-megaphone"
+    case infoCircle = "ic-info"
+    case checkSmall = "ic-check-small"
+    case moon = "ic-moon"
     // 하단 탭바 — Figma 원본 SVG (Resources/Assets.xcassets/Icons)
     case tabHome = "tab-home"
     case tabFinance = "tab-finance"
@@ -29,6 +38,7 @@ enum TSIcon: String {
     /// Figma 에서 가져온 SVG 에셋 아이콘
     private static let assetIcons: Set<TSIcon> = [
         .chevronLeft, .clipboard, .creditCard, .calendar, .bookOpen, .bell, .checkCircle, .settings,
+        .bellRing, .bellOff, .clipboardCheck, .wallet, .megaphone, .infoCircle, .checkSmall, .moon,
         .tabHome, .tabFinance, .tabApproval, .tabDocuments, .tabWorkspace
     ]
 

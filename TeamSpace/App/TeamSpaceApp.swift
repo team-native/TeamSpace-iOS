@@ -2,6 +2,7 @@ import SwiftUI
 
 @main
 struct TeamSpaceApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     private let container: DIContainer
     @State private var session: AppSession
 
@@ -14,6 +15,14 @@ struct TeamSpaceApp: App {
     var body: some Scene {
         WindowGroup {
             RootView(container: container, session: session)
+                .task {
+                    appDelegate.pushTokenRegistrar.configure(
+                        registerPushTokenUseCase: container.registerPushTokenUseCase
+                    )
+                }
+                .onChange(of: session.currentUser != nil, initial: true) { _, isSignedIn in
+                    appDelegate.pushTokenRegistrar.setSignedIn(isSignedIn)
+                }
         }
     }
 }

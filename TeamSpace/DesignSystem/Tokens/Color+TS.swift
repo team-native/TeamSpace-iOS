@@ -37,6 +37,10 @@ extension Color {
     static let tsLogoStart = Color(light: 0xFFE17E, dark: 0xFFE17E)
     static let tsLogoEnd = Color(light: 0xFFD34E, dark: 0xFFD34E)
 
+    // MARK: 알림 미리보기 카드 그라디언트 (02-6)
+    static let tsPreviewStart = Color(light: 0xDDEBFF, dark: 0x1D2A3D)
+    static let tsPreviewEnd = Color(light: 0xFFF8D7, dark: 0x2B2716)
+
     // MARK: Avatar placeholder
     static let tsAvatarStart = Color(light: 0xE2E2E2, dark: 0x2A2C32)
     static let tsAvatarEnd = Color(light: 0xF1F1F1, dark: 0x202227)

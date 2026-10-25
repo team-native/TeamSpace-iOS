@@ -10,6 +10,15 @@ struct AppRouteView: View {
         switch route {
         case .notificationCenter:
             NotificationCenterView(viewModel: container.makeNotificationCenterViewModel(), onNavigate: onNavigate)
+        case .notificationSettings:
+            NotificationSettingsView(viewModel: container.makeNotificationSettingsViewModel(), onNavigate: onNavigate)
+        case .notificationPermission:
+            NotificationPermissionView(viewModel: container.makeNotificationPermissionViewModel(), onNavigate: onNavigate)
+        case .notificationTroubleshoot:
+            NotificationTroubleshootView(
+                viewModel: container.makeNotificationTroubleshootViewModel(),
+                onNavigate: onNavigate
+            )
         case .comingSoon(let title):
             ComingSoonView(title: title, showsBackButton: true)
         }
