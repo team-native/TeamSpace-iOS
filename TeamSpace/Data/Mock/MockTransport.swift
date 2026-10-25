@@ -8,6 +8,7 @@ import Foundation
 /// - GET /notifications · PATCH /notifications/{id}/read: 읽음 상태를 메모리에 기억
 /// - 계정 요청: 이메일이 `taken@` 으로 시작하면 409 (이미 요청됨)
 /// - GET /users · /users/{id} · /organization/tree: Figma 03 팀원 예시 (MockMemberFixture)
+/// - GET /finance/~: Figma 04 재무 예시 (MockFinanceFixture)
 /// - GET /dashboard/home: Figma 02-1 홈 예시 (MockDashboardFixture)
 /// - POST /notifications/push-token: Authorization 헤더가 없으면 401
 struct MockTransport: HTTPTransport {
@@ -21,6 +22,9 @@ struct MockTransport: HTTPTransport {
         try await Task.sleep(nanoseconds: latencyNanoseconds)
         let path = request.url?.lastPathComponent ?? ""
         if let response = try memberRoute(request, path: path) {
+            return response
+        }
+        if let response = try financeRoute(request, path: path) {
             return response
         }
         switch (request.httpMethod, path) {
@@ -77,6 +81,23 @@ struct MockTransport: HTTPTransport {
             return try respond(request, status: 404, json: #"{"code":404,"message":"해당 알림을 찾을 수 없습니다."}"#)
         }
         return try respond(request, status: 200, json: #"{"code":200,"message":"읽음 처리 완료","data":{"success":true,"updatedId":\#(id)}}"#)
+    }
+
+    /// 04 재무 — GET /finance/~
+    private func financeRoute(_ request: URLRequest, path: String) throws -> (Data, HTTPURLResponse)? {
+        guard
+            request.httpMethod == "GET",
+            let url = request.url,
+            url.pathComponents.contains("finance")
+        else { return nil }
+        let month = URLComponents(url: url, resolvingAgainstBaseURL: false)?
+            .queryItems?.first { $0.name == "month" }?.value
+        switch path {
+        case "overview":
+            return try respond(request, status: 200, json: MockFinanceFixture.overview(monthText: month))
+        default:
+            return nil
+        }
     }
 
     /// 03 팀원 — GET /users, /users/{id}, /organization/tree

@@ -54,7 +54,13 @@ struct MainTabView: View {
                 onSelectTab: { selectedTab = $0 },
                 onLogout: onLogout
             )
-        case .finance, .approval, .documents, .workspace:
+        case .finance:
+            FinanceView(
+                viewModel: container.makeFinanceViewModel(user: user),
+                onNavigate: { push($0, in: .finance) },
+                onSelectTab: { selectedTab = $0 }
+            )
+        case .approval, .documents, .workspace:
             ComingSoonView(title: tab.title, showsBackButton: false)
         }
     }
