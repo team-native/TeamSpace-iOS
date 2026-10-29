@@ -70,7 +70,7 @@ struct BoardSearchView: View {
             BoardSearchResultList(
                 title: viewModel.resultTitle,
                 result: result,
-                onOpenNotice: { open(.comingSoon(title: $0.title)) },
+                onOpenNotice: { open(.noticeDetail(id: $0.id)) },
                 onOpenPost: { open(.postDetail(id: $0.id)) }
             )
         }

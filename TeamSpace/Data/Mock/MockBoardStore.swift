@@ -9,7 +9,10 @@ final class MockBoardStore: @unchecked Sendable {
     private let lock = NSLock()
     private let now: Date
     private var posts: [PostSummaryDTO] = []
-    private let notices: [NoticeSummaryDTO]
+    /// 고정 공지 · 검색에 쓰는 공지 (10-5 공지와 같은 저장소)
+    let noticeStore: MockNoticeStore
+    /// 10-1 고정 공지로 보여줄 공지
+    private static let pinnedNoticeIds = [41, 42]
     private var likedIds: Set<Int> = []
     private var comments: [Int: [PostCommentDTO]] = [:]
     /// 새로 쓴 글의 본문 · 댓글 정책
@@ -22,18 +25,11 @@ final class MockBoardStore: @unchecked Sendable {
 
     init(now: Date = Date()) {
         self.now = now
+        self.noticeStore = MockNoticeStore(now: now)
         let today = Calendar.current.startOfDay(for: now)
         func at(_ daysAgo: Double, _ hour: Double) -> Date {
             today.addingTimeInterval(-daysAgo * 86_400 + hour * 3_600)
         }
-        notices = [
-            NoticeSummaryDTO(id: 41, category: .finance, title: "10월 프로젝트 정산 기준 안내",
-                             summary: "수주 금액은 운영 · 적립 · 배당 풀로 나눠 관리해요.",
-                             updatedAt: at(1, 10), isPinned: true, isImportant: true),
-            NoticeSummaryDTO(id: 42, category: .rule, title: "외주 프로젝트 착수 전 체크리스트",
-                             summary: "착수 전에 계약 · 인력 · 일정 확인 항목을 점검해요.",
-                             updatedAt: at(3, 10), isPinned: true, isImportant: false)
-        ]
         posts = Self.seedPosts(at: at)
         comments = Dictionary(uniqueKeysWithValues: posts.map { ($0.id, Self.seedComments(for: $0)) })
     }
@@ -115,7 +111,7 @@ final class MockBoardStore: @unchecked Sendable {
     func boardJSON() -> String {
         lock.lock()
         defer { lock.unlock() }
-        let pinned = encode(notices.filter(\.isPinned))
+        let pinned = encode(noticeStore.summaries(ids: Self.pinnedNoticeIds))
         let latestMine = posts.filter(\.isMine).max { $0.createdAt < $1.createdAt }
         let latestPost = latestMine.map { post in
             #"{"title":"\#(post.title)","createdAt":"\#(ISO8601DateFormatter().string(from: post.createdAt))"}"#
@@ -137,7 +133,7 @@ final class MockBoardStore: @unchecked Sendable {
             !trimmed.isEmpty && texts.contains { $0?.localizedCaseInsensitiveContains(trimmed) == true }
         }
         return envelope(BoardSearchResponseDTO(
-            notices: notices.filter { matches([$0.title, $0.summary]) },
+            notices: noticeStore.search(trimmed),
             posts: posts.filter { matches([$0.title, $0.excerpt]) }
         ))
     }

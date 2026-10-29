@@ -36,8 +36,8 @@ struct HomeSections: View {
                 }
             }
             if !home.notices.isEmpty {
-                HomeNoticeList(notices: home.notices) {
-                    onNavigate(.comingSoon(title: "공지"))
+                HomeNoticeList(notices: home.notices, onOpen: { onNavigate(.noticeDetail(id: $0.id)) }) {
+                    onNavigate(.notices)
                 }
             }
         }

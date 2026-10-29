@@ -55,7 +55,8 @@ extension AuthUser {
             (.approveDocument, "결재"),
             (.manageProject, "프로젝트 관리"),
             (.viewFinanceDetail, "재정 상세 열람"),
-            (.answerInquiry, "문의 답변")
+            (.answerInquiry, "문의 답변"),
+            (.publishNotice, "전체 공지")
         ]
         let granted = names.filter { can($0.0) }.map(\.1)
         return granted.isEmpty ? "없음" : granted.joined(separator: " · ")
@@ -75,6 +76,7 @@ extension AuthUser {
         if can(.manageProject) { features.append("담당 프로젝트 편집·지원자 검토") }
         if can(.viewFinanceDetail) { features.append("허용된 재정 세부 내역 열람") }
         if can(.answerInquiry) { features.append("배정된 문의에 공식 답변") }
+        if can(.publishNotice) { features.append("전체 공지 작성·예약 게시") }
         return features
     }
 }

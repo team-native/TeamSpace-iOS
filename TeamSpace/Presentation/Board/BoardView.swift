@@ -87,7 +87,7 @@ struct BoardView: View {
     @ViewBuilder
     private var posts: some View {
         if !viewModel.pinnedNotices.isEmpty {
-            PinnedNoticeCard(notices: viewModel.pinnedNotices) { onNavigate(.comingSoon(title: $0.title)) }
+            PinnedNoticeCard(notices: viewModel.pinnedNotices) { onNavigate(.noticeDetail(id: $0.id)) }
         }
         if let message = viewModel.emptyMessage {
             InfoBanner(message: message, icon: .search, style: .muted)

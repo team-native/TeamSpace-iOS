@@ -18,6 +18,7 @@ final class DIContainer {
     private let projectRepository: ProjectRepository
     private let ruleRepository: RuleRepository
     private let boardRepository: BoardRepository
+    private let noticeRepository: NoticeRepository
     private let boardRecentSearchRepository: RecentSearchRepository
     private let postDraftRepository: PostDraftRepository
 
@@ -48,6 +49,7 @@ final class DIContainer {
         self.projectRepository = ProjectRepositoryImpl(client: apiClient)
         self.ruleRepository = RuleRepositoryImpl(client: apiClient)
         self.boardRepository = BoardRepositoryImpl(client: apiClient)
+        self.noticeRepository = NoticeRepositoryImpl(client: apiClient)
         self.boardRecentSearchRepository = boardRecentSearchRepository
         self.postDraftRepository = postDraftRepository
     }
@@ -348,6 +350,22 @@ final class DIContainer {
 
     var createCommentUseCase: CreateCommentUseCase {
         CreateCommentUseCase(boardRepository: boardRepository)
+    }
+
+    var fetchNoticesUseCase: FetchNoticesUseCase {
+        FetchNoticesUseCase(noticeRepository: noticeRepository)
+    }
+
+    var fetchNoticeDetailUseCase: FetchNoticeDetailUseCase {
+        FetchNoticeDetailUseCase(noticeRepository: noticeRepository)
+    }
+
+    var acknowledgeNoticeUseCase: AcknowledgeNoticeUseCase {
+        AcknowledgeNoticeUseCase(noticeRepository: noticeRepository)
+    }
+
+    var publishNoticeUseCase: PublishNoticeUseCase {
+        PublishNoticeUseCase(noticeRepository: noticeRepository)
     }
 
     var boardRecentSearchUseCase: RecentSearchUseCase {
@@ -656,5 +674,21 @@ extension DIContainer {
             fetchPostDetailUseCase: fetchPostDetailUseCase,
             createCommentUseCase: createCommentUseCase
         )
+    }
+
+    func makeNoticeListViewModel(user: AuthUser) -> NoticeListViewModel {
+        NoticeListViewModel(canPublish: user.can(.publishNotice), fetchNoticesUseCase: fetchNoticesUseCase)
+    }
+
+    func makeNoticeDetailViewModel(noticeId: Int) -> NoticeDetailViewModel {
+        NoticeDetailViewModel(
+            noticeId: noticeId,
+            fetchNoticeDetailUseCase: fetchNoticeDetailUseCase,
+            acknowledgeNoticeUseCase: acknowledgeNoticeUseCase
+        )
+    }
+
+    func makeNoticeComposeViewModel(user: AuthUser) -> NoticeComposeViewModel {
+        NoticeComposeViewModel(user: user, publishNoticeUseCase: publishNoticeUseCase)
     }
 }

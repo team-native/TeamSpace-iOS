@@ -57,6 +57,9 @@ enum AppRoute: Hashable {
     case postDetail(id: Int)             // 10-3 게시글 상세 (10-8 더보기 · 10-10 신고)
     case postCompose                     // 10-2 게시글 작성 (10-9 게시 완료)
     case commentCompose(postId: Int)     // 10-4 댓글 작성
+    case notices                         // 10-5 공지 · 알아야 할 것들
+    case noticeDetail(id: Int)           // 10-6 공지 상세
+    case noticeCompose                   // 10-7 전체 공지 작성 (담당자)
     // 아직 만들지 않은 화면
     case comingSoon(title: String)
 }

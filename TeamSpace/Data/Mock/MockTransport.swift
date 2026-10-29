@@ -21,6 +21,7 @@ import Foundation
 /// - GET · PATCH /workspace/profile: Figma 07-13 (MockProfileStore, 저장 내용 기억)
 /// - /projects/~ · /applications/~: Figma 08 (MockProjectStore, 신청 · 결과 등록 기억)
 /// - GET /rules · /rules/{id} · POST /rules/{id}/acknowledge: Figma 09 (MockRuleStore, 읽음 확인 기억)
+/// - /notices/~: Figma 10-5 ~ 10-7 공지 (MockNoticeStore, 확인 · 게시 기억)
 /// - /posts/~: Figma 10 팀 게시판 (MockBoardStore, 글 · 댓글 · 공감 · 신고 · 삭제 기억)
 /// - POST /notifications/push-token: Authorization 헤더가 없으면 401
 struct MockTransport: HTTPTransport {
@@ -200,6 +201,9 @@ struct MockTransport: HTTPTransport {
         if components.first == "posts" {
             return try boardRoute(request, components: components)
         }
+        if components.first == "notices" {
+            return try noticeRoute(request, components: components)
+        }
         guard components.first == "projects" else { return nil }
         let notFound = #"{"code":404,"message":"해당 프로젝트를 찾을 수 없습니다."}"#
         let projectId = components.count > 1 ? Int(components[1]) : nil
@@ -308,6 +312,31 @@ struct MockTransport: HTTPTransport {
             let reason = request.httpBody.flatMap { try? JSONDecoder().decode(PostReportRequestDTO.self, from: $0) }?.reason ?? ""
             guard let id = id, boardStore.report(id: id, reason: reason) else { return try respond(request, status: 403, json: forbidden) }
             return try respond(request, status: 201, json: #"{"code":201,"message":"신고 접수 완료","data":{"success":true}}"#)
+        default:
+            return nil
+        }
+    }
+
+    /// 10-5 ~ 10-7 공지 — /notices · /notices/{id} · acknowledge
+    private func noticeRoute(_ request: URLRequest, components: [String]) throws -> (Data, HTTPURLResponse)? {
+        let store = boardStore.noticeStore
+        let notFound = #"{"code":404,"message":"해당 공지를 찾을 수 없습니다."}"#
+        let id = components.count > 1 ? Int(components[1]) : nil
+        switch (request.httpMethod ?? "", components.count) {
+        case ("GET", 1):
+            return try respond(request, status: 200, json: store.listJSON())
+        case ("GET", 2):
+            guard let id = id, let json = store.detailJSON(id: id) else { return try respond(request, status: 404, json: notFound) }
+            return try respond(request, status: 200, json: json)
+        case ("POST", 1):
+            guard
+                let body = request.httpBody,
+                let dto = try? JSONCoder.makeDecoder().decode(NoticePublishRequestDTO.self, from: body)
+            else { return try respond(request, status: 400, json: #"{"code":400,"message":"잘못된 요청입니다."}"#) }
+            return try respond(request, status: 201, json: store.publish(dto))
+        case ("POST", 3) where components[2] == "acknowledge":
+            guard let id = id, let json = store.acknowledge(id: id) else { return try respond(request, status: 404, json: notFound) }
+            return try respond(request, status: 200, json: json)
         default:
             return nil
         }
@@ -614,7 +643,7 @@ private final class MockNotificationStore: @unchecked Sendable {
                  deepLink: "/rules", isRead: true, createdAt: ago(6 * 86_400), effectiveAt: ago(2 * 86_400)),
             Item(id: 105, type: "NOTICE", title: "10월 정기 회의 장소 안내",
                  message: "이번 달 회의는 4층 홈베이스에서 진행해요.",
-                 deepLink: "/posts/77", isRead: true, createdAt: ago(4 * 86_400)),
+                 deepLink: "/notices/1", isRead: true, createdAt: ago(4 * 86_400)),
             Item(id: 106, type: "APPROVAL_RESULT", title: "비용 승인 요청이 승인됐어요",
                  message: "Book-on 테스트 기기 구매 · 420,000원",
                  deepLink: "/documents/55", isRead: true, createdAt: ago(5 * 86_400))

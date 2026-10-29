@@ -33,6 +33,8 @@ struct AppRouteView: View {
             ruleScreen
         case .board, .boardSearch, .postDetail, .postCompose, .commentCompose:
             boardScreen
+        case .notices, .noticeDetail, .noticeCompose:
+            noticeScreen
         case .comingSoon(let title):
             ComingSoonView(title: title, showsBackButton: true)
         }
@@ -207,6 +209,19 @@ struct AppRouteView: View {
             CommentComposeView(viewModel: container.makeCommentComposeViewModel(postId: postId, userName: user.name))
         default:
             BoardView(viewModel: container.makeBoardViewModel(), onNavigate: onNavigate)
+        }
+    }
+
+    /// 10-5 ~ 10-7 공지
+    @ViewBuilder
+    private var noticeScreen: some View {
+        switch route {
+        case .noticeDetail(let id):
+            NoticeDetailView(viewModel: container.makeNoticeDetailViewModel(noticeId: id), onNavigate: onNavigate)
+        case .noticeCompose:
+            NoticeComposeView(viewModel: container.makeNoticeComposeViewModel(user: user))
+        default:
+            NoticeListView(viewModel: container.makeNoticeListViewModel(user: user), onNavigate: onNavigate)
         }
     }
 }

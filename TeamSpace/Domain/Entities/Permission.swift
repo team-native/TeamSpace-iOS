@@ -10,6 +10,8 @@ enum Permission: Hashable, Sendable {
     case approveDocument
     case manageProject
     case answerInquiry
+    /// 10-7 전체 공지 작성 (NativeOps · FA · Leader)
+    case publishNotice
 }
 
 extension AuthUser {
@@ -26,6 +28,8 @@ extension AuthUser {
             return !roles.isDisjoint(with: [.pm, .leader, .admin])
         case .answerInquiry:
             return !roles.isDisjoint(with: [.leader, .admin])
+        case .publishNotice:
+            return !roles.isDisjoint(with: [.fa, .leader, .admin])
         }
     }
 
