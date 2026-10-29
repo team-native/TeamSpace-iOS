@@ -31,6 +31,8 @@ struct AppRouteView: View {
             projectScreen
         case .rules, .ruleDetail, .ruleComparison:
             ruleScreen
+        case .board, .boardSearch:
+            boardScreen
         case .comingSoon(let title):
             ComingSoonView(title: title, showsBackButton: true)
         }
@@ -188,6 +190,16 @@ struct AppRouteView: View {
             RuleComparisonView(viewModel: container.makeRuleDetailViewModel(ruleId: id), onNavigate: onNavigate)
         default:
             RuleListView(viewModel: container.makeRuleListViewModel(), onNavigate: onNavigate)
+        }
+    }
+
+    /// 10 게시판 · 공지
+    @ViewBuilder
+    private var boardScreen: some View {
+        if case .boardSearch = route {
+            BoardSearchView(viewModel: container.makeBoardSearchViewModel(), onNavigate: onNavigate)
+        } else {
+            BoardView(viewModel: container.makeBoardViewModel(), onNavigate: onNavigate)
         }
     }
 }

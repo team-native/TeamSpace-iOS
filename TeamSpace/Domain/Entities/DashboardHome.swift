@@ -40,7 +40,7 @@ struct ScheduleItem: Equatable, Identifiable, Sendable {
     let startsAt: Date
 }
 
-enum NoticeCategory: String, UnknownCaseDecodable, Hashable, Sendable {
+enum NoticeCategory: String, UnknownCaseDecodable, Encodable, Hashable, Sendable {
     case finance = "FINANCE"
     case rule = "RULE"
     case notice = "NOTICE"

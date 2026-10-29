@@ -51,7 +51,7 @@ struct ActivitySummaryView: View {
             LazyVGrid(columns: columns, spacing: Spacing.md) {
                 ActivityTile(count: summary.unreadNotificationCount, title: "안 읽은 알림") { onNavigate(.notificationCenter) }
                 ActivityTile(count: summary.submittedDocumentCount, title: "제출한 문서") { onNavigate(.workspaceDocuments) }
-                ActivityTile(count: summary.postCount, title: "작성한 게시글") { onNavigate(.workspaceMyPosts) }
+                ActivityTile(count: summary.postCount, title: "작성한 게시글") { onNavigate(.board) }
                 ActivityTile(count: summary.inquiryCount, title: "작성한 문의") { onNavigate(.comingSoon(title: "내 문의")) }
             }
         }

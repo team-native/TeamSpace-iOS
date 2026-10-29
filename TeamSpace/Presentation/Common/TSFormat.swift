@@ -162,4 +162,28 @@ enum TSFormat {
         default: return monthDay(date)
         }
     }
+
+    /// 오늘 09:20 / 어제 17:10 / 10.14 (10-1 게시글)
+    static func dayTime(_ date: Date, now: Date = Date(), calendar: Calendar = .current) -> String {
+        switch daysBetween(date, now, calendar: calendar) {
+        case ..<1: return "오늘 \(time(date))"
+        case 1: return "어제 \(time(date))"
+        default: return shortDate(date)
+        }
+    }
+
+    /// 오늘 / 어제 / 3일 전 / 10.14 (10-12 검색 결과 · 10-5 공지)
+    static func dayLabel(_ date: Date, now: Date = Date(), calendar: Calendar = .current) -> String {
+        let days = daysBetween(date, now, calendar: calendar)
+        switch days {
+        case ..<1: return "오늘"
+        case 1: return "어제"
+        case 2..<7: return "\(days)일 전"
+        default: return shortDate(date)
+        }
+    }
+
+    private static func daysBetween(_ date: Date, _ now: Date, calendar: Calendar) -> Int {
+        calendar.dateComponents([.day], from: calendar.startOfDay(for: date), to: calendar.startOfDay(for: now)).day ?? 0
+    }
 }

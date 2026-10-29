@@ -1,6 +1,6 @@
 import Foundation
 
-/// 06-2 최근 검색어 — 최근 것이 앞, 같은 검색어는 한 번만, 최대 `limit` 개
+/// 06-2 · 10-12 최근 검색어 — 최근 것이 앞, 같은 검색어는 한 번만, 최대 `limit` 개
 struct RecentSearchUseCase {
     static let limit = 5
 
@@ -22,5 +22,18 @@ struct RecentSearchUseCase {
         let keywords = Array(([trimmed] + fetch().filter { $0 != trimmed }).prefix(Self.limit))
         recentSearchRepository.save(keywords)
         return keywords
+    }
+
+    /// 10-12 칩의 × — 하나 지우기
+    @discardableResult
+    func remove(_ keyword: String) -> [String] {
+        let keywords = fetch().filter { $0 != keyword }
+        recentSearchRepository.save(keywords)
+        return keywords
+    }
+
+    /// 10-12 "전체 삭제"
+    func clear() {
+        recentSearchRepository.save([])
     }
 }

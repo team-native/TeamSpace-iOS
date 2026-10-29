@@ -17,13 +17,18 @@ final class DIContainer {
     private let workspaceRepository: WorkspaceRepository
     private let projectRepository: ProjectRepository
     private let ruleRepository: RuleRepository
+    private let boardRepository: BoardRepository
+    private let boardRecentSearchRepository: RecentSearchRepository
 
     init(
         apiClient: APIClient,
         tokenStorage: TokenStorage,
         notificationSettingsRepository: NotificationSettingsRepository = UserDefaultsNotificationSettingsRepository(),
         notificationPermissionRepository: NotificationPermissionRepository = SystemNotificationPermissionRepository(),
-        recentSearchRepository: RecentSearchRepository = UserDefaultsRecentSearchRepository()
+        recentSearchRepository: RecentSearchRepository = UserDefaultsRecentSearchRepository(),
+        boardRecentSearchRepository: RecentSearchRepository = UserDefaultsRecentSearchRepository(
+            key: UserDefaultsRecentSearchRepository.boardKey
+        )
     ) {
         self.tokenStorage = tokenStorage
         self.authRepository = AuthRepositoryImpl(client: apiClient)
@@ -40,6 +45,8 @@ final class DIContainer {
         self.workspaceRepository = WorkspaceRepositoryImpl(client: apiClient)
         self.projectRepository = ProjectRepositoryImpl(client: apiClient)
         self.ruleRepository = RuleRepositoryImpl(client: apiClient)
+        self.boardRepository = BoardRepositoryImpl(client: apiClient)
+        self.boardRecentSearchRepository = boardRecentSearchRepository
     }
 
     /// xcconfig 의 USE_MOCK_API / API_BASE_URL 에 따라 실서버 또는 Mock 서버를 씁니다.
@@ -47,16 +54,22 @@ final class DIContainer {
         let tokenStorage = KeychainRepository()
         let apiClient: APIClient
         var recentSearchSeed: [String] = []
+        var boardSearchSeed: [String] = []
         if !configuration.usesMockAPI, let baseURL = configuration.apiBaseURL {
             apiClient = APIClient(baseURL: baseURL, transport: URLSessionTransport(), tokenStorage: tokenStorage)
         } else {
             apiClient = APIClient(baseURL: MockTransport.baseURL, transport: MockTransport(), tokenStorage: tokenStorage)
             recentSearchSeed = MockLibraryFixture.recentKeywords
+            boardSearchSeed = MockBoardStore.recentKeywords
         }
         return DIContainer(
             apiClient: apiClient,
             tokenStorage: tokenStorage,
-            recentSearchRepository: UserDefaultsRecentSearchRepository(seed: recentSearchSeed)
+            recentSearchRepository: UserDefaultsRecentSearchRepository(seed: recentSearchSeed),
+            boardRecentSearchRepository: UserDefaultsRecentSearchRepository(
+                key: UserDefaultsRecentSearchRepository.boardKey,
+                seed: boardSearchSeed
+            )
         )
     }
 
@@ -78,6 +91,11 @@ final class DIContainer {
             recentSearchRepository: UserDefaultsRecentSearchRepository(
                 defaults: UserDefaults(suiteName: "preview.library.search") ?? .standard,
                 seed: MockLibraryFixture.recentKeywords
+            ),
+            boardRecentSearchRepository: UserDefaultsRecentSearchRepository(
+                defaults: UserDefaults(suiteName: "preview.board.search") ?? .standard,
+                key: UserDefaultsRecentSearchRepository.boardKey,
+                seed: MockBoardStore.recentKeywords
             )
         )
     }
@@ -288,6 +306,18 @@ final class DIContainer {
 
     var decideApplicantUseCase: DecideApplicantUseCase {
         DecideApplicantUseCase(projectRepository: projectRepository)
+    }
+
+    var fetchBoardUseCase: FetchBoardUseCase {
+        FetchBoardUseCase(boardRepository: boardRepository)
+    }
+
+    var searchBoardUseCase: SearchBoardUseCase {
+        SearchBoardUseCase(boardRepository: boardRepository)
+    }
+
+    var boardRecentSearchUseCase: RecentSearchUseCase {
+        RecentSearchUseCase(recentSearchRepository: boardRecentSearchRepository)
     }
 
     var fetchRulesUseCase: FetchRulesUseCase {
@@ -561,5 +591,13 @@ extension DIContainer {
             fetchRuleDetailUseCase: fetchRuleDetailUseCase,
             acknowledgeRuleUseCase: acknowledgeRuleUseCase
         )
+    }
+
+    func makeBoardViewModel() -> BoardViewModel {
+        BoardViewModel(fetchBoardUseCase: fetchBoardUseCase)
+    }
+
+    func makeBoardSearchViewModel() -> BoardSearchViewModel {
+        BoardSearchViewModel(searchBoardUseCase: searchBoardUseCase, recentSearchUseCase: boardRecentSearchUseCase)
     }
 }

@@ -51,6 +51,9 @@ enum AppRoute: Hashable {
     case rules                           // 09-1 규칙 · 제도
     case ruleDetail(id: Int)             // 09-2 문서 상세 · 규칙 (09-3 변경 내역 시트)
     case ruleComparison(id: Int)         // 09-4 규칙 개정 비교
+    // 10 게시판 · 공지
+    case board                           // 10-1 팀 게시판
+    case boardSearch                     // 10-12 게시글 검색
     // 아직 만들지 않은 화면
     case comingSoon(title: String)
 }
