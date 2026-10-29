@@ -31,7 +31,7 @@ struct AppRouteView: View {
             projectScreen
         case .rules, .ruleDetail, .ruleComparison:
             ruleScreen
-        case .board, .boardSearch, .postDetail:
+        case .board, .boardSearch, .postDetail, .postCompose, .commentCompose:
             boardScreen
         case .comingSoon(let title):
             ComingSoonView(title: title, showsBackButton: true)
@@ -201,6 +201,10 @@ struct AppRouteView: View {
             BoardSearchView(viewModel: container.makeBoardSearchViewModel(), onNavigate: onNavigate)
         case .postDetail(let id):
             PostDetailView(viewModel: container.makePostDetailViewModel(postId: id), onNavigate: onNavigate)
+        case .postCompose:
+            PostComposeView(viewModel: container.makePostComposeViewModel(), onNavigate: onNavigate)
+        case .commentCompose(let postId):
+            CommentComposeView(viewModel: container.makeCommentComposeViewModel(postId: postId, userName: user.name))
         default:
             BoardView(viewModel: container.makeBoardViewModel(), onNavigate: onNavigate)
         }

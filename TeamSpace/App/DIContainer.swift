@@ -19,6 +19,7 @@ final class DIContainer {
     private let ruleRepository: RuleRepository
     private let boardRepository: BoardRepository
     private let boardRecentSearchRepository: RecentSearchRepository
+    private let postDraftRepository: PostDraftRepository
 
     init(
         apiClient: APIClient,
@@ -28,7 +29,8 @@ final class DIContainer {
         recentSearchRepository: RecentSearchRepository = UserDefaultsRecentSearchRepository(),
         boardRecentSearchRepository: RecentSearchRepository = UserDefaultsRecentSearchRepository(
             key: UserDefaultsRecentSearchRepository.boardKey
-        )
+        ),
+        postDraftRepository: PostDraftRepository = UserDefaultsPostDraftRepository()
     ) {
         self.tokenStorage = tokenStorage
         self.authRepository = AuthRepositoryImpl(client: apiClient)
@@ -47,6 +49,7 @@ final class DIContainer {
         self.ruleRepository = RuleRepositoryImpl(client: apiClient)
         self.boardRepository = BoardRepositoryImpl(client: apiClient)
         self.boardRecentSearchRepository = boardRecentSearchRepository
+        self.postDraftRepository = postDraftRepository
     }
 
     /// xcconfig 의 USE_MOCK_API / API_BASE_URL 에 따라 실서버 또는 Mock 서버를 씁니다.
@@ -96,6 +99,9 @@ final class DIContainer {
                 defaults: UserDefaults(suiteName: "preview.board.search") ?? .standard,
                 key: UserDefaultsRecentSearchRepository.boardKey,
                 seed: MockBoardStore.recentKeywords
+            ),
+            postDraftRepository: UserDefaultsPostDraftRepository(
+                defaults: UserDefaults(suiteName: "preview.board.draft") ?? .standard
             )
         )
     }
@@ -330,6 +336,18 @@ final class DIContainer {
 
     var deletePostUseCase: DeletePostUseCase {
         DeletePostUseCase(boardRepository: boardRepository)
+    }
+
+    var createPostUseCase: CreatePostUseCase {
+        CreatePostUseCase(boardRepository: boardRepository, postDraftRepository: postDraftRepository)
+    }
+
+    var postDraftUseCase: PostDraftUseCase {
+        PostDraftUseCase(postDraftRepository: postDraftRepository)
+    }
+
+    var createCommentUseCase: CreateCommentUseCase {
+        CreateCommentUseCase(boardRepository: boardRepository)
     }
 
     var boardRecentSearchUseCase: RecentSearchUseCase {
@@ -624,6 +642,19 @@ extension DIContainer {
             togglePostLikeUseCase: togglePostLikeUseCase,
             reportPostUseCase: reportPostUseCase,
             deletePostUseCase: deletePostUseCase
+        )
+    }
+
+    func makePostComposeViewModel() -> PostComposeViewModel {
+        PostComposeViewModel(createPostUseCase: createPostUseCase, postDraftUseCase: postDraftUseCase)
+    }
+
+    func makeCommentComposeViewModel(postId: Int, userName: String) -> CommentComposeViewModel {
+        CommentComposeViewModel(
+            postId: postId,
+            userName: userName,
+            fetchPostDetailUseCase: fetchPostDetailUseCase,
+            createCommentUseCase: createCommentUseCase
         )
     }
 }

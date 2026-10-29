@@ -68,7 +68,7 @@ struct PostDetailView: View {
     @ViewBuilder
     private var commentBar: some View {
         if let detail = viewModel.detail {
-            Button(detail.commentButtonTitle) { onNavigate(.comingSoon(title: "댓글 작성")) }
+            Button(detail.commentButtonTitle) { onNavigate(.commentCompose(postId: detail.post.id)) }
                 .buttonStyle(.tsPrimaryLarge)
                 .padding(.horizontal, Spacing.screen)
                 .padding(.vertical, Spacing.md)

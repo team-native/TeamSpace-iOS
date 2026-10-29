@@ -36,7 +36,7 @@ struct BoardView: View {
                 .background(Color.tsBackground)
         }
         .overlay(alignment: .bottomTrailing) {
-            BoardWriteButton { onNavigate(.comingSoon(title: "글쓰기")) }
+            BoardWriteButton { onNavigate(.postCompose) }
                 .padding(.trailing, Spacing.screen)
                 .padding(.bottom, Spacing.lg)
         }

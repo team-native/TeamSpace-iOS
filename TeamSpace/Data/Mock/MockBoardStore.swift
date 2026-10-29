@@ -12,6 +12,11 @@ final class MockBoardStore: @unchecked Sendable {
     private let notices: [NoticeSummaryDTO]
     private var likedIds: Set<Int> = []
     private var comments: [Int: [PostCommentDTO]] = [:]
+    /// 새로 쓴 글의 본문 · 댓글 정책
+    private var bodies: [Int: String] = [:]
+    private var policies: [Int: CommentPolicy] = [:]
+    /// Mock 로그인 사용자 (07 내 공간과 같은 사람)
+    private static let me = (name: "옥물결", role: "iOS")
     /// 신고 접수 내역 (게시글 ID · 사유)
     private var reports: [(postId: Int, reason: String)] = []
 
@@ -70,7 +75,7 @@ final class MockBoardStore: @unchecked Sendable {
                 likeCount: likes, commentCount: comments, viewCount: views, hasImage: image, isMine: mine
             )
         }
-        let me = ("옥물결", "iOS")
+        let me = (Self.me.name, Self.me.role)
         return [
             post(41, .question, "게임에 대해서 어떻게 생각하시나요",
                  "저는 발로를 끊었더니 진짜 죽을맛입니다. 그래도 취업을 위해서라면…",
@@ -146,11 +151,53 @@ final class MockBoardStore: @unchecked Sendable {
         let post = posts[index]
         return envelope(PostDetailDTO(
             post: post,
-            body: Self.body(for: post),
-            commentPolicy: post.isAnonymous ? .anonymous : .realName,
+            body: bodies[id] ?? Self.body(for: post),
+            commentPolicy: policies[id] ?? (post.isAnonymous ? .anonymous : .realName),
             isLiked: likedIds.contains(id),
             comments: comments[id] ?? []
         ))
+    }
+
+    /// POST /posts — 내 글로 맨 앞에 추가해요.
+    func create(_ request: PostCreateRequestDTO) -> String {
+        lock.lock()
+        defer { lock.unlock() }
+        let id = (posts.map(\.id).max() ?? 0) + 1
+        let firstLine = request.body.split(separator: "\n").first.map(String.init) ?? request.body
+        let post = PostSummaryDTO(
+            id: id, category: request.category, title: request.title, excerpt: String(firstLine.prefix(60)),
+            authorName: request.isAnonymous ? nil : Self.me.name, authorRole: request.isAnonymous ? nil : Self.me.role,
+            isAnonymous: request.isAnonymous, createdAt: Date(), likeCount: 0, commentCount: 0, viewCount: 0,
+            hasImage: !request.images.isEmpty, isMine: true
+        )
+        posts.insert(post, at: 0)
+        bodies[id] = request.body
+        policies[id] = request.commentPolicy
+        comments[id] = []
+        return envelope(post)
+    }
+
+    /// POST /posts/{id}/comments — 익명이면 이 글 안의 번호를 이어서 붙여요. (같은 사람은 같은 번호)
+    func createComment(postId: Int, request: CommentCreateRequestDTO) -> String? {
+        lock.lock()
+        defer { lock.unlock() }
+        guard let index = posts.firstIndex(where: { $0.id == postId }) else { return nil }
+        let existing = comments[postId] ?? []
+        let myNumber = existing.first { $0.isMine && $0.isAnonymous }?.anonymousNumber
+        let nextNumber = (existing.compactMap(\.anonymousNumber).max() ?? 0) + 1
+        let comment = PostCommentDTO(
+            id: (existing.map(\.id).max() ?? postId * 100) + 1,
+            authorName: request.isAnonymous ? nil : Self.me.name,
+            isAnonymous: request.isAnonymous,
+            anonymousNumber: request.isAnonymous ? myNumber ?? nextNumber : nil,
+            isPostAuthor: posts[index].isMine,
+            isMine: true,
+            body: request.body,
+            createdAt: Date()
+        )
+        comments[postId] = existing + [comment]
+        posts[index].commentCount += 1
+        return envelope(comment)
     }
 
     /// POST /posts/{id}/like

@@ -21,7 +21,7 @@ import Foundation
 /// - GET · PATCH /workspace/profile: Figma 07-13 (MockProfileStore, 저장 내용 기억)
 /// - /projects/~ · /applications/~: Figma 08 (MockProjectStore, 신청 · 결과 등록 기억)
 /// - GET /rules · /rules/{id} · POST /rules/{id}/acknowledge: Figma 09 (MockRuleStore, 읽음 확인 기억)
-/// - /posts/~: Figma 10 팀 게시판 (MockBoardStore, 공감 · 신고 · 삭제 기억)
+/// - /posts/~: Figma 10 팀 게시판 (MockBoardStore, 글 · 댓글 · 공감 · 신고 · 삭제 기억)
 /// - POST /notifications/push-token: Authorization 헤더가 없으면 401
 struct MockTransport: HTTPTransport {
     static let baseURL = URL(fileURLWithPath: "/mock-api")
@@ -151,7 +151,7 @@ struct MockTransport: HTTPTransport {
                 return try respond(request, status: 404, json: notFound)
             }
             return try respond(request, status: 200, json: json)
-        case ("POST", "comments"):
+        case ("POST", "comments") where components.contains("documents"):
             guard
                 let id = Int(parent),
                 let body = request.httpBody,
@@ -288,6 +288,19 @@ struct MockTransport: HTTPTransport {
         case ("DELETE", 2):
             guard let id = id, boardStore.delete(id: id) else { return try respond(request, status: 403, json: forbidden) }
             return try respond(request, status: 200, json: #"{"code":200,"message":"삭제 완료","data":{"success":true}}"#)
+        case ("POST", 1):
+            guard let body = request.httpBody, let dto = try? JSONDecoder().decode(PostCreateRequestDTO.self, from: body) else {
+                return try respond(request, status: 400, json: #"{"code":400,"message":"잘못된 요청입니다."}"#)
+            }
+            return try respond(request, status: 201, json: boardStore.create(dto))
+        case ("POST", 3) where components[2] == "comments":
+            guard
+                let id = id,
+                let body = request.httpBody,
+                let dto = try? JSONDecoder().decode(CommentCreateRequestDTO.self, from: body),
+                let json = boardStore.createComment(postId: id, request: dto)
+            else { return try respond(request, status: 404, json: notFound) }
+            return try respond(request, status: 201, json: json)
         case ("POST", 3) where components[2] == "like":
             guard let id = id, let json = boardStore.toggleLike(id: id) else { return try respond(request, status: 404, json: notFound) }
             return try respond(request, status: 200, json: json)

@@ -15,4 +15,8 @@ protocol BoardRepository: Sendable {
     func report(postId: Int, reason: PostReportReason) async throws
     /// DELETE /posts/{postId} — 10-8 내 글 삭제
     func deletePost(id: Int) async throws
+    /// POST /posts — 10-2 게시 (사진은 JPG · PNG 데이터)
+    func createPost(_ draft: PostDraft, images: [Data]) async throws -> PostSummary
+    /// POST /posts/{postId}/comments — 10-4 댓글 등록
+    func createComment(postId: Int, draft: CommentDraft) async throws -> PostComment
 }

@@ -42,6 +42,27 @@ final class BoardRepositoryImpl: BoardRepository, @unchecked Sendable {
         try await send(Endpoint(method: .delete, path: "posts/\(id)"))
     }
 
+    func createPost(_ draft: PostDraft, images: [Data]) async throws -> PostSummary {
+        let body = PostCreateRequestDTO(
+            isAnonymous: draft.isAnonymous,
+            category: draft.category ?? .free,
+            title: draft.title,
+            body: draft.body,
+            commentPolicy: draft.commentPolicy,
+            images: images.map { $0.base64EncodedString() }
+        )
+        return try await request(Endpoint(method: .post, path: "posts", body: body), as: PostSummaryDTO.self).toEntity()
+    }
+
+    func createComment(postId: Int, draft: CommentDraft) async throws -> PostComment {
+        let endpoint = Endpoint(
+            method: .post,
+            path: "posts/\(postId)/comments",
+            body: CommentCreateRequestDTO(body: draft.body, isAnonymous: draft.isAnonymous)
+        )
+        return try await request(endpoint, as: PostCommentDTO.self).toEntity()
+    }
+
     /// 응답 본문이 없어도 되는 요청
     private func send(_ endpoint: Endpoint) async throws {
         do {

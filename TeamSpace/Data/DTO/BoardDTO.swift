@@ -108,3 +108,19 @@ struct PostLikeResponseDTO: Codable {
 struct PostReportRequestDTO: Codable {
     let reason: String
 }
+
+/// POST /posts 요청 — 사진은 base64 문자열 (업로드 방식은 백엔드와 맞춰야 함)
+struct PostCreateRequestDTO: Codable {
+    let isAnonymous: Bool
+    let category: PostCategory
+    let title: String
+    let body: String
+    let commentPolicy: CommentPolicy
+    let images: [String]
+}
+
+/// POST /posts/{id}/comments 요청
+struct CommentCreateRequestDTO: Codable {
+    let body: String
+    let isAnonymous: Bool
+}
