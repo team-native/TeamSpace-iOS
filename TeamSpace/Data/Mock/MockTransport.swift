@@ -21,7 +21,7 @@ import Foundation
 /// - GET · PATCH /workspace/profile: Figma 07-13 (MockProfileStore, 저장 내용 기억)
 /// - /projects/~ · /applications/~: Figma 08 (MockProjectStore, 신청 · 결과 등록 기억)
 /// - GET /rules · /rules/{id} · POST /rules/{id}/acknowledge: Figma 09 (MockRuleStore, 읽음 확인 기억)
-/// - GET /posts · /posts/search: Figma 10 팀 게시판 (MockBoardStore)
+/// - /posts/~: Figma 10 팀 게시판 (MockBoardStore, 공감 · 신고 · 삭제 기억)
 /// - POST /notifications/push-token: Authorization 헤더가 없으면 401
 struct MockTransport: HTTPTransport {
     static let baseURL = URL(fileURLWithPath: "/mock-api")
@@ -270,8 +270,11 @@ struct MockTransport: HTTPTransport {
         }
     }
 
-    /// 10 팀 게시판 — GET /posts · /posts/search?keyword=
+    /// 10 팀 게시판 — /posts · /posts/search · /posts/{id} · like · reports
     private func boardRoute(_ request: URLRequest, components: [String]) throws -> (Data, HTTPURLResponse)? {
+        let notFound = #"{"code":404,"message":"해당 게시글을 찾을 수 없습니다."}"#
+        let forbidden = #"{"code":403,"message":"이 게시글에는 할 수 없는 작업이에요."}"#
+        let id = components.count > 1 ? Int(components[1]) : nil
         switch (request.httpMethod ?? "", components.count) {
         case ("GET", 1):
             return try respond(request, status: 200, json: boardStore.boardJSON())
@@ -279,6 +282,19 @@ struct MockTransport: HTTPTransport {
             let keyword = request.url.flatMap { URLComponents(url: $0, resolvingAgainstBaseURL: false) }?
                 .queryItems?.first { $0.name == "keyword" }?.value ?? ""
             return try respond(request, status: 200, json: boardStore.searchJSON(keyword: keyword))
+        case ("GET", 2):
+            guard let id = id, let json = boardStore.detailJSON(id: id) else { return try respond(request, status: 404, json: notFound) }
+            return try respond(request, status: 200, json: json)
+        case ("DELETE", 2):
+            guard let id = id, boardStore.delete(id: id) else { return try respond(request, status: 403, json: forbidden) }
+            return try respond(request, status: 200, json: #"{"code":200,"message":"삭제 완료","data":{"success":true}}"#)
+        case ("POST", 3) where components[2] == "like":
+            guard let id = id, let json = boardStore.toggleLike(id: id) else { return try respond(request, status: 404, json: notFound) }
+            return try respond(request, status: 200, json: json)
+        case ("POST", 3) where components[2] == "reports":
+            let reason = request.httpBody.flatMap { try? JSONDecoder().decode(PostReportRequestDTO.self, from: $0) }?.reason ?? ""
+            guard let id = id, boardStore.report(id: id, reason: reason) else { return try respond(request, status: 403, json: forbidden) }
+            return try respond(request, status: 201, json: #"{"code":201,"message":"신고 접수 완료","data":{"success":true}}"#)
         default:
             return nil
         }

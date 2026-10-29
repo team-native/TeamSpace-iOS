@@ -10,6 +10,10 @@ final class MockBoardStore: @unchecked Sendable {
     private let now: Date
     private var posts: [PostSummaryDTO] = []
     private let notices: [NoticeSummaryDTO]
+    private var likedIds: Set<Int> = []
+    private var comments: [Int: [PostCommentDTO]] = [:]
+    /// 신고 접수 내역 (게시글 ID · 사유)
+    private var reports: [(postId: Int, reason: String)] = []
 
     init(now: Date = Date()) {
         self.now = now
@@ -26,6 +30,33 @@ final class MockBoardStore: @unchecked Sendable {
                              updatedAt: at(3, 10), isPinned: true, isImportant: false)
         ]
         posts = Self.seedPosts(at: at)
+        comments = Dictionary(uniqueKeysWithValues: posts.map { ($0.id, Self.seedComments(for: $0)) })
+    }
+
+    /// 10-3 댓글 — 41번은 Figma 예시, 나머지는 댓글 수만큼 만들어요.
+    private static func seedComments(for post: PostSummaryDTO) -> [PostCommentDTO] {
+        if post.id == 41 {
+            return [
+                PostCommentDTO(id: 4101, authorName: nil, isAnonymous: true, anonymousNumber: 1, isPostAuthor: false,
+                               isMine: false, body: "발로랑겜입니다개발이답입니다", createdAt: post.createdAt.addingTimeInterval(14 * 60)),
+                PostCommentDTO(id: 4102, authorName: nil, isAnonymous: true, anonymousNumber: 2, isPostAuthor: true,
+                               isMine: false, body: "취업을 바라보며 게임은 휴지통으로", createdAt: post.createdAt.addingTimeInterval(21 * 60))
+            ]
+        }
+        let names = ["이시우", "양지우", "김민준", "안율"]
+        let bodies = ["좋은 의견 감사해요!", "저도 같은 생각이에요.", "다음 회의 때 같이 이야기해봐요.", "정리해 주셔서 도움이 됐어요."]
+        return (0..<post.commentCount).map { index in
+            PostCommentDTO(
+                id: post.id * 100 + index + 1,
+                authorName: post.isAnonymous ? nil : names[index % names.count],
+                isAnonymous: post.isAnonymous,
+                anonymousNumber: post.isAnonymous ? index + 1 : nil,
+                isPostAuthor: false,
+                isMine: false,
+                body: bodies[index % bodies.count],
+                createdAt: post.createdAt.addingTimeInterval(Double(index + 1) * 30 * 60)
+            )
+        }
     }
 
     private static func seedPosts(at: (Double, Double) -> Date) -> [PostSummaryDTO] {
@@ -104,6 +135,64 @@ final class MockBoardStore: @unchecked Sendable {
             notices: notices.filter { matches([$0.title, $0.summary]) },
             posts: posts.filter { matches([$0.title, $0.excerpt]) }
         ))
+    }
+
+    /// GET /posts/{id} — 볼 때마다 조회 수가 1 올라가요.
+    func detailJSON(id: Int) -> String? {
+        lock.lock()
+        defer { lock.unlock() }
+        guard let index = posts.firstIndex(where: { $0.id == id }) else { return nil }
+        posts[index].viewCount += 1
+        let post = posts[index]
+        return envelope(PostDetailDTO(
+            post: post,
+            body: Self.body(for: post),
+            commentPolicy: post.isAnonymous ? .anonymous : .realName,
+            isLiked: likedIds.contains(id),
+            comments: comments[id] ?? []
+        ))
+    }
+
+    /// POST /posts/{id}/like
+    func toggleLike(id: Int) -> String? {
+        lock.lock()
+        defer { lock.unlock() }
+        guard let index = posts.firstIndex(where: { $0.id == id }) else { return nil }
+        let isLiked = !likedIds.contains(id)
+        if isLiked { likedIds.insert(id) } else { likedIds.remove(id) }
+        posts[index].likeCount += isLiked ? 1 : -1
+        return envelope(PostLikeResponseDTO(isLiked: isLiked, likeCount: posts[index].likeCount))
+    }
+
+    /// POST /posts/{id}/reports — 내 글이면 false (403)
+    func report(id: Int, reason: String) -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        guard let post = posts.first(where: { $0.id == id }), !post.isMine else { return false }
+        reports.append((id, reason))
+        return true
+    }
+
+    /// DELETE /posts/{id} — 내 글만 지워져요.
+    func delete(id: Int) -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        guard let index = posts.firstIndex(where: { $0.id == id }), posts[index].isMine else { return false }
+        posts.remove(at: index)
+        comments[id] = nil
+        return true
+    }
+
+    private static func body(for post: PostSummaryDTO) -> String {
+        guard post.id == 41 else { return "\(post.excerpt)\n\n자유롭게 의견 남겨주세요." }
+        return """
+        저는 발로를 끊었더니 진짜 죽을맛입니다.
+        다이아는 찍고 접고 싶었는데...
+
+        그래도 취업을 위해서라면 ㅎㅇㅌ
+        제 친구들이 게임하는 거 볼 때마다 저도 너무 하고 싶어집니다.
+        게임중독 탈출 방안 없을까요
+        """
     }
 
     private func envelope<T: Encodable>(_ value: T) -> String {

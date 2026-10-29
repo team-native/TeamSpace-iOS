@@ -71,7 +71,7 @@ struct BoardSearchView: View {
                 title: viewModel.resultTitle,
                 result: result,
                 onOpenNotice: { open(.comingSoon(title: $0.title)) },
-                onOpenPost: { open(.comingSoon(title: $0.title)) }
+                onOpenPost: { open(.postDetail(id: $0.id)) }
             )
         }
     }

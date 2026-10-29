@@ -72,7 +72,7 @@ struct BoardView: View {
                 PopularPostsCard(
                     posts: viewModel.popularPosts,
                     rangeText: viewModel.popularRangeText,
-                    onOpen: { onNavigate(.comingSoon(title: $0.title)) },
+                    onOpen: { onNavigate(.postDetail(id: $0.id)) },
                     onShowMore: { viewModel.showPopular() }
                 )
             }
@@ -93,7 +93,7 @@ struct BoardView: View {
             InfoBanner(message: message, icon: .search, style: .muted)
         }
         ForEach(viewModel.posts) { post in
-            BoardPostCard(post: post) { onNavigate(.comingSoon(title: post.title)) }
+            BoardPostCard(post: post) { onNavigate(.postDetail(id: post.id)) }
         }
     }
 }

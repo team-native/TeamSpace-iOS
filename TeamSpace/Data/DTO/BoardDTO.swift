@@ -62,3 +62,49 @@ struct NoticeSummaryDTO: Codable {
         )
     }
 }
+
+/// GET /posts/{id} 응답의 `data`
+struct PostDetailDTO: Codable {
+    let post: PostSummaryDTO
+    let body: String
+    let commentPolicy: CommentPolicy
+    let isLiked: Bool
+    let comments: [PostCommentDTO]
+
+    func toEntity() -> PostDetail {
+        PostDetail(
+            post: post.toEntity(), body: body, commentPolicy: commentPolicy,
+            isLiked: isLiked, comments: comments.map { $0.toEntity() }
+        )
+    }
+}
+
+struct PostCommentDTO: Codable {
+    let id: Int
+    let authorName: String?
+    let isAnonymous: Bool
+    let anonymousNumber: Int?
+    let isPostAuthor: Bool
+    let isMine: Bool
+    let body: String
+    let createdAt: Date
+
+    func toEntity() -> PostComment {
+        PostComment(
+            id: id, authorName: isAnonymous ? nil : authorName, isAnonymous: isAnonymous,
+            anonymousNumber: anonymousNumber, isPostAuthor: isPostAuthor, isMine: isMine,
+            body: body, createdAt: createdAt
+        )
+    }
+}
+
+/// POST /posts/{id}/like 응답의 `data`
+struct PostLikeResponseDTO: Codable {
+    let isLiked: Bool
+    let likeCount: Int
+}
+
+/// POST /posts/{id}/reports 요청
+struct PostReportRequestDTO: Codable {
+    let reason: String
+}

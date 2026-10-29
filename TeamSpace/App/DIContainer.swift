@@ -316,6 +316,22 @@ final class DIContainer {
         SearchBoardUseCase(boardRepository: boardRepository)
     }
 
+    var fetchPostDetailUseCase: FetchPostDetailUseCase {
+        FetchPostDetailUseCase(boardRepository: boardRepository)
+    }
+
+    var togglePostLikeUseCase: TogglePostLikeUseCase {
+        TogglePostLikeUseCase(boardRepository: boardRepository)
+    }
+
+    var reportPostUseCase: ReportPostUseCase {
+        ReportPostUseCase(boardRepository: boardRepository)
+    }
+
+    var deletePostUseCase: DeletePostUseCase {
+        DeletePostUseCase(boardRepository: boardRepository)
+    }
+
     var boardRecentSearchUseCase: RecentSearchUseCase {
         RecentSearchUseCase(recentSearchRepository: boardRecentSearchRepository)
     }
@@ -599,5 +615,15 @@ extension DIContainer {
 
     func makeBoardSearchViewModel() -> BoardSearchViewModel {
         BoardSearchViewModel(searchBoardUseCase: searchBoardUseCase, recentSearchUseCase: boardRecentSearchUseCase)
+    }
+
+    func makePostDetailViewModel(postId: Int) -> PostDetailViewModel {
+        PostDetailViewModel(
+            postId: postId,
+            fetchPostDetailUseCase: fetchPostDetailUseCase,
+            togglePostLikeUseCase: togglePostLikeUseCase,
+            reportPostUseCase: reportPostUseCase,
+            deletePostUseCase: deletePostUseCase
+        )
     }
 }

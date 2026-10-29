@@ -54,6 +54,7 @@ enum AppRoute: Hashable {
     // 10 게시판 · 공지
     case board                           // 10-1 팀 게시판
     case boardSearch                     // 10-12 게시글 검색
+    case postDetail(id: Int)             // 10-3 게시글 상세 (10-8 더보기 · 10-10 신고)
     // 아직 만들지 않은 화면
     case comingSoon(title: String)
 }

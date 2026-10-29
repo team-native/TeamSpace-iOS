@@ -124,3 +124,46 @@ enum BoardSort: CaseIterable, Hashable {
         }
     }
 }
+
+extension PostReportReason {
+    var title: String {
+        switch self {
+        case .abuse: return "욕설 · 비하"
+        case .privacy: return "개인정보 노출"
+        case .spam: return "광고 · 도배"
+        case .etc: return "기타"
+        }
+    }
+}
+
+extension PostDetail {
+    /// "이 글은 익명 댓글로 운영돼요."
+    var policyText: String {
+        commentPolicy == .realName ? "이 글은 실명 댓글로 운영돼요." : "이 글은 익명 댓글로 운영돼요."
+    }
+
+    /// 아래 버튼 — "익명으로 댓글 남기기"
+    var commentButtonTitle: String {
+        commentPolicy == .realName ? "실명으로 댓글 남기기" : "익명으로 댓글 남기기"
+    }
+
+    /// "오늘 09:20 · 조회 48"
+    func metaText(now: Date = Date()) -> String {
+        "\(TSFormat.dayTime(post.createdAt, now: now)) · 조회 \(post.viewCount)"
+    }
+}
+
+extension PostComment {
+    /// "익명 1" / "익명 2 · 글쓴이" / "이시우"
+    var authorText: String {
+        let name = isAnonymous ? "익명\(anonymousNumber.map { " \($0)" } ?? "")" : authorName ?? "익명"
+        return isPostAuthor ? "\(name) · 글쓴이" : name
+    }
+
+    /// 오늘이면 "09:34", 아니면 "10.14 09:34"
+    func timeText(now: Date = Date(), calendar: Calendar = .current) -> String {
+        calendar.isDate(createdAt, inSameDayAs: now)
+            ? TSFormat.time(createdAt)
+            : "\(TSFormat.shortDate(createdAt)) \(TSFormat.time(createdAt))"
+    }
+}

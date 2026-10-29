@@ -31,7 +31,7 @@ struct AppRouteView: View {
             projectScreen
         case .rules, .ruleDetail, .ruleComparison:
             ruleScreen
-        case .board, .boardSearch:
+        case .board, .boardSearch, .postDetail:
             boardScreen
         case .comingSoon(let title):
             ComingSoonView(title: title, showsBackButton: true)
@@ -196,9 +196,12 @@ struct AppRouteView: View {
     /// 10 게시판 · 공지
     @ViewBuilder
     private var boardScreen: some View {
-        if case .boardSearch = route {
+        switch route {
+        case .boardSearch:
             BoardSearchView(viewModel: container.makeBoardSearchViewModel(), onNavigate: onNavigate)
-        } else {
+        case .postDetail(let id):
+            PostDetailView(viewModel: container.makePostDetailViewModel(postId: id), onNavigate: onNavigate)
+        default:
             BoardView(viewModel: container.makeBoardViewModel(), onNavigate: onNavigate)
         }
     }
