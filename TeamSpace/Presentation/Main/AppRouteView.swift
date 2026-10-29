@@ -31,6 +31,10 @@ struct AppRouteView: View {
             projectScreen
         case .rules, .ruleDetail, .ruleComparison:
             ruleScreen
+        case .board, .boardSearch, .postDetail, .postCompose, .commentCompose:
+            boardScreen
+        case .notices, .noticeDetail, .noticeCompose:
+            noticeScreen
         case .comingSoon(let title):
             ComingSoonView(title: title, showsBackButton: true)
         }
@@ -188,6 +192,36 @@ struct AppRouteView: View {
             RuleComparisonView(viewModel: container.makeRuleDetailViewModel(ruleId: id), onNavigate: onNavigate)
         default:
             RuleListView(viewModel: container.makeRuleListViewModel(), onNavigate: onNavigate)
+        }
+    }
+
+    /// 10 게시판 · 공지
+    @ViewBuilder
+    private var boardScreen: some View {
+        switch route {
+        case .boardSearch:
+            BoardSearchView(viewModel: container.makeBoardSearchViewModel(), onNavigate: onNavigate)
+        case .postDetail(let id):
+            PostDetailView(viewModel: container.makePostDetailViewModel(postId: id), onNavigate: onNavigate)
+        case .postCompose:
+            PostComposeView(viewModel: container.makePostComposeViewModel(), onNavigate: onNavigate)
+        case .commentCompose(let postId):
+            CommentComposeView(viewModel: container.makeCommentComposeViewModel(postId: postId, userName: user.name))
+        default:
+            BoardView(viewModel: container.makeBoardViewModel(), onNavigate: onNavigate)
+        }
+    }
+
+    /// 10-5 ~ 10-7 공지
+    @ViewBuilder
+    private var noticeScreen: some View {
+        switch route {
+        case .noticeDetail(let id):
+            NoticeDetailView(viewModel: container.makeNoticeDetailViewModel(noticeId: id), onNavigate: onNavigate)
+        case .noticeCompose:
+            NoticeComposeView(viewModel: container.makeNoticeComposeViewModel(user: user))
+        default:
+            NoticeListView(viewModel: container.makeNoticeListViewModel(user: user), onNavigate: onNavigate)
         }
     }
 }

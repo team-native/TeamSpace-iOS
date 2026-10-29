@@ -101,7 +101,7 @@ private struct ReceivedApprovalRow: View {
     }
 }
 
-/// 07-3 메뉴 — 업무 대시보드 · 내 활동 · 참여 프로젝트 · 예정된 일정
+/// 07-3 메뉴 — 업무 대시보드 · 내 활동 · 팀 게시판 · 참여 프로젝트 · 예정된 일정
 struct WorkspaceMenuList: View {
     let onNavigate: (AppRoute) -> Void
 
@@ -109,6 +109,7 @@ struct WorkspaceMenuList: View {
         [
             ("업무 대시보드", .workspaceDashboard),
             ("내 활동", .workspaceActivity),
+            ("팀 게시판", .board),
             ("참여 프로젝트", .workspaceProjects),
             ("예정된 일정", .workspaceSchedules)
         ]

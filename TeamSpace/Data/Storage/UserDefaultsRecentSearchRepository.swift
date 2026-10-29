@@ -3,6 +3,7 @@ import Foundation
 /// 최근 검색어를 기기에 저장합니다. (민감 정보가 아니라 UserDefaults 사용)
 final class UserDefaultsRecentSearchRepository: RecentSearchRepository, @unchecked Sendable {
     static let libraryKey = "library.recentSearches.v1"
+    static let boardKey = "board.recentSearches.v1"
 
     private let defaults: UserDefaults
     private let key: String

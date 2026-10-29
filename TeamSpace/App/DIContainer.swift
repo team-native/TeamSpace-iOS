@@ -17,13 +17,21 @@ final class DIContainer {
     private let workspaceRepository: WorkspaceRepository
     private let projectRepository: ProjectRepository
     private let ruleRepository: RuleRepository
+    private let boardRepository: BoardRepository
+    private let noticeRepository: NoticeRepository
+    private let boardRecentSearchRepository: RecentSearchRepository
+    private let postDraftRepository: PostDraftRepository
 
     init(
         apiClient: APIClient,
         tokenStorage: TokenStorage,
         notificationSettingsRepository: NotificationSettingsRepository = UserDefaultsNotificationSettingsRepository(),
         notificationPermissionRepository: NotificationPermissionRepository = SystemNotificationPermissionRepository(),
-        recentSearchRepository: RecentSearchRepository = UserDefaultsRecentSearchRepository()
+        recentSearchRepository: RecentSearchRepository = UserDefaultsRecentSearchRepository(),
+        boardRecentSearchRepository: RecentSearchRepository = UserDefaultsRecentSearchRepository(
+            key: UserDefaultsRecentSearchRepository.boardKey
+        ),
+        postDraftRepository: PostDraftRepository = UserDefaultsPostDraftRepository()
     ) {
         self.tokenStorage = tokenStorage
         self.authRepository = AuthRepositoryImpl(client: apiClient)
@@ -40,6 +48,10 @@ final class DIContainer {
         self.workspaceRepository = WorkspaceRepositoryImpl(client: apiClient)
         self.projectRepository = ProjectRepositoryImpl(client: apiClient)
         self.ruleRepository = RuleRepositoryImpl(client: apiClient)
+        self.boardRepository = BoardRepositoryImpl(client: apiClient)
+        self.noticeRepository = NoticeRepositoryImpl(client: apiClient)
+        self.boardRecentSearchRepository = boardRecentSearchRepository
+        self.postDraftRepository = postDraftRepository
     }
 
     /// xcconfig 의 USE_MOCK_API / API_BASE_URL 에 따라 실서버 또는 Mock 서버를 씁니다.
@@ -47,16 +59,22 @@ final class DIContainer {
         let tokenStorage = KeychainRepository()
         let apiClient: APIClient
         var recentSearchSeed: [String] = []
+        var boardSearchSeed: [String] = []
         if !configuration.usesMockAPI, let baseURL = configuration.apiBaseURL {
             apiClient = APIClient(baseURL: baseURL, transport: URLSessionTransport(), tokenStorage: tokenStorage)
         } else {
             apiClient = APIClient(baseURL: MockTransport.baseURL, transport: MockTransport(), tokenStorage: tokenStorage)
             recentSearchSeed = MockLibraryFixture.recentKeywords
+            boardSearchSeed = MockBoardStore.recentKeywords
         }
         return DIContainer(
             apiClient: apiClient,
             tokenStorage: tokenStorage,
-            recentSearchRepository: UserDefaultsRecentSearchRepository(seed: recentSearchSeed)
+            recentSearchRepository: UserDefaultsRecentSearchRepository(seed: recentSearchSeed),
+            boardRecentSearchRepository: UserDefaultsRecentSearchRepository(
+                key: UserDefaultsRecentSearchRepository.boardKey,
+                seed: boardSearchSeed
+            )
         )
     }
 
@@ -78,6 +96,14 @@ final class DIContainer {
             recentSearchRepository: UserDefaultsRecentSearchRepository(
                 defaults: UserDefaults(suiteName: "preview.library.search") ?? .standard,
                 seed: MockLibraryFixture.recentKeywords
+            ),
+            boardRecentSearchRepository: UserDefaultsRecentSearchRepository(
+                defaults: UserDefaults(suiteName: "preview.board.search") ?? .standard,
+                key: UserDefaultsRecentSearchRepository.boardKey,
+                seed: MockBoardStore.recentKeywords
+            ),
+            postDraftRepository: UserDefaultsPostDraftRepository(
+                defaults: UserDefaults(suiteName: "preview.board.draft") ?? .standard
             )
         )
     }
@@ -288,6 +314,62 @@ final class DIContainer {
 
     var decideApplicantUseCase: DecideApplicantUseCase {
         DecideApplicantUseCase(projectRepository: projectRepository)
+    }
+
+    var fetchBoardUseCase: FetchBoardUseCase {
+        FetchBoardUseCase(boardRepository: boardRepository)
+    }
+
+    var searchBoardUseCase: SearchBoardUseCase {
+        SearchBoardUseCase(boardRepository: boardRepository)
+    }
+
+    var fetchPostDetailUseCase: FetchPostDetailUseCase {
+        FetchPostDetailUseCase(boardRepository: boardRepository)
+    }
+
+    var togglePostLikeUseCase: TogglePostLikeUseCase {
+        TogglePostLikeUseCase(boardRepository: boardRepository)
+    }
+
+    var reportPostUseCase: ReportPostUseCase {
+        ReportPostUseCase(boardRepository: boardRepository)
+    }
+
+    var deletePostUseCase: DeletePostUseCase {
+        DeletePostUseCase(boardRepository: boardRepository)
+    }
+
+    var createPostUseCase: CreatePostUseCase {
+        CreatePostUseCase(boardRepository: boardRepository, postDraftRepository: postDraftRepository)
+    }
+
+    var postDraftUseCase: PostDraftUseCase {
+        PostDraftUseCase(postDraftRepository: postDraftRepository)
+    }
+
+    var createCommentUseCase: CreateCommentUseCase {
+        CreateCommentUseCase(boardRepository: boardRepository)
+    }
+
+    var fetchNoticesUseCase: FetchNoticesUseCase {
+        FetchNoticesUseCase(noticeRepository: noticeRepository)
+    }
+
+    var fetchNoticeDetailUseCase: FetchNoticeDetailUseCase {
+        FetchNoticeDetailUseCase(noticeRepository: noticeRepository)
+    }
+
+    var acknowledgeNoticeUseCase: AcknowledgeNoticeUseCase {
+        AcknowledgeNoticeUseCase(noticeRepository: noticeRepository)
+    }
+
+    var publishNoticeUseCase: PublishNoticeUseCase {
+        PublishNoticeUseCase(noticeRepository: noticeRepository)
+    }
+
+    var boardRecentSearchUseCase: RecentSearchUseCase {
+        RecentSearchUseCase(recentSearchRepository: boardRecentSearchRepository)
     }
 
     var fetchRulesUseCase: FetchRulesUseCase {
@@ -561,5 +643,52 @@ extension DIContainer {
             fetchRuleDetailUseCase: fetchRuleDetailUseCase,
             acknowledgeRuleUseCase: acknowledgeRuleUseCase
         )
+    }
+
+    func makeBoardViewModel() -> BoardViewModel {
+        BoardViewModel(fetchBoardUseCase: fetchBoardUseCase)
+    }
+
+    func makeBoardSearchViewModel() -> BoardSearchViewModel {
+        BoardSearchViewModel(searchBoardUseCase: searchBoardUseCase, recentSearchUseCase: boardRecentSearchUseCase)
+    }
+
+    func makePostDetailViewModel(postId: Int) -> PostDetailViewModel {
+        PostDetailViewModel(
+            postId: postId,
+            fetchPostDetailUseCase: fetchPostDetailUseCase,
+            togglePostLikeUseCase: togglePostLikeUseCase,
+            reportPostUseCase: reportPostUseCase,
+            deletePostUseCase: deletePostUseCase
+        )
+    }
+
+    func makePostComposeViewModel() -> PostComposeViewModel {
+        PostComposeViewModel(createPostUseCase: createPostUseCase, postDraftUseCase: postDraftUseCase)
+    }
+
+    func makeCommentComposeViewModel(postId: Int, userName: String) -> CommentComposeViewModel {
+        CommentComposeViewModel(
+            postId: postId,
+            userName: userName,
+            fetchPostDetailUseCase: fetchPostDetailUseCase,
+            createCommentUseCase: createCommentUseCase
+        )
+    }
+
+    func makeNoticeListViewModel(user: AuthUser) -> NoticeListViewModel {
+        NoticeListViewModel(canPublish: user.can(.publishNotice), fetchNoticesUseCase: fetchNoticesUseCase)
+    }
+
+    func makeNoticeDetailViewModel(noticeId: Int) -> NoticeDetailViewModel {
+        NoticeDetailViewModel(
+            noticeId: noticeId,
+            fetchNoticeDetailUseCase: fetchNoticeDetailUseCase,
+            acknowledgeNoticeUseCase: acknowledgeNoticeUseCase
+        )
+    }
+
+    func makeNoticeComposeViewModel(user: AuthUser) -> NoticeComposeViewModel {
+        NoticeComposeViewModel(user: user, publishNoticeUseCase: publishNoticeUseCase)
     }
 }

@@ -1,31 +1,31 @@
 # TeamSpace-iOS
 
-동아리 내부 운영 앱 **팀스페이스** iOS 클라이언트입니다.
+동아리 내부 운영 앱 **팀스페이스** iOS 클라이언트입니다
 SwiftUI · iOS 17 · `@Observable` · async/await · Clean Architecture (Presentation → Domain ← Data)
 
 ## 개발 환경 (VS Code)
 
-macOS + **Xcode 16 이상** 설치가 필요해요. (편집·실행은 VS Code)
+macOS + **Xcode 16 이상** 설치가 필요
 
 ```bash
 # 1) 도구 설치 (최초 1회)
 brew install xcodegen xcode-build-server
 
-# 2) 프로젝트 생성 — project.yml → TeamSpace.xcodeproj (git 에 올리지 않아요)
+# 2) 프로젝트 생성 — project.yml → TeamSpace.xcodeproj (git 에 올리지 않음)
 xcodegen generate
 
 # 3) VS Code 자동완성 연결
 xcode-build-server config -project TeamSpace.xcodeproj -scheme TeamSpace
 ```
 
-VS Code 추천 확장: **SweetPad**(빌드·실행), **Swift**(자동완성).
-SweetPad 패널 → Build & Run → 시뮬레이터 선택.
-파일을 추가/삭제하면 `xcodegen generate` 를 다시 실행하세요.
-`#Preview` 는 `open TeamSpace.xcodeproj` 로 Xcode 에서 확인할 수 있어요.
+VS Code 추천 확장: **SweetPad**(빌드·실행), **Swift**(자동완성)
+SweetPad 패널 → Build & Run → 시뮬레이터 선택
+파일을 추가/삭제하면 `xcodegen generate` 를 다시 실행
+`#Preview` 는 `open TeamSpace.xcodeproj` 로 Xcode 에서 확인할 수 있음
 
 ## 서버 연결
 
-기본은 **Mock 서버**(`Data/Mock/MockTransport`)라 서버 없이 실행돼요. 응답은 API 명세서(Notion) 예시와 같은 `{ code, message, data }` 형식이에요.
+기본은 **Mock 서버**(`Data/Mock/MockTransport`)라 서버 없이 실행됨. 응답은 API 명세서(Notion) 예시와 같은 `{ code, message, data }` 형식
 
 | 입력 | 결과 |
 | --- | --- |

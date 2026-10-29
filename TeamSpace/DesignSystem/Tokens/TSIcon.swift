@@ -19,6 +19,11 @@ enum TSIcon: String {
     case ellipsis = "ellipsis"
     case circle = "circle"
     case mapPin = "mappin.and.ellipse"
+    // 10 게시판
+    case pin = "pin"
+    case heart = "heart"
+    case photo = "photo"
+    case anonymous = "theatermasks"
     // 06-3 템플릿 상세 — Figma 원본 SVG
     case templateBack = "template-back"
     case templateField = "template-field"

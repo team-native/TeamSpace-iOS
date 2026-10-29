@@ -1,7 +1,7 @@
 import Foundation
 import os
 
-/// print 대신 os.Logger 를 사용합니다.
+/// print 대신 os.Logger 를 사용
 enum AppLog {
     static let subsystem = Bundle.main.bundleIdentifier ?? "TeamSpace"
 
