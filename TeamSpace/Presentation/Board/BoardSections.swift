@@ -15,7 +15,7 @@ struct BoardSearchEntry: View {
                 Spacer()
             }
             .padding(.horizontal, Spacing.md + Spacing.xxxs)
-            .frame(height: 46)
+            .frame(minHeight: 46)
             .background(Color.tsSurface, in: RoundedRectangle(cornerRadius: Radius.lg, style: .continuous))
         }
         .buttonStyle(.plain)
@@ -64,7 +64,7 @@ private struct BoardPeriodChip: View {
             }
             .foregroundStyle(isSelected ? Color.tsOnInk : Color.tsInk2)
             .padding(.horizontal, Spacing.md + Spacing.xxxs)
-            .frame(height: 34)
+            .frame(minHeight: 34)
             .background(isSelected ? Color.tsInk : Color.tsSurface, in: Capsule())
             .overlay(Capsule().stroke(isSelected ? Color.clear : Color.tsLine, lineWidth: 1))
         }
@@ -167,7 +167,7 @@ struct BoardWriteButton: View {
             }
             .foregroundStyle(Color.tsOnPrimary)
             .padding(.horizontal, Spacing.lg)
-            .frame(height: 48)
+            .frame(minHeight: 48)
             .background(Color.tsPrimary, in: Capsule())
             .tsShadow(.primaryGlow)
         }

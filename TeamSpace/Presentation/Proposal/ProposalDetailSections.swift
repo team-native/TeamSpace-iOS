@@ -47,7 +47,7 @@ struct ProposalRecommendBar: View {
                     }
                     .foregroundStyle(detail.isRecommended ? Color.tsOnPrimary : Color.tsPrimary)
                     .padding(.horizontal, Spacing.md)
-                    .frame(height: 34)
+                    .frame(minHeight: 34)
                     .background(detail.isRecommended ? Color.tsPrimary : Color.tsPrimarySoft, in: Capsule())
                 }
                 .buttonStyle(.plain)
@@ -161,7 +161,7 @@ struct ProposalCommentBar: View {
                     .tsFont(.captionBold)
                     .foregroundStyle(viewModel.isCommentAnonymous ? Color.tsInk2 : Color.tsPrimary)
                     .padding(.horizontal, Spacing.sm)
-                    .frame(height: 30)
+                    .frame(minHeight: 30)
                     .background(viewModel.isCommentAnonymous ? Color.tsSurface2 : Color.tsPrimarySoft, in: Capsule())
             }
             .buttonStyle(.plain)

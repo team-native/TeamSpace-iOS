@@ -45,7 +45,7 @@ struct HomeHeader: View {
             .buttonStyle(.plain)
             .accessibilityLabel("내 계정")
         }
-        .frame(height: 44)
+        .frame(minHeight: 44)
     }
 }
 

@@ -116,7 +116,7 @@ struct LoadingSkeletonView: View {
                 .tsFont(.bodyBold)
                 .foregroundStyle(Color.tsInk3)
                 .frame(maxWidth: .infinity)
-                .frame(height: TSButtonStyle.Size.medium.height)
+                .frame(minHeight: TSButtonStyle.Size.medium.height)
                 .background(Color.tsSurface2, in: RoundedRectangle(cornerRadius: Radius.lg, style: .continuous))
             StateFootnote("로딩 중에는 목록 항목을 사용할 수 없어요. 아직 결과 개수가 확정되지 않았어요.")
         }
@@ -124,6 +124,8 @@ struct LoadingSkeletonView: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(message)
         .accessibilityAddTraits(.updatesFrequently)
+        // 14-5 메모: 로딩 시작을 보조기술에 알려요.
+        .onAppear { UIAccessibility.post(notification: .announcement, argument: message) }
     }
 }
 
@@ -160,6 +162,8 @@ struct ErrorStateView: View {
             )
             StateFootnote("문제가 계속되면 잠시 후 다시 시도해 주세요.")
         }
+        // 14-5 메모: 실패를 알리고 초점을 오류 안내로 옮겨 바로 다시 시도할 수 있게 해요.
+        .onAppear { UIAccessibility.post(notification: .screenChanged, argument: title) }
     }
 }
 

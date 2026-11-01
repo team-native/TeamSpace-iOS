@@ -50,7 +50,7 @@ struct TSButtonStyle: ButtonStyle {
             .foregroundStyle(foreground)
             .padding(.horizontal, Spacing.lg)
             .frame(maxWidth: isFullWidth ? .infinity : nil)
-            .frame(height: size.height)
+            .frame(minHeight: size.height)
             .background(background, in: RoundedRectangle(cornerRadius: size.radius, style: .continuous))
             .opacity(isEnabled ? 1 : 0.45)
             .scaleEffect(configuration.isPressed ? 0.98 : 1)

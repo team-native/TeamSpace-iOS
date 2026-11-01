@@ -37,7 +37,7 @@ struct TodoKindChips: View {
                         .tsFont(.caption2Bold)
                         .foregroundStyle(isFirst ? Color.tsOnPrimary : Color.tsInk2)
                         .padding(.horizontal, Spacing.md)
-                        .frame(height: 28)
+                        .frame(minHeight: 28)
                         .background(isFirst ? Color.tsPrimary : Color.tsSurface2, in: Capsule())
                 }
                 .buttonStyle(.plain)
@@ -82,7 +82,7 @@ struct TodoCard: View {
     var body: some View {
         WorkspaceCard {
             HStack(alignment: .top, spacing: Spacing.md) {
-                TodoCheckBox(isOn: todo.isDone, action: onToggle)
+                TodoCheckBox(title: todo.title, isOn: todo.isDone, action: onToggle)
                 VStack(alignment: .leading, spacing: Spacing.xs) {
                     Text(todo.title)
                         .tsFont(.bodyBold)
@@ -104,8 +104,9 @@ struct TodoCard: View {
     }
 }
 
-/// 둥근 사각 체크 박스 (28pt)
+/// 둥근 사각 체크 박스 (28pt) — 누르는 영역은 48pt (14-5 메모)
 struct TodoCheckBox: View {
+    let title: String
     let isOn: Bool
     let action: () -> Void
 
@@ -124,9 +125,16 @@ struct TodoCheckBox: View {
                     }
                 }
                 .frame(width: 28, height: 28)
+                .padding(Spacing.sm + Spacing.xxxs)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(isOn ? "완료 취소" : "완료로 표시")
+        .padding(-(Spacing.sm + Spacing.xxxs))
+        // 14-5 메모: "할 일 제목, 미완료/완료, 전환"
+        .accessibilityLabel(title)
+        .accessibilityValue(isOn ? "완료" : "미완료")
+        .accessibilityHint(isOn ? "두 번 탭하면 미완료로 바꿔요" : "두 번 탭하면 완료로 바꿔요")
+        .accessibilityAddTraits(.isToggle)
     }
 }
 

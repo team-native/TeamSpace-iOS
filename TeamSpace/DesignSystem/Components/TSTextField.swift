@@ -35,7 +35,7 @@ struct TSTextField: View {
                 trailingIcon
             }
             .padding(.horizontal, Spacing.lg)
-            .frame(height: 52)
+            .frame(minHeight: 52)
             .background(Color.tsBackground, in: RoundedRectangle(cornerRadius: Radius.lg, style: .continuous))
             .overlay {
                 RoundedRectangle(cornerRadius: Radius.lg, style: .continuous)

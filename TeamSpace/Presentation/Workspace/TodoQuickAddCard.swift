@@ -17,7 +17,7 @@ struct TodoQuickAddCard: View {
                 .submitLabel(.done)
                 .onSubmit { Task { await viewModel.add() } }
                 .padding(.horizontal, Spacing.md)
-                .frame(height: 44)
+                .frame(minHeight: 44)
                 .background(Color.tsSurface2, in: RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
             HStack(spacing: Spacing.xs) {
                 Button { viewModel.isDatePickerPresented = true } label: {
@@ -68,7 +68,7 @@ private struct TodoOptionChip: View {
             .tsFont(.caption2Bold)
             .foregroundStyle(isSelected ? Color.tsPrimary : Color.tsInk2)
             .padding(.horizontal, Spacing.md)
-            .frame(height: 28)
+            .frame(minHeight: 28)
             .background(isSelected ? Color.tsPrimarySoft : Color.tsSurface2, in: Capsule())
     }
 }

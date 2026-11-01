@@ -25,7 +25,7 @@ struct WorkspaceMenuProfileCard: View {
                 .tsFont(.captionBold)
                 .foregroundStyle(Color.tsOnPrimary)
                 .padding(.horizontal, Spacing.md + Spacing.xxxs)
-                .frame(height: 33)
+                .frame(minHeight: 33)
                 .background(Color.tsPrimary, in: Capsule())
                 .buttonStyle(.plain)
         }
@@ -135,7 +135,7 @@ struct WorkspaceMenuList: View {
                         TSIcon.chevronRight.sized(.base)
                             .foregroundStyle(Color.tsInk3)
                     }
-                    .frame(height: 55)
+                    .frame(minHeight: 55)
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)

@@ -81,7 +81,7 @@ struct PostReactionBar: View {
                 }
                 .foregroundStyle(detail.isLiked ? Color.tsNegative : Color.tsInk2)
                 .padding(.horizontal, Spacing.md)
-                .frame(height: 34)
+                .frame(minHeight: 34)
                 .background(detail.isLiked ? Color.tsNegativeSoft : Color.tsSurface, in: Capsule())
             }
             .buttonStyle(.plain)
@@ -95,7 +95,7 @@ struct PostReactionBar: View {
                 }
                 .foregroundStyle(Color.tsInk2)
                 .padding(.horizontal, Spacing.md)
-                .frame(height: 34)
+                .frame(minHeight: 34)
                 .background(Color.tsSurface, in: Capsule())
             }
             .buttonStyle(.plain)

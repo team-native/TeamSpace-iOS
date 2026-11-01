@@ -36,7 +36,7 @@ struct PeriodPickerSheet: View {
                     .foregroundStyle(Color.tsPrimary)
             }
             .padding(.horizontal, Spacing.xl)
-            .frame(height: 48)
+            .frame(minHeight: 48)
             HStack(spacing: 0) {
                 Picker("연도", selection: $year) {
                     ForEach(years, id: \.self) { Text("\(String($0))년").tag($0) }

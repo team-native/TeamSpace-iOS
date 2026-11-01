@@ -87,7 +87,7 @@ private struct DepartmentRow: View {
                 Spacer()
             }
             .padding(.horizontal, Spacing.xl)
-            .frame(height: 52)
+            .frame(minHeight: 52)
             .background(isSelected ? Color.tsPrimarySoft : Color.clear)
             .contentShape(Rectangle())
         }
