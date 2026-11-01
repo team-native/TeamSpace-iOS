@@ -3,6 +3,8 @@ import SwiftUI
 /// 02-1 지금 팀이 알아야 할 것들
 struct HomeNoticeList: View {
     let notices: [NoticePreview]
+    /// 공지를 누르면 10-6 공지 상세
+    var onOpen: (NoticePreview) -> Void = { _ in }
     let onShowAll: () -> Void
 
     var body: some View {
@@ -11,7 +13,7 @@ struct HomeNoticeList: View {
             VStack(spacing: 0) {
                 ForEach(Array(notices.enumerated()), id: \.element.id) { index, notice in
                     if index > 0 { TSDivider() }
-                    Button(action: onShowAll) {
+                    Button { onOpen(notice) } label: {
                         NoticeRow(notice: notice)
                     }
                     .buttonStyle(.plain)

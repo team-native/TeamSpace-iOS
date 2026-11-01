@@ -57,7 +57,7 @@ struct MyPostsView: View {
             case .posts:
                 ForEach(viewModel.posts) { post in
                     MyPostCard(post: post, authorName: viewModel.userName) {
-                        onNavigate(.comingSoon(title: post.title))
+                        onNavigate(.postDetail(id: post.id))
                     }
                 }
                 if let comment = viewModel.comments.first {
@@ -65,7 +65,7 @@ struct MyPostsView: View {
                 }
             case .comments:
                 ForEach(viewModel.comments) { comment in
-                    MyCommentCard(comment: comment) { onNavigate(.comingSoon(title: comment.postTitle)) }
+                    MyCommentCard(comment: comment) { onNavigate(.postDetail(id: comment.postId)) }
                 }
             }
         }

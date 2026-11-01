@@ -125,14 +125,21 @@ struct WorkspaceHomeResponseDTO: Decodable {
                     endsAt: $0.endsAt, place: $0.place, note: $0.note
                 )
             },
-            records: WorkspaceRecords(
-                latestPost: records.latestPost.map { WorkspacePostPreview(title: $0.title, createdAt: $0.createdAt) },
-                proposalCount: records.proposalCount,
-                latestProposal: records.latestProposal.map {
-                    WorkspaceProposalPreview(title: $0.title, status: $0.status, recommendCount: $0.recommendCount)
-                },
-                inquiries: records.inquiries.map { WorkspaceInquiryPreview(title: $0.title, status: $0.status) }
-            )
+            records: records.toEntity()
+        )
+    }
+}
+
+extension WorkspaceHomeResponseDTO.RecordsDTO {
+    /// 07-1 · 10-1 "내가 남긴 기록"
+    func toEntity() -> WorkspaceRecords {
+        WorkspaceRecords(
+            latestPost: latestPost.map { WorkspacePostPreview(title: $0.title, createdAt: $0.createdAt) },
+            proposalCount: proposalCount,
+            latestProposal: latestProposal.map {
+                WorkspaceProposalPreview(title: $0.title, status: $0.status, recommendCount: $0.recommendCount)
+            },
+            inquiries: inquiries.map { WorkspaceInquiryPreview(title: $0.title, status: $0.status) }
         )
     }
 }
