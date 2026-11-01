@@ -1,0 +1,6 @@
+// 공통 설정. 실제 서버 주소/키는 Secrets.xcconfig 에 둡니다 (git 제외).
+// URL의 // 는 xcconfig 주석으로 인식되므로 $() 로 끊어서 씁니다.
+API_BASE_URL = https:/$()/api.example.com
+USE_MOCK_API = YES
+
+#include? "Secrets.xcconfig"
