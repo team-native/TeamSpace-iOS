@@ -1,11 +1,14 @@
 import Foundation
 
 /// 10 팀 게시판 저장소
-/// 명세서에서 게시판 응답 예시를 찾지 못해 경로 · 필드는 Figma 10 기준으로 정했습니다. (백엔드와 맞춰야 함)
+/// 목록 · 고정 공지 · 검색은 TeamSpace-backend develop `app/api/community.py` 기준이에요.
+/// 상세 · 작성 · 댓글은 아직 Figma 10 기준 경로예요. (다음 API 맞추기 묶음)
 protocol BoardRepository: Sendable {
-    /// GET /posts — 고정 공지 · 게시글 · 내가 남긴 기록
-    func fetchBoard() async throws -> Board
-    /// GET /posts/search?keyword= — 10-12 공지 · 게시글 검색
+    /// GET /posts?category&sort&period&from&to&q&cursor&limit — `{items, nextCursor}`
+    func fetchPosts(_ query: PostListQuery, cursor: String?, limit: Int) async throws -> CursorPage<PostSummary>
+    /// GET /notices?pinned=true — 10-1 고정 공지
+    func fetchPinnedNotices(limit: Int) async throws -> [NoticeSummary]
+    /// GET /posts?q= + GET /notices?q= — 10-12 공지 · 게시글 검색
     func search(keyword: String) async throws -> BoardSearchResult
     /// GET /posts/{postId} — 10-3 본문 · 댓글 (조회 수가 1 올라가요)
     func fetchPost(id: Int) async throws -> PostDetail

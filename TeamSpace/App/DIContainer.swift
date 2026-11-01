@@ -332,7 +332,11 @@ final class DIContainer {
     }
 
     var fetchBoardUseCase: FetchBoardUseCase {
-        FetchBoardUseCase(boardRepository: boardRepository)
+        FetchBoardUseCase(boardRepository: boardRepository, workspaceRepository: workspaceRepository)
+    }
+
+    var fetchPostsUseCase: FetchPostsUseCase {
+        FetchPostsUseCase(boardRepository: boardRepository)
     }
 
     var searchBoardUseCase: SearchBoardUseCase {
@@ -726,7 +730,7 @@ extension DIContainer {
     }
 
     func makeBoardViewModel() -> BoardViewModel {
-        BoardViewModel(fetchBoardUseCase: fetchBoardUseCase)
+        BoardViewModel(fetchBoardUseCase: fetchBoardUseCase, fetchPostsUseCase: fetchPostsUseCase)
     }
 
     func makeBoardSearchViewModel() -> BoardSearchViewModel {

@@ -329,18 +329,14 @@ struct MockTransport: HTTPTransport {
         }
     }
 
-    /// 10 팀 게시판 — /posts · /posts/search · /posts/{id} · like · reports
+    /// 10 팀 게시판 — /posts(서버 형식 목록) · /posts/{id} · like · reports
     private func boardRoute(_ request: URLRequest, components: [String]) throws -> (Data, HTTPURLResponse)? {
         let notFound = #"{"code":404,"message":"해당 게시글을 찾을 수 없습니다."}"#
         let forbidden = #"{"code":403,"message":"이 게시글에는 할 수 없는 작업이에요."}"#
         let id = components.count > 1 ? Int(components[1]) : nil
         switch (request.httpMethod ?? "", components.count) {
         case ("GET", 1):
-            return try respond(request, status: 200, json: boardStore.boardJSON())
-        case ("GET", 2) where components[1] == "search":
-            let keyword = request.url.flatMap { URLComponents(url: $0, resolvingAgainstBaseURL: false) }?
-                .queryItems?.first { $0.name == "keyword" }?.value ?? ""
-            return try respond(request, status: 200, json: boardStore.searchJSON(keyword: keyword))
+            return try respond(request, status: 200, json: boardStore.listJSON(query: Self.query(of: request)))
         case ("GET", 2):
             guard let id = id, let json = boardStore.detailJSON(id: id) else { return try respond(request, status: 404, json: notFound) }
             return try respond(request, status: 200, json: json)
@@ -377,7 +373,13 @@ struct MockTransport: HTTPTransport {
         let store = boardStore.noticeStore
         let notFound = #"{"code":404,"message":"해당 공지를 찾을 수 없습니다."}"#
         let id = components.count > 1 ? Int(components[1]) : nil
+        let query = Self.query(of: request)
         switch (request.httpMethod ?? "", components.count) {
+        // 게시판 고정 공지 · 검색은 서버(develop) 형식, 10-5 공지 목록은 아직 예전 형식 (다음 API 맞추기 묶음)
+        case ("GET", 1) where query["pinned"] == "true":
+            return try respond(request, status: 200, json: boardStore.pinnedNoticesJSON())
+        case ("GET", 1) where query["q"] != nil:
+            return try respond(request, status: 200, json: store.serverItemsJSON(keyword: query["q"]))
         case ("GET", 1):
             return try respond(request, status: 200, json: store.listJSON())
         case ("GET", 2):
@@ -697,6 +699,12 @@ struct MockTransport: HTTPTransport {
             return try respond(request, status: 409, json: #"{"detail":"이미 등록된 이메일입니다."}"#)
         }
         return try respond(request, status: 202, json: #"{"id":"12","status":"PENDING"}"#)
+    }
+
+    /// 요청 URL 의 쿼리를 이름 → 값으로
+    static func query(of request: URLRequest) -> [String: String] {
+        let items = request.url.flatMap { URLComponents(url: $0, resolvingAgainstBaseURL: false) }?.queryItems ?? []
+        return Dictionary(items.compactMap { item in item.value.map { (item.name, $0) } }, uniquingKeysWith: { _, last in last })
     }
 
     private func respond(_ request: URLRequest, status: Int, json: String) throws -> (Data, HTTPURLResponse) {

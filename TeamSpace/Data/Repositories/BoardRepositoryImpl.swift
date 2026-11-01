@@ -7,18 +7,34 @@ final class BoardRepositoryImpl: BoardRepository, @unchecked Sendable {
         self.client = client
     }
 
-    func fetchBoard() async throws -> Board {
-        try await request(Endpoint(method: .get, path: "posts"), as: BoardResponseDTO.self).toEntity()
+    func fetchPosts(_ query: PostListQuery, cursor: String?, limit: Int) async throws -> CursorPage<PostSummary> {
+        let endpoint = Endpoint(method: .get, path: "posts", queryItems: query.queryItems(cursor: cursor, limit: limit))
+        let page = try await request(endpoint, as: CursorPageDTO<ServerPostItemDTO>.self)
+        return CursorPage(items: page.items.map { $0.toEntity() }, nextCursor: page.nextCursor)
     }
 
-    func search(keyword: String) async throws -> BoardSearchResult {
-        let endpoint = Endpoint(
-            method: .get,
-            path: "posts/search",
-            queryItems: [URLQueryItem(name: "keyword", value: keyword)]
-        )
-        return try await request(endpoint, as: BoardSearchResponseDTO.self).toEntity()
+    func fetchPinnedNotices(limit: Int) async throws -> [NoticeSummary] {
+        let endpoint = Endpoint(method: .get, path: "notices", queryItems: [
+            URLQueryItem(name: "pinned", value: "true"),
+            URLQueryItem(name: "limit", value: String(limit))
+        ])
+        return try await request(endpoint, as: CursorPageDTO<ServerNoticeItemDTO>.self).items.map { $0.toEntity() }
     }
+
+    /// 서버엔 검색 전용 API 가 없어 게시글 · 공지 목록에 `q` 를 붙여 같이 불러요.
+    func search(keyword: String) async throws -> BoardSearchResult {
+        async let posts = fetchPosts(PostListQuery(period: .all, keyword: keyword), cursor: nil, limit: Self.searchLimit)
+        async let notices = request(
+            Endpoint(method: .get, path: "notices", queryItems: [
+                URLQueryItem(name: "q", value: keyword),
+                URLQueryItem(name: "limit", value: String(Self.searchLimit))
+            ]),
+            as: CursorPageDTO<ServerNoticeItemDTO>.self
+        )
+        return BoardSearchResult(notices: try await notices.items.map { $0.toEntity() }, posts: try await posts.items)
+    }
+
+    static let searchLimit = 50
 
     func fetchPost(id: Int) async throws -> PostDetail {
         try await request(Endpoint(method: .get, path: "posts/\(id)"), as: PostDetailDTO.self).toEntity()
