@@ -33,6 +33,13 @@ extension Color {
     static let tsAmberSoft = Color(light: 0xFFF4E0, dark: 0x2B2416)
     static let tsHoney = Color(light: 0xFEDB6B, dark: 0xF4C15A)
 
+    // MARK: 06-3 템플릿 상세
+    static let tsTemplateAccent = Color(light: 0x4C71F5, dark: 0x8EA5FF)
+    static let tsTemplateButton = Color(light: 0x4C71F5, dark: 0x4C71F5)
+    static let tsTemplateSoft = Color(light: 0xEEF2FE, dark: 0x222A45)
+    static let tsTemplateBanner = Color(light: 0xF0F3FF, dark: 0x222A45)
+    static let tsTemplateSecondary = Color(light: 0x6B7684, dark: 0xB7B9C1)
+
     // MARK: Brand logo (Figma 로고 캡슐)
     static let tsLogoStart = Color(light: 0xFFE17E, dark: 0xFFE17E)
     static let tsLogoEnd = Color(light: 0xFFD34E, dark: 0xFFD34E)

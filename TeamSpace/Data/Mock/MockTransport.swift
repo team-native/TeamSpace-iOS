@@ -12,6 +12,7 @@ import Foundation
 /// - GET /approvals/~: Figma 05 결재 예시 (MockApprovalStore, 처리 결과를 메모리에 기억)
 /// - GET /finance/~: Figma 04 재무 예시 (MockFinanceFixture)
 /// - GET /dashboard/home: Figma 02-1 홈 예시 (MockDashboardFixture)
+/// - GET /library · /library/search: Figma 06 문서함 예시 (MockLibraryFixture)
 /// - POST /notifications/push-token: Authorization 헤더가 없으면 401
 struct MockTransport: HTTPTransport {
     static let baseURL = URL(fileURLWithPath: "/mock-api")
@@ -33,6 +34,9 @@ struct MockTransport: HTTPTransport {
             return response
         }
         if let response = try approvalRoute(request, path: path) {
+            return response
+        }
+        if let response = try libraryRoute(request, path: path) {
             return response
         }
         switch (request.httpMethod, path) {
@@ -151,6 +155,31 @@ struct MockTransport: HTTPTransport {
                 return try respond(request, status: 404, json: notFound)
             }
             return try respond(request, status: 200, json: #"{"code":200,"message":"요청 취소 완료","data":{"success":true}}"#)
+        default:
+            return nil
+        }
+    }
+
+    /// 06 문서함 — GET /library · /library/search
+    private func libraryRoute(_ request: URLRequest, path: String) throws -> (Data, HTTPURLResponse)? {
+        guard
+            request.httpMethod == "GET",
+            let url = request.url,
+            url.pathComponents.contains("library")
+        else { return nil }
+        if url.pathComponents.contains("templates"), let id = Int(path) {
+            guard let json = MockTemplateFixture.template(id: id) else {
+                return try respond(request, status: 404, json: #"{"code":404,"message":"템플릿을 찾을 수 없어요","data":null}"#)
+            }
+            return try respond(request, status: 200, json: json)
+        }
+        switch path {
+        case "library":
+            return try respond(request, status: 200, json: MockLibraryFixture.library())
+        case "search":
+            let keyword = URLComponents(url: url, resolvingAgainstBaseURL: false)?
+                .queryItems?.first { $0.name == "keyword" }?.value ?? ""
+            return try respond(request, status: 200, json: MockLibraryFixture.search(keyword: keyword))
         default:
             return nil
         }

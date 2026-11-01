@@ -32,7 +32,7 @@ struct CardSectionHeader: View {
     }
 }
 
-/// Figma 카드 밖 섹션 제목 (`필요한 일에 바로`, `지금 팀이 알아야 할 것들`)
+/// Figma 카드 밖 섹션 제목 (`지금 팀이 알아야 할 것들`)
 struct SectionTitle: View {
     let title: String
     var linkTitle: String?

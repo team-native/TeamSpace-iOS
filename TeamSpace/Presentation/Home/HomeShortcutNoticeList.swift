@@ -1,39 +1,5 @@
 import SwiftUI
 
-/// 02-1 필요한 일에 바로
-struct HomeShortcutList: View {
-    let onSelect: (HomeShortcut) -> Void
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: Spacing.sm + Spacing.xxxs) {
-            SectionTitle(title: "필요한 일에 바로")
-            VStack(spacing: 0) {
-                ForEach(Array(HomeShortcut.allCases.enumerated()), id: \.element) { index, shortcut in
-                    if index > 0 { TSDivider() }
-                    Button {
-                        onSelect(shortcut)
-                    } label: {
-                        HStack {
-                            Text(shortcut.title)
-                                .tsFont(.calloutBold)
-                                .foregroundStyle(Color.tsInk)
-                            Spacer(minLength: 0)
-                            TSIcon.chevronRight.sized(.mdLarge)
-                                .foregroundStyle(Color.tsInk3)
-                        }
-                        .padding(.vertical, Spacing.md + Spacing.compact)
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            .padding(.horizontal, Spacing.lg)
-            .padding(.vertical, Spacing.xxs)
-            .background(Color.tsSurface, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
-        }
-    }
-}
-
 /// 02-1 지금 팀이 알아야 할 것들
 struct HomeNoticeList: View {
     let notices: [NoticePreview]
@@ -86,7 +52,6 @@ private struct NoticeRow: View {
 
 #Preview {
     VStack(spacing: Spacing.xl) {
-        HomeShortcutList(onSelect: { _ in })
         HomeNoticeList(
             notices: [NoticePreview(id: 1, category: .finance, title: "10월 프로젝트 정산 기준 안내", updatedAt: Date())],
             onShowAll: {}

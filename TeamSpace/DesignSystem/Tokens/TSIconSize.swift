@@ -9,6 +9,7 @@ enum TSIconSize {
     case mdLarge // 14 — 안내 문구 옆 설정 아이콘
     case base   // 16 — 원형 버튼 안 쉐브론
     case lg     // 17
+    case action // 18 — 템플릿 작성 버튼
     case xl     // 20
     case xlLarge // 22 — 방해 금지(달) 아이콘
     case xxl    // 26
@@ -24,6 +25,7 @@ enum TSIconSize {
         case .mdLarge: return 14
         case .base: return 16
         case .lg: return 17
+        case .action: return 18
         case .xl: return 20
         case .xlLarge: return 22
         case .xxl: return 26

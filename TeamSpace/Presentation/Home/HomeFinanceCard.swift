@@ -62,11 +62,13 @@ struct HomeFinanceCard: View {
     }
 
     private var flowRow: some View {
-        HStack(spacing: 0) {
+        HStack {
             FlowColumn(title: "이번 달 수금", value: TSFormat.signedWon(finance.monthIncome), color: .tsPositive)
+            Spacer(minLength: Spacing.sm)
             Rectangle()
                 .fill(Color.tsLine)
                 .frame(width: 1, height: 36)
+            Spacer(minLength: Spacing.sm)
             FlowColumn(title: "이번 달 지출", value: TSFormat.signedWon(-finance.monthExpense), color: .tsInk)
         }
         .padding(.vertical, Spacing.xxs)
@@ -138,7 +140,5 @@ private struct FlowColumn: View {
                 .tsFont(.footnoteBold)
                 .foregroundStyle(color)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.leading, Spacing.md)
     }
 }

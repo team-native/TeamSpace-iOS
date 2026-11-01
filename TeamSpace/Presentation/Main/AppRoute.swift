@@ -21,6 +21,10 @@ enum AppRoute: Hashable {
     // 05 결재
     case approvalDetail(documentId: Int) // 05-3 내 결재 상세 · 05-4 받은 결재 검토
     case approvalCompose                 // 05-0 결재 올리기 · 종류 선택
+    // 06 문서함
+    case librarySearch                   // 06-2 문서 검색
+    case templateDetail(id: Int)          // 06-3 템플릿 상세
+    case templateCompose(kind: TemplateFormKind, title: String)
     // 아직 만들지 않은 화면
     case comingSoon(title: String)
 }

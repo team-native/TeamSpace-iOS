@@ -88,24 +88,3 @@ enum HomeFinanceMode: Hashable, CaseIterable {
         }
     }
 }
-
-/// 홈 "필요한 일에 바로" 바로가기
-enum HomeShortcut: CaseIterable, Identifiable {
-    case submitApproval
-    case findDocument
-    case teamBoard
-    case inquiry
-    case members
-
-    var id: Self { self }
-
-    var title: String {
-        switch self {
-        case .submitApproval: return "결재 올리기"
-        case .findDocument: return "문서 찾기"
-        case .teamBoard: return "팀 게시판"
-        case .inquiry: return "문의 · 건의"
-        case .members: return "팀원 소개"
-        }
-    }
-}

@@ -12,12 +12,15 @@ final class DIContainer {
     private let memberRepository: MemberRepository
     private let financeRepository: FinanceRepository
     private let approvalRepository: ApprovalRepository
+    private let libraryRepository: LibraryRepository
+    private let recentSearchRepository: RecentSearchRepository
 
     init(
         apiClient: APIClient,
         tokenStorage: TokenStorage,
         notificationSettingsRepository: NotificationSettingsRepository = UserDefaultsNotificationSettingsRepository(),
-        notificationPermissionRepository: NotificationPermissionRepository = SystemNotificationPermissionRepository()
+        notificationPermissionRepository: NotificationPermissionRepository = SystemNotificationPermissionRepository(),
+        recentSearchRepository: RecentSearchRepository = UserDefaultsRecentSearchRepository()
     ) {
         self.tokenStorage = tokenStorage
         self.authRepository = AuthRepositoryImpl(client: apiClient)
@@ -29,18 +32,26 @@ final class DIContainer {
         self.memberRepository = MemberRepositoryImpl(client: apiClient)
         self.financeRepository = FinanceRepositoryImpl(client: apiClient)
         self.approvalRepository = ApprovalRepositoryImpl(client: apiClient)
+        self.libraryRepository = LibraryRepositoryImpl(client: apiClient)
+        self.recentSearchRepository = recentSearchRepository
     }
 
     /// xcconfig 의 USE_MOCK_API / API_BASE_URL 에 따라 실서버 또는 Mock 서버를 씁니다.
     static func make(configuration: AppConfiguration = .current) -> DIContainer {
         let tokenStorage = KeychainRepository()
         let apiClient: APIClient
+        var recentSearchSeed: [String] = []
         if !configuration.usesMockAPI, let baseURL = configuration.apiBaseURL {
             apiClient = APIClient(baseURL: baseURL, transport: URLSessionTransport(), tokenStorage: tokenStorage)
         } else {
             apiClient = APIClient(baseURL: MockTransport.baseURL, transport: MockTransport(), tokenStorage: tokenStorage)
+            recentSearchSeed = MockLibraryFixture.recentKeywords
         }
-        return DIContainer(apiClient: apiClient, tokenStorage: tokenStorage)
+        return DIContainer(
+            apiClient: apiClient,
+            tokenStorage: tokenStorage,
+            recentSearchRepository: UserDefaultsRecentSearchRepository(seed: recentSearchSeed)
+        )
     }
 
     /// Preview 전용 (Mock 서버 + 메모리 토큰 + 가짜 알림 권한)
@@ -57,7 +68,11 @@ final class DIContainer {
             notificationSettingsRepository: UserDefaultsNotificationSettingsRepository(
                 defaults: UserDefaults(suiteName: "preview.notification.settings") ?? .standard
             ),
-            notificationPermissionRepository: MockNotificationPermissionRepository(status: permission)
+            notificationPermissionRepository: MockNotificationPermissionRepository(status: permission),
+            recentSearchRepository: UserDefaultsRecentSearchRepository(
+                defaults: UserDefaults(suiteName: "preview.library.search") ?? .standard,
+                seed: MockLibraryFixture.recentKeywords
+            )
         )
     }
 
@@ -167,6 +182,18 @@ final class DIContainer {
 
     var submitDocumentUseCase: SubmitDocumentUseCase {
         SubmitDocumentUseCase(approvalRepository: approvalRepository)
+    }
+
+    var fetchLibraryUseCase: FetchLibraryUseCase {
+        FetchLibraryUseCase(libraryRepository: libraryRepository)
+    }
+
+    var searchLibraryUseCase: SearchLibraryUseCase {
+        SearchLibraryUseCase(libraryRepository: libraryRepository)
+    }
+
+    var recentSearchUseCase: RecentSearchUseCase {
+        RecentSearchUseCase(recentSearchRepository: recentSearchRepository)
     }
 }
 
@@ -283,7 +310,22 @@ extension DIContainer {
         StaffingRequestViewModel(submitDocumentUseCase: submitDocumentUseCase)
     }
 
-    func makeRequestFormViewModel(kind: RequestFormKind) -> RequestFormViewModel {
-        RequestFormViewModel(kind: kind, submitDocumentUseCase: submitDocumentUseCase)
+    func makeRequestFormViewModel(kind: RequestFormKind, initialTitle: String = "") -> RequestFormViewModel {
+        RequestFormViewModel(kind: kind, submitDocumentUseCase: submitDocumentUseCase, initialTitle: initialTitle)
+    }
+
+    func makeLibraryViewModel() -> LibraryViewModel {
+        LibraryViewModel(fetchLibraryUseCase: fetchLibraryUseCase)
+    }
+
+    func makeLibrarySearchViewModel() -> LibrarySearchViewModel {
+        LibrarySearchViewModel(searchLibraryUseCase: searchLibraryUseCase, recentSearchUseCase: recentSearchUseCase)
+    }
+
+    func makeTemplateDetailViewModel(templateId: Int) -> TemplateDetailViewModel {
+        TemplateDetailViewModel(
+            templateId: templateId,
+            fetchTemplateUseCase: FetchLibraryTemplateUseCase(libraryRepository: libraryRepository)
+        )
     }
 }

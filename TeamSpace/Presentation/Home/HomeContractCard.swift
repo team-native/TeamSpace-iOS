@@ -20,30 +20,32 @@ struct HomeContractCard: View {
                 }
             }
             PoolRow(pools: summary.pools)
-            if !summary.recentContracts.isEmpty {
-                RecentList(title: "최근 수주") {
-                    ForEach(summary.recentContracts) { contract in
-                        MoneyRow(
-                            title: contract.title,
-                            subtitle: TSFormat.monthDay(contract.contractedAt),
-                            amount: TSFormat.won(contract.amount),
-                            amountColor: .tsInk
-                        ) {
-                            TagChip(title: contract.status.title, tone: contract.status.tone)
+            VStack(alignment: .leading, spacing: Spacing.xxl + Spacing.hairline) {
+                if !summary.recentContracts.isEmpty {
+                    RecentList(title: "최근 수주") {
+                        ForEach(summary.recentContracts) { contract in
+                            MoneyRow(
+                                title: contract.title,
+                                subtitle: TSFormat.monthDay(contract.contractedAt),
+                                amount: TSFormat.won(contract.amount),
+                                amountColor: .tsInk
+                            ) {
+                                TagChip(title: contract.status.title, tone: contract.status.tone)
+                            }
                         }
                     }
                 }
-            }
-            if !summary.recentDeposits.isEmpty {
-                RecentList(title: "최근 입금") {
-                    ForEach(summary.recentDeposits) { deposit in
-                        MoneyRow(
-                            title: deposit.title,
-                            subtitle: "\(deposit.kind) · \(TSFormat.monthDay(deposit.paidAt))",
-                            amount: TSFormat.signedWon(deposit.amount),
-                            amountColor: .tsPositive
-                        ) {
-                            EmptyView()
+                if !summary.recentDeposits.isEmpty {
+                    RecentList(title: "최근 입금") {
+                        ForEach(summary.recentDeposits) { deposit in
+                            MoneyRow(
+                                title: deposit.title,
+                                subtitle: "\(deposit.kind) · \(TSFormat.monthDay(deposit.paidAt))",
+                                amount: TSFormat.signedWon(deposit.amount),
+                                amountColor: .tsPositive
+                            ) {
+                                EmptyView()
+                            }
                         }
                     }
                 }
@@ -63,11 +65,10 @@ struct RecentList<Content: View>: View {
             Text(title)
                 .tsFont(.captionBold)
                 .foregroundStyle(Color.tsInk2)
-            VStack(spacing: 0) {
+            VStack(spacing: Spacing.sm + Spacing.xxxs) {
                 content()
             }
         }
-        .padding(.top, Spacing.sm)
     }
 }
 
@@ -80,8 +81,8 @@ struct MoneyRow<Accessory: View>: View {
     @ViewBuilder let accessory: () -> Accessory
 
     var body: some View {
-        VStack(spacing: 0) {
-            HStack(alignment: .top) {
+        VStack(spacing: Spacing.sm + Spacing.xxxs) {
+            HStack(alignment: .center) {
                 VStack(alignment: .leading, spacing: Spacing.xs - 1) {
                     Text(title)
                         .tsFont(.calloutBold)
@@ -99,7 +100,7 @@ struct MoneyRow<Accessory: View>: View {
                     accessory()
                 }
             }
-            .padding(.vertical, Spacing.xs)
+            .frame(minHeight: 52)
             TSDivider()
         }
         .accessibilityElement(children: .combine)
