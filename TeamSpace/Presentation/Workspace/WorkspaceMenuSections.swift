@@ -101,7 +101,7 @@ private struct ReceivedApprovalRow: View {
     }
 }
 
-/// 07-3 메뉴 — 업무 대시보드 · 내 활동 · 팀 게시판 · 참여 프로젝트 · 예정된 일정 (· 문의 받은함)
+/// 07-3 메뉴 — 업무 대시보드 · 내 활동 · 팀 게시판 · 프로젝트 · 참여 프로젝트 · 예정된 일정 (· 문의 받은함)
 struct WorkspaceMenuList: View {
     /// 문의 담당자에게만 11-5 문의 받은함 줄을 보여줘요.
     var canAnswerInquiry = false
@@ -112,6 +112,7 @@ struct WorkspaceMenuList: View {
             ("업무 대시보드", .workspaceDashboard),
             ("내 활동", .workspaceActivity),
             ("팀 게시판", .board),
+            ("프로젝트", .workspaceProjectList),
             ("참여 프로젝트", .workspaceProjects),
             ("예정된 일정", .workspaceSchedules)
         ]

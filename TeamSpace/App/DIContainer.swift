@@ -616,6 +616,10 @@ extension DIContainer {
         WorkspaceProjectsViewModel(fetchJoinedProjectsUseCase: fetchJoinedProjectsUseCase)
     }
 
+    func makeWorkspaceProjectListViewModel() -> WorkspaceProjectListViewModel {
+        WorkspaceProjectListViewModel(fetchProjectsUseCase: fetchProjectsUseCase)
+    }
+
     func makeMyDocumentsViewModel() -> MyDocumentsViewModel {
         MyDocumentsViewModel(fetchMyDocumentsUseCase: fetchMyDocumentsUseCase)
     }

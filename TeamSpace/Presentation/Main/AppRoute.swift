@@ -32,6 +32,7 @@ enum AppRoute: Hashable {
     case workspaceDocuments              // 07-4 내가 제출한 문서
     case workspaceDrafts                 // 07-5 임시 저장 문서
     case workspaceProjects               // 07-6 참여 프로젝트
+    case workspaceProjectList            // 07-18 프로젝트 목록
     case workspaceSchedules              // 07-7 일정 (07-9 시트 포함)
     case workspaceScheduleDetail(id: Int) // 07-8 전체 일정 상세
     case workspaceMyPosts                // 07-10 내가 쓴 게시글 · 댓글
