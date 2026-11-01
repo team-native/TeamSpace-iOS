@@ -37,6 +37,19 @@ final class NotificationCenterViewModel {
         return count > 0 ? count : nil
     }
 
+    /// 02-4 · 02-5 칩 아래 "미확인 N · 확인 M"
+    func readSummary(for filter: NotificationFilter) -> (unread: Int, read: Int) {
+        let items = notifications.filter { filter.matches($0) }
+        let unread = items.filter { !$0.isRead }.count
+        return (unread, items.count - unread)
+    }
+
+    /// 02-5 — 알림은 있지만 이 분류에서 안 읽은 게 하나도 없을 때
+    var isAllCaughtUp: Bool {
+        let summary = readSummary(for: filter)
+        return summary.unread == 0 && summary.read > 0
+    }
+
     /// 오늘 / 이번 주 / 이전
     func sections(now: Date = Date(), calendar: Calendar = .current) -> [NotificationSection] {
         let filtered = notifications.filter { filter.matches($0) }

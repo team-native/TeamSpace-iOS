@@ -8,6 +8,9 @@ enum AuthRoute: Hashable {
 /// 01 로그인 / 계정 흐름 — 로그인 → 계정 요청 → 요청 완료
 struct AuthFlowView: View {
     let container: DIContainer
+    /// 알림을 눌러 들어왔다면 로그인 화면에 돌아갈 위치를 보여줘요. (02-8)
+    var entry: NotificationEntry?
+    var onCancelEntry: () -> Void = {}
     let onLoginSucceeded: (AuthUser) -> Void
 
     @State private var path: [AuthRoute] = []
@@ -17,6 +20,8 @@ struct AuthFlowView: View {
             LoginView(
                 viewModel: container.makeLoginViewModel(),
                 passwordResetViewModel: container.makePasswordResetViewModel(),
+                entry: entry,
+                onCancelEntry: onCancelEntry,
                 onLoginSucceeded: onLoginSucceeded,
                 onRequestAccount: { path.append(.accountRequest) }
             )

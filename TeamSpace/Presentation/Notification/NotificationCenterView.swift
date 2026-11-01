@@ -22,6 +22,7 @@ struct NotificationCenterView: View {
                     count: { viewModel.unreadCount(for: $0) },
                     onSelect: { viewModel.filter = $0 }
                 )
+                readStatus
                 content
                 settingsLink
             }
@@ -47,6 +48,18 @@ struct NotificationCenterView: View {
         }
     }
 
+    /// 02-4 미확인 · 확인 개수, 02-5 모두 확인한 상태
+    @ViewBuilder
+    private var readStatus: some View {
+        if case .loaded = viewModel.state {
+            let summary = viewModel.readSummary(for: viewModel.filter)
+            NotificationReadSummary(unread: summary.unread, read: summary.read)
+            if viewModel.isAllCaughtUp {
+                AllCaughtUpCard()
+            }
+        }
+    }
+
     @ViewBuilder
     private var content: some View {
         switch viewModel.state {
@@ -60,8 +73,13 @@ struct NotificationCenterView: View {
                 onReview: { notification in
                     Task { await viewModel.markAsRead(notification) }
                     onNavigate(.comingSoon(title: "결재"))
+                },
+                onOpenTarget: { notification in
+                    Task { await viewModel.markAsRead(notification) }
+                    onNavigate(.comingSoon(title: notification.type.targetTitle))
                 }
             )
+            NotificationReadNotice(filter: viewModel.filter)
         case .empty, .forbidden:
             NotificationEmptyView()
         case .failed(let error):

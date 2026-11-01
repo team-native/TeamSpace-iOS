@@ -4,6 +4,7 @@ import SwiftUI
 struct RootView: View {
     let container: DIContainer
     let session: AppSession
+    let entryRouter: NotificationEntryRouter
 
     var body: some View {
         content
@@ -17,9 +18,14 @@ struct RootView: View {
         case .launching:
             LaunchView()
         case .signedOut:
-            AuthFlowView(container: container, onLoginSucceeded: { user in session.signIn(user) })
+            AuthFlowView(
+                container: container,
+                entry: entryRouter.pending,
+                onCancelEntry: { entryRouter.cancel() },
+                onLoginSucceeded: { user in session.signIn(user) }
+            )
         case .signedIn(let user):
-            MainTabView(container: container, user: user, onLogout: { session.signOut() })
+            MainTabView(container: container, user: user, entryRouter: entryRouter, onLogout: { session.signOut() })
         }
     }
 }
@@ -35,5 +41,5 @@ private struct LaunchView: View {
 
 #Preview {
     let container = DIContainer.preview()
-    return RootView(container: container, session: container.makeAppSession())
+    return RootView(container: container, session: container.makeAppSession(), entryRouter: NotificationEntryRouter())
 }

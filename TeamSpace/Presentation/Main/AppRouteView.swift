@@ -19,6 +19,10 @@ struct AppRouteView: View {
                 viewModel: container.makeNotificationTroubleshootViewModel(),
                 onNavigate: onNavigate
             )
+        case .memberDirectory:
+            MemberDirectoryView(viewModel: container.makeMemberDirectoryViewModel(), onNavigate: onNavigate)
+        case .memberDetail(let id):
+            MemberDetailView(viewModel: container.makeMemberDetailViewModel(memberId: id), onNavigate: onNavigate)
         case .comingSoon(let title):
             ComingSoonView(title: title, showsBackButton: true)
         }

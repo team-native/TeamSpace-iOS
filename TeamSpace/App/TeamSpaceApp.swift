@@ -14,7 +14,7 @@ struct TeamSpaceApp: App {
 
     var body: some Scene {
         WindowGroup {
-            RootView(container: container, session: session)
+            RootView(container: container, session: session, entryRouter: appDelegate.notificationEntryRouter)
                 .task {
                     appDelegate.pushTokenRegistrar.configure(
                         registerPushTokenUseCase: container.registerPushTokenUseCase
