@@ -1,27 +1,36 @@
 import Foundation
 
-/// 계정 요청 요청 바디. TODO: 백엔드 API 확정 후 필드명 맞추기
+/// `POST /auth/signup-requests` 요청 바디 (TeamSpace-backend `SignupRequest`)
 struct AccountRequestRequestDTO: Codable {
-    let name: String
     let email: String
-    let department: String
+    let name: String
+    let dept: String
     let password: String
 }
 
-/// 계정 요청 응답의 `data`
+/// `POST /auth/signup-requests` 응답 — `{ "id": "12", "status": "PENDING" }`
 struct AccountRequestResponseDTO: Decodable {
-    let name: String
-    let email: String
-    let department: Department
-    let status: AccountRequestStatus
-    let requestedAt: Date
+    let id: Int
+    let status: String
 
-    func toEntity() -> AccountRequestReceipt {
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decodeIntOrString(forKey: .id)
+        status = try container.decode(String.self, forKey: .status)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case status
+    }
+
+    /// 서버는 접수 번호와 상태만 줘요. 완료 화면에 보여줄 이름 · 이메일 · 부서는 보낸 값으로 채워요.
+    func toEntity(form: AccountRequestForm, department: Department, requestedAt: Date = Date()) -> AccountRequestReceipt {
         AccountRequestReceipt(
-            name: name,
-            email: email,
+            name: form.name,
+            email: form.email,
             department: department,
-            status: status,
+            status: AccountRequestStatus(serverValue: status),
             requestedAt: requestedAt
         )
     }

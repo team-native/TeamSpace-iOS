@@ -52,7 +52,7 @@ final class AccountRequestViewModelTests: XCTestCase {
         let receipt = await viewModel.submit()
 
         XCTAssertNil(receipt)
-        XCTAssertEqual(viewModel.errorMessage, "이미 요청된 이메일입니다.")
+        XCTAssertEqual(viewModel.errorMessage, "이미 등록된 이메일입니다.")
     }
 
     func testPasswordResetValidatesEmail() async {
