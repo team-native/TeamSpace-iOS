@@ -105,6 +105,91 @@ final class InquiryTests: XCTestCase {
         XCTAssertEqual(access.submitTitle, "실명으로 문의 제출")
     }
 
+    // MARK: 11-5 문의 받은함
+
+    private let manager = AuthUser(id: 9, name: "양지우", roles: [.leader])
+
+    func testInboxOnlyForManagers() async {
+        let member = makeContainer().makeInquiryInboxViewModel(user: AuthUser(id: 1, name: "옥물결", roles: [.member]))
+        await member.load()
+        guard case .forbidden = member.state else { return XCTFail("일반 구성원은 받은함을 볼 수 없어요") }
+    }
+
+    func testInboxItemsCountsAndLogs() async throws {
+        let viewModel = makeContainer().makeInquiryInboxViewModel(user: manager)
+        await viewModel.load()
+
+        XCTAssertEqual(viewModel.roleTitle, "NativeOps 담당자 권한")
+        XCTAssertEqual(viewModel.items.map(\.id), [53, 52, 51, 42, 41], "NativeOps 문의만 · 최신 접수순")
+        XCTAssertEqual(viewModel.count(of: .status(.received)), 2)
+        XCTAssertEqual(viewModel.count(of: .status(.reviewing)), 1)
+        XCTAssertTrue(viewModel.filters.contains(.status(.rejected)))
+
+        let unassigned = try XCTUnwrap(viewModel.items.first { $0.id == 52 })
+        XCTAssertEqual(unassigned.assigneeText, "담당 미배정 · 확인 및 담당 배정 필요")
+        XCTAssertEqual(unassigned.actionTitle, "문의 확인 · 담당 배정")
+        XCTAssertEqual(unassigned.authorText, "익명 · 신원 표시 안 함")
+        XCTAssertEqual(viewModel.items.first?.authorText, "실명 · 이시우")
+        XCTAssertTrue(viewModel.items.first { $0.id == 51 }?.assigneeText.hasSuffix("자료 검토 시작") == true)
+
+        XCTAssertEqual(viewModel.recentLogs.first?.title, "신규 구성원 안내 자료를 제안해요")
+        XCTAssertTrue(viewModel.recentLogs.first?.detailText.hasSuffix("양지우 · 접수 → 검토 중") == true)
+
+        viewModel.query = "회의"
+        XCTAssertEqual(viewModel.items.map(\.id), [53, 42, 41])
+    }
+
+    // MARK: 11-6 검토 · 공식 답변
+
+    func testAssignThenAnswerWithRule() async throws {
+        let viewModel = makeContainer().makeInquiryReviewViewModel(inquiryId: 52, user: manager)
+        await viewModel.load()
+        XCTAssertEqual(viewModel.assignees, ["양지우", "이시우", "안율"])
+        XCTAssertFalse(viewModel.rules.isEmpty)
+
+        await viewModel.assign("안율")
+        XCTAssertEqual(viewModel.item?.assignee, "안율")
+        XCTAssertEqual(viewModel.item?.inquiry.status, .reviewing, "배정하면 검토 중")
+        XCTAssertEqual(viewModel.statusChangeText, "검토 중 → 답변 완료")
+
+        viewModel.draft.body = "평일 9시부터 22시까지 이용할 수 있어요."
+        viewModel.draft.referenceRuleId = 8
+        XCTAssertEqual(viewModel.selectedRule?.title, "신규 멤버 온보딩 규칙")
+        await viewModel.submit()
+
+        XCTAssertEqual(viewModel.item?.inquiry.status, .answered)
+        XCTAssertEqual(viewModel.item?.reference?.title, "신규 멤버 온보딩 규칙")
+        XCTAssertEqual(viewModel.item?.history.last?.actor, "안율")
+        XCTAssertFalse(viewModel.isEditable)
+        XCTAssertEqual(viewModel.toastMessage, "공식 답변을 등록했어요")
+    }
+
+    func testRejectReachesAuthorAndClosedInquiryIsLocked() async throws {
+        let container = makeContainer()
+        let compose = container.makeInquiryComposeViewModel(context: .blank)
+        compose.draft.title = "회의실 앱 예약"
+        compose.draft.body = "앱에서 예약하고 싶어요."
+        await compose.submit()
+        let mine = try XCTUnwrap(compose.submitted)
+
+        let review = container.makeInquiryReviewViewModel(inquiryId: mine.id, user: manager)
+        await review.load()
+        review.draft.kind = .reject
+        review.draft.body = "학교 시설이라 앱 예약은 어려워요."
+        XCTAssertEqual(review.submitTitle, "반려 사유 등록")
+        await review.submit()
+        XCTAssertEqual(review.item?.inquiry.status, .rejected)
+
+        let detail = container.makeInquiryDetailViewModel(inquiryId: mine.id)
+        await detail.load()
+        XCTAssertEqual(detail.detail?.inquiry.reply?.body, "학교 시설이라 앱 예약은 어려워요.", "작성자 상세에도 보여요")
+        XCTAssertEqual(detail.followUpTitle, "다시 문의하기")
+
+        let answered = container.makeInquiryReviewViewModel(inquiryId: 42, user: manager)
+        await answered.load()
+        XCTAssertFalse(answered.isEditable, "답변이 끝난 문의는 고칠 수 없어요")
+    }
+
     // MARK: 연결
 
     func testInquiryAnswerNotificationRoutes() {

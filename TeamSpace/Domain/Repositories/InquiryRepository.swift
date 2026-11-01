@@ -9,4 +9,12 @@ protocol InquiryRepository: Sendable {
     func fetchInquiry(id: Int) async throws -> InquiryDetail
     /// POST /inquiries — 11-2 문의 제출
     func submit(_ draft: InquiryDraft) async throws -> InquirySummary
+    /// GET /inquiries/inbox — 11-5 담당 부서 받은함
+    func fetchInbox() async throws -> InquiryInbox
+    /// GET /inquiries/inbox/{inquiryId} — 11-6 검토 화면
+    func fetchInboxItem(id: Int) async throws -> InquiryInboxItem
+    /// PATCH /inquiries/{inquiryId}/assignee — 담당 배정 (접수면 검토 중으로 바뀌어요)
+    func assign(inquiryId: Int, assignee: String) async throws -> InquiryInboxItem
+    /// POST /inquiries/{inquiryId}/reply — 공식 답변 · 반려 등록 (작성자에게 알림)
+    func reply(inquiryId: Int, draft: InquiryReplyDraft) async throws -> InquiryInboxItem
 }

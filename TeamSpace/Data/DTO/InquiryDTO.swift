@@ -38,6 +38,11 @@ struct InquiryHistoryDTO: Codable {
     let status: InquiryStatus
     let occurredAt: Date
     let note: String
+    var actor: String? = nil
+
+    func toEntity() -> InquiryHistory {
+        InquiryHistory(status: status, occurredAt: occurredAt, note: note, actor: actor)
+    }
 }
 
 struct InquiryReferenceDTO: Codable {
@@ -45,6 +50,10 @@ struct InquiryReferenceDTO: Codable {
     let id: Int?
     let title: String
     let summary: String
+
+    func toEntity() -> InquiryReference {
+        InquiryReference(kind: kind, id: id, title: title, summary: summary)
+    }
 }
 
 struct InquiryDetailDTO: Codable {
@@ -55,8 +64,8 @@ struct InquiryDetailDTO: Codable {
     func toEntity() -> InquiryDetail {
         InquiryDetail(
             inquiry: inquiry.toEntity(),
-            history: history.map { InquiryHistory(status: $0.status, occurredAt: $0.occurredAt, note: $0.note) },
-            reference: reference.map { InquiryReference(kind: $0.kind, id: $0.id, title: $0.title, summary: $0.summary) }
+            history: history.map { $0.toEntity() },
+            reference: reference?.toEntity()
         )
     }
 }
@@ -68,4 +77,46 @@ struct InquirySubmitRequestDTO: Codable {
     let body: String
     let isAnonymous: Bool
     let followUpOf: Int?
+}
+
+/// GET /inquiries/inbox · /inquiries/inbox/{id} 응답의 `data` (담당자 화면)
+struct InquiryInboxItemDTO: Codable {
+    let inquiry: InquirySummaryDTO
+    let authorName: String?
+    let assignee: String?
+    let history: [InquiryHistoryDTO]
+    let reference: InquiryReferenceDTO?
+
+    func toEntity() -> InquiryInboxItem {
+        InquiryInboxItem(
+            inquiry: inquiry.toEntity(),
+            authorName: inquiry.isAnonymous ? nil : authorName,
+            assignee: assignee,
+            history: history.map { $0.toEntity() },
+            reference: reference?.toEntity()
+        )
+    }
+}
+
+struct InquiryInboxResponseDTO: Codable {
+    let department: InquiryDepartment
+    let list: [InquiryInboxItemDTO]
+    let assignees: [String]
+
+    func toEntity() -> InquiryInbox {
+        InquiryInbox(department: department, items: list.map { $0.toEntity() }, assignees: assignees)
+    }
+}
+
+/// PATCH /inquiries/{id}/assignee 요청
+struct InquiryAssignRequestDTO: Codable {
+    let assignee: String
+}
+
+/// POST /inquiries/{id}/reply 요청
+struct InquiryReplyRequestDTO: Codable {
+    /// ANSWER · REJECT
+    let kind: String
+    let body: String
+    let referenceRuleId: Int?
 }

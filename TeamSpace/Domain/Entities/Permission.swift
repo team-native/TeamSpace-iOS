@@ -27,7 +27,7 @@ extension AuthUser {
         case .manageProject:
             return !roles.isDisjoint(with: [.pm, .leader, .admin])
         case .answerInquiry:
-            return !roles.isDisjoint(with: [.leader, .admin])
+            return !roles.isDisjoint(with: [.fa, .leader, .admin])
         case .publishNotice:
             return !roles.isDisjoint(with: [.fa, .leader, .admin])
         }

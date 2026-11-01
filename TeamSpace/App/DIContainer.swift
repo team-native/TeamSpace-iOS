@@ -382,6 +382,22 @@ final class DIContainer {
         SubmitInquiryUseCase(inquiryRepository: inquiryRepository)
     }
 
+    var fetchInquiryInboxUseCase: FetchInquiryInboxUseCase {
+        FetchInquiryInboxUseCase(inquiryRepository: inquiryRepository)
+    }
+
+    var fetchInquiryReviewUseCase: FetchInquiryReviewUseCase {
+        FetchInquiryReviewUseCase(inquiryRepository: inquiryRepository)
+    }
+
+    var assignInquiryUseCase: AssignInquiryUseCase {
+        AssignInquiryUseCase(inquiryRepository: inquiryRepository)
+    }
+
+    var replyInquiryUseCase: ReplyInquiryUseCase {
+        ReplyInquiryUseCase(inquiryRepository: inquiryRepository)
+    }
+
     var boardRecentSearchUseCase: RecentSearchUseCase {
         RecentSearchUseCase(recentSearchRepository: boardRecentSearchRepository)
     }
@@ -716,5 +732,21 @@ extension DIContainer {
 
     func makeInquiryComposeViewModel(context: InquiryComposeContext) -> InquiryComposeViewModel {
         InquiryComposeViewModel(context: context, submitInquiryUseCase: submitInquiryUseCase)
+    }
+
+    func makeInquiryInboxViewModel(user: AuthUser) -> InquiryInboxViewModel {
+        InquiryInboxViewModel(user: user, fetchInquiryInboxUseCase: fetchInquiryInboxUseCase)
+    }
+
+    func makeInquiryReviewViewModel(inquiryId: Int, user: AuthUser) -> InquiryReviewViewModel {
+        InquiryReviewViewModel(
+            inquiryId: inquiryId,
+            user: user,
+            fetchInquiryReviewUseCase: fetchInquiryReviewUseCase,
+            fetchInquiryInboxUseCase: fetchInquiryInboxUseCase,
+            assignInquiryUseCase: assignInquiryUseCase,
+            replyInquiryUseCase: replyInquiryUseCase,
+            fetchRulesUseCase: fetchRulesUseCase
+        )
     }
 }

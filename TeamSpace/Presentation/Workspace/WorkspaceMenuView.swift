@@ -42,7 +42,7 @@ struct WorkspaceMenuView: View {
                     onOpenTab: { onSelectTab(.approval) },
                     onOpenItem: { onNavigate(.approvalDetail(documentId: $0.id)) }
                 )
-                WorkspaceMenuList(onNavigate: onNavigate)
+                WorkspaceMenuList(canAnswerInquiry: viewModel.user.can(.answerInquiry), onNavigate: onNavigate)
                 WorkspacePrivacyNote()
             }
             .padding(.horizontal, Spacing.screen)

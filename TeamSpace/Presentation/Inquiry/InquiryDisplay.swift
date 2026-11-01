@@ -125,3 +125,63 @@ struct InquiryComposeContext: Hashable {
         InquiryComposeContext(department: inquiry.department, title: "[후속] \(inquiry.title)", followUpOf: inquiry.id)
     }
 }
+
+extension InquiryInboxItem {
+    /// 11-5 "10.05 접수 · 익명 · NativeOps"
+    var metaText: String {
+        "\(TSFormat.shortDate(inquiry.createdAt)) 접수 · \(inquiry.isAnonymous ? "익명" : "실명") · \(inquiry.department.title)"
+    }
+
+    /// 11-5 "담당 양지우 · 10.08 공식 답변 등록" / "담당 미배정 · 확인 및 담당 배정 필요"
+    var assigneeText: String {
+        guard let assignee = assignee else { return "담당 미배정 · 확인 및 담당 배정 필요" }
+        guard let last = history.last(where: { $0.status != .received }) else { return "담당 \(assignee)" }
+        return "담당 \(assignee) · \(TSFormat.shortDate(last.occurredAt)) \(last.note)"
+    }
+
+    /// 11-5 카드 아래 링크
+    var actionTitle: String {
+        switch inquiry.status {
+        case .received: return assignee == nil ? "문의 확인 · 담당 배정" : "검토 · 공식 답변 작성"
+        case .reviewing: return "검토 · 공식 답변 작성"
+        default: return "문의와 처리 이력 보기"
+        }
+    }
+
+    /// 11-6 "익명 · 신원 표시 안 함" / "실명 · 이시우"
+    var authorText: String {
+        authorName.map { "실명 · \($0)" } ?? "익명 · 신원 표시 안 함"
+    }
+
+    /// 11-6 "2026.10.13 16:20 접수 · NativeOps"
+    var receivedText: String {
+        "\(TSFormat.fullDate(inquiry.createdAt)) \(TSFormat.time(inquiry.createdAt)) 접수 · \(inquiry.department.title)"
+    }
+
+    func matches(_ query: String) -> Bool {
+        let keyword = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !keyword.isEmpty else { return true }
+        return inquiry.title.localizedCaseInsensitiveContains(keyword) || inquiry.body.localizedCaseInsensitiveContains(keyword)
+    }
+}
+
+/// 11-5 최근 처리 이력 한 줄
+struct InquiryInboxLog: Equatable, Identifiable {
+    let title: String
+    let occurredAt: Date
+    let actor: String
+    let from: InquiryStatus
+    let to: InquiryStatus
+
+    var id: String { "\(title)-\(occurredAt.timeIntervalSince1970)" }
+
+    /// "10.14 10:00 · 양지우 · 접수 → 검토 중"
+    var detailText: String {
+        "\(TSFormat.shortDate(occurredAt)) \(TSFormat.time(occurredAt)) · \(actor) · \(from.title) → \(to.title)"
+    }
+}
+
+extension InquiryReplyDraft.Kind {
+    var title: String { self == .answer ? "공식 답변" : "반려" }
+    var resultStatus: InquiryStatus { self == .answer ? .answered : .rejected }
+}

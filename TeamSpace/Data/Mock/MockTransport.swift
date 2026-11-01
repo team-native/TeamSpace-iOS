@@ -21,7 +21,7 @@ import Foundation
 /// - GET · PATCH /workspace/profile: Figma 07-13 (MockProfileStore, 저장 내용 기억)
 /// - /projects/~ · /applications/~: Figma 08 (MockProjectStore, 신청 · 결과 등록 기억)
 /// - GET /rules · /rules/{id} · POST /rules/{id}/acknowledge: Figma 09 (MockRuleStore, 읽음 확인 기억)
-/// - /inquiries/~: Figma 11 익명 문의 (MockInquiryStore, 제출 기억)
+/// - /inquiries/~: Figma 11 익명 문의 · 담당자 받은함 (MockInquiryStore, 제출 · 배정 · 답변 기억)
 /// - /notices/~: Figma 10-5 ~ 10-7 공지 (MockNoticeStore, 확인 · 게시 기억)
 /// - /posts/~: Figma 10 팀 게시판 (MockBoardStore, 글 · 댓글 · 공감 · 신고 · 삭제 기억)
 /// - POST /notifications/push-token: Authorization 헤더가 없으면 401
@@ -353,6 +353,29 @@ struct MockTransport: HTTPTransport {
         switch (request.httpMethod ?? "", components.count) {
         case ("GET", 2) where components[1] == "mine":
             return try respond(request, status: 200, json: inquiryStore.mineJSON())
+        case ("GET", 2) where components[1] == "inbox":
+            return try respond(request, status: 200, json: inquiryStore.inboxJSON())
+        case ("GET", 3) where components[1] == "inbox":
+            guard let id = Int(components[2]), let json = inquiryStore.inboxItemJSON(id: id) else {
+                return try respond(request, status: 404, json: notFound)
+            }
+            return try respond(request, status: 200, json: json)
+        case ("PATCH", 3) where components[2] == "assignee":
+            guard
+                let id = Int(components[1]),
+                let body = request.httpBody,
+                let dto = try? JSONDecoder().decode(InquiryAssignRequestDTO.self, from: body),
+                let json = inquiryStore.assign(id: id, assignee: dto.assignee)
+            else { return try respond(request, status: 404, json: notFound) }
+            return try respond(request, status: 200, json: json)
+        case ("POST", 3) where components[2] == "reply":
+            guard
+                let id = Int(components[1]),
+                let body = request.httpBody,
+                let dto = try? JSONDecoder().decode(InquiryReplyRequestDTO.self, from: body),
+                let json = inquiryStore.reply(id: id, request: dto)
+            else { return try respond(request, status: 409, json: #"{"code":409,"message":"이미 처리가 끝난 문의예요."}"#) }
+            return try respond(request, status: 200, json: json)
         case ("GET", 2):
             guard let id = Int(components[1]), let json = inquiryStore.detailJSON(id: id) else {
                 return try respond(request, status: 404, json: notFound)

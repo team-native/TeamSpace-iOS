@@ -35,7 +35,7 @@ struct AppRouteView: View {
             boardScreen
         case .notices, .noticeDetail, .noticeCompose:
             noticeScreen
-        case .myInquiries, .inquiryCompose, .inquiryDetail:
+        case .myInquiries, .inquiryCompose, .inquiryDetail, .inquiryInbox, .inquiryReview:
             inquiryScreen
         case .comingSoon(let title):
             ComingSoonView(title: title, showsBackButton: true)
@@ -235,6 +235,10 @@ struct AppRouteView: View {
             InquiryComposeView(viewModel: container.makeInquiryComposeViewModel(context: context), onNavigate: onNavigate)
         case .inquiryDetail(let id):
             InquiryDetailView(viewModel: container.makeInquiryDetailViewModel(inquiryId: id), onNavigate: onNavigate)
+        case .inquiryInbox:
+            InquiryInboxView(viewModel: container.makeInquiryInboxViewModel(user: user), onNavigate: onNavigate)
+        case .inquiryReview(let id):
+            InquiryReviewView(viewModel: container.makeInquiryReviewViewModel(inquiryId: id, user: user))
         default:
             MyInquiriesView(viewModel: container.makeMyInquiriesViewModel(), onNavigate: onNavigate)
         }
