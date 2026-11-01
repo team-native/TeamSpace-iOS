@@ -254,4 +254,68 @@ final class MockApprovalStore: @unchecked Sendable {
         struct Created: Encodable { let documentId: Int }
         return encode(Created(documentId: id), message: "작성 완료")
     }
+
+    // MARK: 07-4 · 07-5 내 문서
+
+    private struct MyDocumentItem: Encodable {
+        let id: Int
+        let kind: String
+        let title: String
+        let amount: Int?
+        let status: String
+        let projectName: String?
+        let summary: String?
+        let submittedAt: String?
+        let updatedAt: String
+        let currentApproverName: String?
+        let currentApproverDepartment: String?
+        let currentStepTitle: String?
+        let decidedByName: String?
+        let decidedByDepartment: String?
+        let decidedAt: String?
+        let rejectReason: String?
+    }
+
+    /// GET /workspace/documents — 내가 올린 결재를 07-4 모양으로. 결재선은 상세(approvers)와 같아요.
+    func myDocumentsJSON() -> String {
+        lock.lock()
+        defer { lock.unlock() }
+        let list = storage.filter(\.isMine).map { item -> MyDocumentItem in
+            let isWaiting = item.status == "PENDING" || item.status == "IN_REVIEW"
+            let isDecided = item.status == "APPROVED" || item.status == "REJECTED"
+            let decider: (String, String)? = item.status == "APPROVED" ? ("이시우", "Leader")
+                : item.status == "REJECTED" ? ("안율", "OL") : nil
+            return MyDocumentItem(
+                id: item.id,
+                kind: item.kind,
+                title: item.title,
+                amount: item.amount,
+                status: item.status,
+                projectName: item.id == 1 || item.kind == "STAFFING" ? "Book-on" : "NativeLab",
+                summary: item.status == "DRAFT" ? (drafts[item.id]?.reason ?? item.summary ?? "작성하던 내용이 저장돼 있어요.") : nil,
+                submittedAt: item.status == "DRAFT" ? nil : item.updatedAt,
+                updatedAt: item.updatedAt,
+                currentApproverName: isWaiting ? "안율" : nil,
+                currentApproverDepartment: isWaiting ? "OL" : nil,
+                currentStepTitle: item.status == "PENDING" ? "1차 검토 대기" : item.status == "IN_REVIEW" ? "1차 검토 중" : nil,
+                decidedByName: decider?.0,
+                decidedByDepartment: decider?.1,
+                decidedAt: isDecided ? item.updatedAt : nil,
+                rejectReason: item.status == "REJECTED" ? "사용 기간과 인원별 산출 근거를 보완해 주세요." : nil
+            )
+        }
+        return encode(["list": list])
+    }
+
+    /// DELETE /documents/{id} — 내가 작성 중인 문서만 지워요.
+    func deleteDraft(id: Int) -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        guard let index = storage.firstIndex(where: { $0.id == id && $0.isMine && $0.status == "DRAFT" }) else {
+            return false
+        }
+        storage.remove(at: index)
+        drafts[id] = nil
+        return true
+    }
 }

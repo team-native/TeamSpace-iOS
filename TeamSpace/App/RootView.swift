@@ -6,8 +6,12 @@ struct RootView: View {
     let session: AppSession
     let entryRouter: NotificationEntryRouter
 
+    /// 07-14 설정의 다크 모드
+    @AppStorage(AppAppearance.storageKey) private var appearance = AppAppearance.system.rawValue
+
     var body: some View {
         content
+            .preferredColorScheme(AppAppearance(rawValue: appearance)?.colorScheme)
             .animation(.easeInOut(duration: 0.2), value: session.state)
             .task { await session.restore() }
     }

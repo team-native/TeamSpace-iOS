@@ -13,16 +13,26 @@ import Foundation
 /// - GET /finance/~: Figma 04 재무 예시 (MockFinanceFixture)
 /// - GET /dashboard/home: Figma 02-1 홈 예시 (MockDashboardFixture)
 /// - GET /library · /library/search: Figma 06 문서함 예시 (MockLibraryFixture)
+/// - GET /workspace/home · /workspace/projects: Figma 07 내 공간 예시 (MockWorkspaceFixture)
+/// - GET /workspace/documents · DELETE /documents/{id}: 07-4 · 07-5 (MockApprovalStore 의 내 결재)
+/// - GET · POST /workspace/todos · PATCH /workspace/todos/{id}: Figma 07-2 (MockTodoStore, 메모리에 기억)
+/// - /workspace/schedules/~: Figma 07-7 ~ 07-9 (MockScheduleStore, 참석 응답 · 리마인더 기억)
+/// - GET /workspace/activity · posts · proposals: Figma 07-10 ~ 07-12 (MockActivityFixture)
+/// - GET · PATCH /workspace/profile: Figma 07-13 (MockProfileStore, 저장 내용 기억)
 /// - POST /notifications/push-token: Authorization 헤더가 없으면 401
 struct MockTransport: HTTPTransport {
     static let baseURL = URL(fileURLWithPath: "/mock-api")
     static let failingPassword = "wrong"
     /// FA 계정으로 로그인했을 때 받는 가짜 토큰
     static let faToken = "mock-fa-token"
+    private static let scheduleNotFound = #"{"code":404,"message":"해당 일정을 찾을 수 없습니다."}"#
 
     var latencyNanoseconds: UInt64 = 700_000_000
     private let notificationStore = MockNotificationStore()
     private let approvalStore = MockApprovalStore()
+    private let todoStore = MockTodoStore()
+    private let scheduleStore = MockScheduleStore()
+    private let profileStore = MockProfileStore()
 
     func send(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
         try await Task.sleep(nanoseconds: latencyNanoseconds)
@@ -37,6 +47,9 @@ struct MockTransport: HTTPTransport {
             return response
         }
         if let response = try libraryRoute(request, path: path) {
+            return response
+        }
+        if let response = try workspaceRoute(request, path: path) {
             return response
         }
         switch (request.httpMethod, path) {
@@ -114,6 +127,11 @@ struct MockTransport: HTTPTransport {
                 return try respond(request, status: 404, json: notFound)
             }
             return try respond(request, status: 200, json: json)
+        case ("DELETE", _) where parent == "documents":
+            guard let id = Int(path), approvalStore.deleteDraft(id: id) else {
+                return try respond(request, status: 404, json: notFound)
+            }
+            return try respond(request, status: 200, json: #"{"code":200,"message":"삭제 완료","data":{"documentId":\#(path)}}"#)
         case ("POST", "decide"):
             guard
                 let id = Int(parent),
@@ -155,6 +173,96 @@ struct MockTransport: HTTPTransport {
                 return try respond(request, status: 404, json: notFound)
             }
             return try respond(request, status: 200, json: #"{"code":200,"message":"요청 취소 완료","data":{"success":true}}"#)
+        default:
+            return nil
+        }
+    }
+
+    /// 07 내 공간 — /workspace/~ (dashboard/home 과 마지막 경로가 같아서 먼저 걸러요)
+    private func workspaceRoute(_ request: URLRequest, path: String) throws -> (Data, HTTPURLResponse)? {
+        guard let url = request.url, url.pathComponents.contains("workspace") else { return nil }
+        let parent = url.deletingLastPathComponent().lastPathComponent
+        switch (request.httpMethod ?? "", path) {
+        case ("GET", "home"):
+            let summary = todoStore.summary()
+            return try respond(request, status: 200, json: MockWorkspaceFixture.home(
+                todayTodoTitles: summary.today,
+                completedTodoCount: summary.completed
+            ))
+        case ("GET", "schedules"):
+            let month = URLComponents(url: url, resolvingAgainstBaseURL: false)?
+                .queryItems?.first { $0.name == "month" }?.value
+            return try respond(request, status: 200, json: scheduleStore.listJSON(monthText: month))
+        case ("GET", _) where parent == "schedules":
+            guard let id = Int(path), let json = scheduleStore.detailJSON(id: id) else {
+                return try respond(request, status: 404, json: Self.scheduleNotFound)
+            }
+            return try respond(request, status: 200, json: json)
+        case ("POST", "response"):
+            guard
+                let id = Int(parent),
+                let body = request.httpBody,
+                let dto = try? JSONCoder.makeDecoder().decode(ScheduleResponseRequestDTO.self, from: body),
+                let json = scheduleStore.respond(id: id, response: dto.response)
+            else {
+                return try respond(request, status: 404, json: Self.scheduleNotFound)
+            }
+            return try respond(request, status: 200, json: json)
+        case ("PATCH", "reminders"):
+            guard
+                let id = Int(parent),
+                let body = request.httpBody,
+                let dto = try? JSONCoder.makeDecoder().decode(ScheduleRemindersDTO.self, from: body),
+                let json = scheduleStore.updateReminders(id: id, values: dto.reminders)
+            else {
+                return try respond(request, status: 404, json: Self.scheduleNotFound)
+            }
+            return try respond(request, status: 200, json: json)
+        case ("GET", "profile"):
+            return try respond(request, status: 200, json: profileStore.json())
+        case ("PATCH", "profile"):
+            guard
+                let body = request.httpBody,
+                let dto = try? JSONCoder.makeDecoder().decode(ProfileUpdateRequestDTO.self, from: body)
+            else {
+                return try respond(request, status: 400, json: #"{"code":400,"message":"잘못된 요청입니다."}"#)
+            }
+            return try respond(request, status: 200, json: profileStore.update(dto))
+        case ("GET", "activity"):
+            let unread = notificationStore.items().filter { !$0.isRead }.count
+            let submitted = approvalStore.items(mine: true).filter { $0.status != "DRAFT" }.count
+            return try respond(request, status: 200, json: MockActivityFixture.summary(
+                unreadNotifications: unread,
+                submittedDocuments: submitted
+            ))
+        case ("GET", "posts"):
+            return try respond(request, status: 200, json: MockActivityFixture.posts())
+        case ("GET", "proposals"):
+            return try respond(request, status: 200, json: MockActivityFixture.proposals())
+        case ("GET", "documents"):
+            return try respond(request, status: 200, json: approvalStore.myDocumentsJSON())
+        case ("GET", "projects"):
+            return try respond(request, status: 200, json: MockWorkspaceFixture.projects())
+        case ("GET", "todos"):
+            return try respond(request, status: 200, json: todoStore.listJSON())
+        case ("POST", "todos"):
+            guard
+                let body = request.httpBody,
+                let dto = try? JSONCoder.makeDecoder().decode(TodoCreateRequestDTO.self, from: body)
+            else {
+                return try respond(request, status: 400, json: #"{"code":400,"message":"잘못된 요청입니다."}"#)
+            }
+            return try respond(request, status: 201, json: todoStore.add(dto))
+        case ("PATCH", _) where parent == "todos":
+            guard
+                let id = Int(path),
+                let body = request.httpBody,
+                let dto = try? JSONCoder.makeDecoder().decode(TodoUpdateRequestDTO.self, from: body),
+                let json = todoStore.update(id: id, status: dto.status)
+            else {
+                return try respond(request, status: 404, json: #"{"code":404,"message":"해당 할 일을 찾을 수 없습니다."}"#)
+            }
+            return try respond(request, status: 200, json: json)
         default:
             return nil
         }
