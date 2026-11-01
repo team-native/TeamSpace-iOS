@@ -16,6 +16,7 @@ final class DIContainer {
     private let recentSearchRepository: RecentSearchRepository
     private let workspaceRepository: WorkspaceRepository
     private let projectRepository: ProjectRepository
+    private let ruleRepository: RuleRepository
 
     init(
         apiClient: APIClient,
@@ -38,6 +39,7 @@ final class DIContainer {
         self.recentSearchRepository = recentSearchRepository
         self.workspaceRepository = WorkspaceRepositoryImpl(client: apiClient)
         self.projectRepository = ProjectRepositoryImpl(client: apiClient)
+        self.ruleRepository = RuleRepositoryImpl(client: apiClient)
     }
 
     /// xcconfig 의 USE_MOCK_API / API_BASE_URL 에 따라 실서버 또는 Mock 서버를 씁니다.
@@ -288,6 +290,18 @@ final class DIContainer {
         DecideApplicantUseCase(projectRepository: projectRepository)
     }
 
+    var fetchRulesUseCase: FetchRulesUseCase {
+        FetchRulesUseCase(ruleRepository: ruleRepository)
+    }
+
+    var fetchRuleDetailUseCase: FetchRuleDetailUseCase {
+        FetchRuleDetailUseCase(ruleRepository: ruleRepository)
+    }
+
+    var acknowledgeRuleUseCase: AcknowledgeRuleUseCase {
+        AcknowledgeRuleUseCase(ruleRepository: ruleRepository)
+    }
+
     var fetchTodosUseCase: FetchTodosUseCase {
         FetchTodosUseCase(workspaceRepository: workspaceRepository)
     }
@@ -534,6 +548,18 @@ extension DIContainer {
             projectId: projectId,
             fetchApplicantsUseCase: fetchApplicantsUseCase,
             decideApplicantUseCase: decideApplicantUseCase
+        )
+    }
+
+    func makeRuleListViewModel() -> RuleListViewModel {
+        RuleListViewModel(fetchRulesUseCase: fetchRulesUseCase)
+    }
+
+    func makeRuleDetailViewModel(ruleId: Int) -> RuleDetailViewModel {
+        RuleDetailViewModel(
+            ruleId: ruleId,
+            fetchRuleDetailUseCase: fetchRuleDetailUseCase,
+            acknowledgeRuleUseCase: acknowledgeRuleUseCase
         )
     }
 }
