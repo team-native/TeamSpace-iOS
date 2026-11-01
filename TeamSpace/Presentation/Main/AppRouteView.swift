@@ -35,6 +35,8 @@ struct AppRouteView: View {
             boardScreen
         case .notices, .noticeDetail, .noticeCompose:
             noticeScreen
+        case .myInquiries, .inquiryCompose, .inquiryDetail:
+            inquiryScreen
         case .comingSoon(let title):
             ComingSoonView(title: title, showsBackButton: true)
         }
@@ -222,6 +224,19 @@ struct AppRouteView: View {
             NoticeComposeView(viewModel: container.makeNoticeComposeViewModel(user: user))
         default:
             NoticeListView(viewModel: container.makeNoticeListViewModel(user: user), onNavigate: onNavigate)
+        }
+    }
+
+    /// 11 문의 · 건의
+    @ViewBuilder
+    private var inquiryScreen: some View {
+        switch route {
+        case .inquiryCompose(let context):
+            InquiryComposeView(viewModel: container.makeInquiryComposeViewModel(context: context), onNavigate: onNavigate)
+        case .inquiryDetail(let id):
+            InquiryDetailView(viewModel: container.makeInquiryDetailViewModel(inquiryId: id), onNavigate: onNavigate)
+        default:
+            MyInquiriesView(viewModel: container.makeMyInquiriesViewModel(), onNavigate: onNavigate)
         }
     }
 }

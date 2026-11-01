@@ -96,7 +96,9 @@ enum ProposalStatus: String, UnknownCaseDecodable, Encodable, Hashable, Sendable
 }
 
 /// 문의 상태
-enum InquiryStatus: String, UnknownCaseDecodable, Hashable, Sendable {
+enum InquiryStatus: String, UnknownCaseDecodable, Encodable, Hashable, Sendable {
+    /// 담당 부서에 전달됨 (11 문의)
+    case received = "RECEIVED"
     case reviewing = "IN_REVIEW"
     case answered = "ANSWERED"
     case rejected = "REJECTED"

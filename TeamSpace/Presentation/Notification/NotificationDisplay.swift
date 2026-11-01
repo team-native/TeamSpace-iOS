@@ -53,22 +53,24 @@ extension NotificationType {
         }
     }
 
-    /// "자세히 보기"로 이동할 화면. 규칙은 09-1, 공지는 10-5, 일정은 07-7로 가고 나머지는 준비 중이에요.
+    /// "자세히 보기"로 이동할 화면. 규칙은 09-1, 공지는 10-5, 문의 답변은 11-1, 일정은 07-7로 가고 나머지는 준비 중이에요.
     var targetRoute: AppRoute {
         switch self {
         case .rule: return .rules
         case .notice: return .notices
+        case .inquiryAnswer: return .myInquiries
         case .schedule: return .workspaceSchedules
         default: return .comingSoon(title: targetTitle)
         }
     }
 
-    /// deepLink 에 ID 가 있으면 규칙은 09-2, 공지는 10-6 상세로 바로 가요. (Figma 02-2 → 09-2 · 10-6)
+    /// deepLink 에 ID 가 있으면 규칙은 09-2, 공지는 10-6, 문의 답변은 11-4 상세로 바로 가요. (Figma 02-2 → 09-2 · 10-6)
     func targetRoute(deepLink: String?) -> AppRoute {
         let id = deepLink.flatMap { Int(URL(fileURLWithPath: $0).lastPathComponent) }
         switch (self, id) {
         case (.rule, .some(let id)): return .ruleDetail(id: id)
         case (.notice, .some(let id)): return .noticeDetail(id: id)
+        case (.inquiryAnswer, .some(let id)): return .inquiryDetail(id: id)
         default: break
         }
         return targetRoute

@@ -23,7 +23,7 @@ struct BoardView: View {
                     onCustom: { isShowingPeriodSheet = true }
                 )
                 WorkspacePageTitle(eyebrow: "• TEAMSPACE · 팀 게시판", title: "함께 나누는 생각이\n팀을 더 나아지게 해요.")
-                BoardInquiryBanner { onNavigate(.comingSoon(title: "문의 · 건의")) }
+                BoardInquiryBanner { onNavigate(.inquiryCompose(.blank)) }
                 content
             }
             .padding(.horizontal, Spacing.screen)
@@ -63,7 +63,7 @@ struct BoardView: View {
             BoardListHeader(
                 inquiryCount: viewModel.inquiryCount,
                 sort: viewModel.sort,
-                onOpenInquiries: { onNavigate(.comingSoon(title: "내 문의")) },
+                onOpenInquiries: { onNavigate(.myInquiries) },
                 onSort: { viewModel.sort = $0 }
             )
             BoardFilterBar(selection: viewModel.filter) { viewModel.filter = $0 }

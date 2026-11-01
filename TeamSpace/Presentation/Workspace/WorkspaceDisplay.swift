@@ -83,6 +83,7 @@ extension ProposalStatus {
 extension InquiryStatus {
     var title: String {
         switch self {
+        case .received: return "접수"
         case .reviewing: return "검토 중"
         case .answered: return "답변 완료"
         case .rejected: return "반려"

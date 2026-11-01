@@ -149,7 +149,7 @@ struct WorkspaceRecordsCard: View {
             }
             TSDivider()
             WorkspaceLinkRow(title: "내 문의 · \(records.inquiries.count)건", subtitle: records.inquiryText) {
-                onOpen(.comingSoon(title: "내 문의"))
+                onOpen(.myInquiries)
             }
         }
     }
