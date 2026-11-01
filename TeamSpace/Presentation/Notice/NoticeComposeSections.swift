@@ -41,7 +41,7 @@ private struct NoticeCheckChip: View {
             }
             .foregroundStyle(isOn ? Color.tsPrimary : Color.tsInk2)
             .padding(.horizontal, Spacing.md)
-            .frame(height: 32)
+            .frame(minHeight: 32)
             .background(isOn ? Color.tsPrimarySoft : Color.tsSurface, in: Capsule())
             .overlay(Capsule().stroke(isOn ? Color.clear : Color.tsLine, lineWidth: 1))
         }

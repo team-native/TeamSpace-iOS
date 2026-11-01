@@ -51,7 +51,7 @@ struct ProfileEditView: View {
                     .tsFont(.calloutBold)
                     .foregroundStyle(Color.tsOnPrimary)
                     .padding(.horizontal, Spacing.lg)
-                    .frame(height: 36)
+                    .frame(minHeight: 36)
                     .background(Color.tsPrimary, in: Capsule())
                     .buttonStyle(.plain)
             }
@@ -85,7 +85,7 @@ private struct ProfileEditTopBar: View {
                     .tsFont(.calloutBold)
                     .foregroundStyle(Color.tsOnPrimary)
                     .padding(.horizontal, Spacing.md + Spacing.xxxs)
-                    .frame(height: 32)
+                    .frame(minHeight: 32)
                     .background(Color.tsPrimary, in: Capsule())
                     .opacity(canSave ? 1 : 0.45)
                     .buttonStyle(.plain)

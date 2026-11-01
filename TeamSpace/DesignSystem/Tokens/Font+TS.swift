@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// 타이포그래피 토큰. 사용: `.tsFont(.title3)`
 enum TSFontStyle {
@@ -67,9 +68,47 @@ enum TSFontStyle {
     }
 }
 
+extension TSFontStyle {
+    /// 하단 탭바 글자는 시스템 탭바처럼 크기를 고정하고, 길게 누르면 크게 보여줘요.
+    var scalesWithDynamicType: Bool {
+        self != .tabLabel && self != .tabLabelSelected
+    }
+
+    /// 시스템 글자 크기에 따라 커지는 비율 기준 (COMMON-08 접근성)
+    private var textStyle: UIFont.TextStyle {
+        switch size {
+        case 28...: return .largeTitle
+        case 20..<28: return .title3
+        case 13..<20: return .body
+        default: return .caption1
+        }
+    }
+
+    /// 지금 시스템 글자 크기에 맞춘 글꼴. 기본 크기(large)에서는 Figma 값 그대로예요.
+    func font(for dynamicTypeSize: DynamicTypeSize) -> Font {
+        .system(size: scaledSize(for: dynamicTypeSize), weight: weight)
+    }
+
+    func scaledSize(for dynamicTypeSize: DynamicTypeSize) -> CGFloat {
+        guard scalesWithDynamicType else { return size }
+        let traits = UITraitCollection(preferredContentSizeCategory: UIContentSizeCategory(dynamicTypeSize))
+        return UIFontMetrics(forTextStyle: textStyle).scaledValue(for: size, compatibleWith: traits)
+    }
+}
+
+private struct TSFontModifier: ViewModifier {
+    let style: TSFontStyle
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    func body(content: Content) -> some View {
+        content.font(style.font(for: dynamicTypeSize))
+    }
+}
+
 extension View {
+    /// 시스템 글자 크기(Dynamic Type)를 따라 커져요.
     func tsFont(_ style: TSFontStyle) -> some View {
-        font(style.font)
+        modifier(TSFontModifier(style: style))
     }
 }
 

@@ -112,7 +112,7 @@ private struct RoleChipRow: View {
                             .tsFont(isSelected ? .footnoteBold : .footnoteMedium)
                             .foregroundStyle(isSelected ? Color.tsOnPrimary : Color.tsInk2)
                             .padding(.horizontal, Spacing.md + Spacing.xxxs)
-                            .frame(height: 35)
+                            .frame(minHeight: 35)
                             .background(Capsule().fill(isSelected ? Color.tsPrimary : Color.tsSurface2))
                     }
                     .buttonStyle(.plain)

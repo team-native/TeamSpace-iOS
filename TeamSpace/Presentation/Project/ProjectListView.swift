@@ -107,7 +107,7 @@ private struct ProjectFilterBar: View {
                     .tsFont(.captionBold)
                     .foregroundStyle(Color.tsOnPrimary)
                     .padding(.horizontal, Spacing.md + Spacing.xxxs)
-                    .frame(height: 30)
+                    .frame(minHeight: 30)
                     .background(Color.tsPrimary, in: Capsule())
                 }
                 FilterChip(title: "모집 중만", isSelected: viewModel.recruitingOnly) { viewModel.recruitingOnly.toggle() }

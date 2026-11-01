@@ -192,7 +192,7 @@ struct WorkspaceCountChip: View {
                 .tsFont(.caption2Bold)
                 .foregroundStyle(isSelected ? Color.tsOnPrimary : Color.tsInk2)
                 .padding(.horizontal, Spacing.md)
-                .frame(height: 28)
+                .frame(minHeight: 28)
                 .background(isSelected ? Color.tsPrimary : Color.tsSurface2, in: Capsule())
         }
         .buttonStyle(.plain)

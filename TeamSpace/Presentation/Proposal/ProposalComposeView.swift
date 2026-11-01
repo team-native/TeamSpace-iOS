@@ -117,7 +117,7 @@ private struct ProposalTextSection: View {
                 .tsFont(.bodyBold)
                 .foregroundStyle(Color.tsInk)
                 .padding(.horizontal, Spacing.md + Spacing.xxxs)
-                .frame(height: 50)
+                .frame(minHeight: 50)
                 .background(Color.tsSurface, in: RoundedRectangle(cornerRadius: Radius.lg, style: .continuous))
             TextEditor(text: $viewModel.draft.body)
                 .tsFont(.callout)

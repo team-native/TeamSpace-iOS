@@ -107,7 +107,7 @@ private struct ProposalMenuLabel: View {
         }
         .foregroundStyle(isActive ? Color.tsPrimary : Color.tsInk2)
         .padding(.horizontal, Spacing.md)
-        .frame(height: 32)
+        .frame(minHeight: 32)
         .background(isActive ? Color.tsPrimarySoft : Color.tsSurface, in: RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
     }
 }

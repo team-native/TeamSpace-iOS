@@ -149,7 +149,7 @@ private struct WorkspaceProjectListCard: View {
                 .tsFont(.captionBold)
                 .foregroundStyle(Color.tsOnPrimary)
                 .padding(.horizontal, Spacing.md + Spacing.xxxs)
-                .frame(height: 33)
+                .frame(minHeight: 33)
                 .background(Color.tsPrimary, in: RoundedRectangle(cornerRadius: Radius.xs + 1, style: .continuous))
         }
     }

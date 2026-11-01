@@ -29,7 +29,7 @@ struct WorkspaceMenuView: View {
                         onNavigate(.workspaceSettings)
                     }
                 }
-                .frame(height: 44)
+                .frame(minHeight: 44)
                 .padding(.top, Spacing.xs)
                 WorkspaceMenuProfileCard(
                     name: viewModel.user.name,

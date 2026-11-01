@@ -33,7 +33,7 @@ struct ProfileEditFields: View {
                             .tsFont(.footnoteBold)
                             .foregroundStyle(Color.tsInk)
                             .padding(.horizontal, Spacing.md)
-                            .frame(height: 32)
+                            .frame(minHeight: 32)
                             .background(Color.tsSurface, in: Capsule())
                         }
                         .buttonStyle(.plain)
@@ -43,7 +43,7 @@ struct ProfileEditFields: View {
                         .tsFont(.footnoteBold)
                         .foregroundStyle(Color.tsPrimary)
                         .padding(.horizontal, Spacing.md)
-                        .frame(height: 32)
+                        .frame(minHeight: 32)
                         .background(Color.tsPrimarySoft, in: Capsule())
                         .buttonStyle(.plain)
                 }

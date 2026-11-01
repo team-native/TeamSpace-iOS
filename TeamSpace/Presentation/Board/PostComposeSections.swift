@@ -69,7 +69,7 @@ struct PostTextSection: View {
                 .tsFont(.bodyBold)
                 .foregroundStyle(Color.tsInk)
                 .padding(.horizontal, Spacing.md + Spacing.xxxs)
-                .frame(height: 50)
+                .frame(minHeight: 50)
                 .background(Color.tsSurface, in: RoundedRectangle(cornerRadius: Radius.lg, style: .continuous))
             ZStack(alignment: .topLeading) {
                 if viewModel.draft.body.isEmpty {

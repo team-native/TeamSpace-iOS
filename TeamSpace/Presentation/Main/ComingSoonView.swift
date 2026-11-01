@@ -40,7 +40,7 @@ struct ComingSoonView: View {
                 .tsFont(.title3)
                 .foregroundStyle(Color.tsInk)
         }
-        .frame(height: 48)
+        .frame(minHeight: 48)
     }
 }
 

@@ -45,6 +45,10 @@ struct TSTabBar: View {
         .buttonStyle(.plain)
         .accessibilityLabel(item.title)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
+        .accessibilityShowsLargeContentViewer {
+            item.icon.image
+            Text(item.title)
+        }
     }
 }
 

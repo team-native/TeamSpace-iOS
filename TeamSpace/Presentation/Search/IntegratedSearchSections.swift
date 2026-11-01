@@ -103,6 +103,6 @@ struct SearchHitCard: View {
                 .foregroundStyle(Color.tsPrimary)
                 .accessibilityHidden(true)
         }
-        .frame(height: 44)
+        .frame(minHeight: 44)
     }
 }

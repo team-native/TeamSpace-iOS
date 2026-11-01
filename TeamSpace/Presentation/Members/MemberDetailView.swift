@@ -33,7 +33,7 @@ struct MemberDetailView: View {
                     viewModel.didCopyLink()
                 }
             }
-            .frame(height: 44)
+            .frame(minHeight: 44)
             .padding(.horizontal, Spacing.screen)
             .padding(.bottom, Spacing.sm)
             .background(Color.tsBackground)

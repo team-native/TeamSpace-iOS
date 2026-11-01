@@ -18,14 +18,21 @@ struct KeyValueRow<Value: View>: View {
     }
 }
 
-extension KeyValueRow where Value == Text {
+/// `KeyValueRow` 의 글자 값 (시스템 글자 크기를 따라 커져요)
+struct KeyValueText: View {
+    let text: String
+
+    var body: some View {
+        Text(text)
+            .tsFont(.calloutBold)
+            .foregroundStyle(Color.tsInk)
+    }
+}
+
+extension KeyValueRow where Value == KeyValueText {
     init(title: String, value: String) {
         self.title = title
-        self.value = {
-            Text(value)
-                .font(.ts(.calloutBold))
-                .foregroundColor(Color.tsInk)
-        }
+        self.value = { KeyValueText(text: value) }
     }
 }
 

@@ -94,7 +94,7 @@ private struct FinanceHeader: View {
                 }
                 .foregroundStyle(Color.tsInk2)
                 .padding(.horizontal, Spacing.md + Spacing.xxxs)
-                .frame(height: 32)
+                .frame(minHeight: 32)
                 .background(Color.tsSurface2, in: Capsule())
             }
             .buttonStyle(.plain)

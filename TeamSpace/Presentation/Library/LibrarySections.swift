@@ -32,7 +32,7 @@ struct LibrarySearchBar: View {
             Spacer(minLength: 0)
         }
         .padding(.horizontal, Spacing.md)
-        .frame(height: 44)
+        .frame(minHeight: 44)
         .background(Color.tsSurface, in: RoundedRectangle(cornerRadius: Radius.lg, style: .continuous))
         .contentShape(Rectangle())
     }

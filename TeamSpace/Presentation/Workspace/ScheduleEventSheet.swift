@@ -67,6 +67,6 @@ struct ScheduleInfoLine: View {
                 .tsFont(.callout)
                 .foregroundStyle(Color.tsInk)
         }
-        .frame(height: 41)
+        .frame(minHeight: 41)
     }
 }

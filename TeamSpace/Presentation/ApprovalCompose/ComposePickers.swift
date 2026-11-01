@@ -52,7 +52,7 @@ struct MonthRangePickerSheet: View {
                     .foregroundStyle(Color.tsPrimary)
             }
             .padding(.horizontal, Spacing.xl)
-            .frame(height: 48)
+            .frame(minHeight: 48)
             HStack(spacing: 0) {
                 monthPicker("시작", selection: $start)
                 Text("~").tsFont(.bodyBold).foregroundStyle(Color.tsInk3)

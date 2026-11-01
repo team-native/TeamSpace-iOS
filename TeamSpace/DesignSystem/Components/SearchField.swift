@@ -33,7 +33,7 @@ struct SearchField: View {
             }
         }
         .padding(.horizontal, Spacing.md + Spacing.xxxs)
-        .frame(height: 46)
+        .frame(minHeight: 46)
         .background(Color.tsSurface, in: RoundedRectangle(cornerRadius: Radius.lg, style: .continuous))
         .task {
             guard autoFocus else { return }

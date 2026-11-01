@@ -175,7 +175,7 @@ private struct CategoryChips: View {
                             .tsFont(isSelected ? .footnoteBold : .footnoteMedium)
                             .foregroundStyle(isSelected ? Color.tsOnPrimary : Color.tsInk2)
                             .padding(.horizontal, Spacing.md + Spacing.xxxs)
-                            .frame(height: 33)
+                            .frame(minHeight: 33)
                             .background(Capsule().fill(isSelected ? Color.tsPrimary : Color.tsSurface))
                             .overlay(Capsule().stroke(isSelected ? Color.clear : Color.tsLine, lineWidth: 1))
                     }

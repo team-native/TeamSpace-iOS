@@ -21,7 +21,7 @@ struct FilterChip: View {
             }
             .foregroundStyle(isSelected ? Color.tsOnPrimary : Color.tsInk2)
             .padding(.horizontal, Spacing.md + Spacing.xxxs)
-            .frame(height: 30)
+            .frame(minHeight: 30)
             .background(isSelected ? Color.tsPrimary : Color.tsSurface, in: Capsule())
             .overlay(Capsule().stroke(isSelected ? Color.clear : Color.tsLine, lineWidth: 1))
         }

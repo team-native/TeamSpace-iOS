@@ -22,7 +22,7 @@ struct TSNavigationBar<Trailing: View>: View {
                 .accessibilityAddTraits(.isHeader)
             trailing()
         }
-        .frame(height: 44)
+        .frame(minHeight: 44)
     }
 }
 

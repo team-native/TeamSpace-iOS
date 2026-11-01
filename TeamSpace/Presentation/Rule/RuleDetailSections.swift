@@ -144,7 +144,7 @@ struct RuleReadBar: View {
                     .tsFont(.footnoteBold)
                     .foregroundStyle(Color.tsOnPrimary)
                     .padding(.horizontal, Spacing.lg)
-                    .frame(height: 36)
+                    .frame(minHeight: 36)
                     .background(Color.tsPrimary, in: Capsule())
                     .buttonStyle(.plain)
                     .disabled(isLoading)
