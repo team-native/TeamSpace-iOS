@@ -39,6 +39,8 @@ struct AppRouteView: View {
             inquiryScreen
         case .proposals, .proposalDetail, .proposalCompose:
             proposalScreen
+        case .integratedSearch:
+            IntegratedSearchView(viewModel: container.makeIntegratedSearchViewModel(), onNavigate: onNavigate)
         case .comingSoon(let title):
             ComingSoonView(title: title, showsBackButton: true)
         }
