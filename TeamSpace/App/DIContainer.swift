@@ -21,6 +21,7 @@ final class DIContainer {
     private let noticeRepository: NoticeRepository
     private let inquiryRepository: InquiryRepository
     private let proposalRepository: ProposalRepository
+    private let searchRepository: SearchRepository
     private let boardRecentSearchRepository: RecentSearchRepository
     private let postDraftRepository: PostDraftRepository
     private let proposalDraftRepository: ProposalDraftRepository
@@ -56,6 +57,7 @@ final class DIContainer {
         self.noticeRepository = NoticeRepositoryImpl(client: apiClient)
         self.inquiryRepository = InquiryRepositoryImpl(client: apiClient)
         self.proposalRepository = ProposalRepositoryImpl(client: apiClient)
+        self.searchRepository = SearchRepositoryImpl(client: apiClient)
         self.boardRecentSearchRepository = boardRecentSearchRepository
         self.postDraftRepository = postDraftRepository
         self.proposalDraftRepository = proposalDraftRepository
@@ -662,6 +664,10 @@ extension DIContainer {
 
     func makePermissionsViewModel(user: AuthUser) -> PermissionsViewModel {
         PermissionsViewModel(user: user, fetchProfileUseCase: fetchProfileUseCase)
+    }
+
+    func makeIntegratedSearchViewModel() -> IntegratedSearchViewModel {
+        IntegratedSearchViewModel(searchAllUseCase: SearchAllUseCase(searchRepository: searchRepository))
     }
 
     func makeProjectListViewModel() -> ProjectListViewModel {

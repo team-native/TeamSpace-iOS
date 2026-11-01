@@ -71,6 +71,8 @@ enum AppRoute: Hashable {
     case proposals                       // 12-1b 운영 제안 목록
     case proposalDetail(id: Int)         // 12-2b 운영 제안 상세
     case proposalCompose                 // 12-3 운영 제안 쓰기
+    // 13 통합 검색
+    case integratedSearch
     // 아직 만들지 않은 화면
     case comingSoon(title: String)
 }

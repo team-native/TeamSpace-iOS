@@ -25,6 +25,7 @@ import Foundation
 /// - /inquiries/~: Figma 11 익명 문의 · 담당자 받은함 (MockInquiryStore, 제출 · 배정 · 답변 기억)
 /// - /notices/~: Figma 10-5 ~ 10-7 공지 (MockNoticeStore, 확인 · 게시 기억)
 /// - /posts/~: Figma 10 팀 게시판 (MockBoardStore, 글 · 댓글 · 공감 · 신고 · 삭제 기억)
+/// - GET /search: Figma 13 통합 검색 (MockSearchFixture)
 /// - POST /notifications/push-token: Authorization 헤더가 없으면 401
 struct MockTransport: HTTPTransport {
     static let baseURL = URL(fileURLWithPath: "/mock-api")
@@ -196,6 +197,14 @@ struct MockTransport: HTTPTransport {
     private func projectRoute(_ request: URLRequest, path: String) throws -> (Data, HTTPURLResponse)? {
         guard let url = request.url else { return nil }
         let components = url.pathComponents.filter { $0 != "/" && $0 != MockTransport.baseURL.lastPathComponent }
+        if components == ["search"], request.httpMethod == "GET" {
+            let query = URLComponents(url: url, resolvingAgainstBaseURL: false)?
+                .queryItems?.first { $0.name == "query" }?.value ?? ""
+            guard query.trimmingCharacters(in: .whitespacesAndNewlines).count >= 2 else {
+                return try respond(request, status: 422, json: #"{"code":422,"message":"검색어는 2자 이상 입력해주세요.","data":null}"#)
+            }
+            return try respond(request, status: 200, json: MockSearchFixture.search(query: query))
+        }
         if components.first == "applications" {
             return try applicationRoute(request, components: components)
         }

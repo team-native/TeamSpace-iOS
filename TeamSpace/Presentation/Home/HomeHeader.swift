@@ -1,8 +1,9 @@
 import SwiftUI
 
-/// 02-1 상단 — 로고 + 알림(배지) + 미모티콘
+/// 02-1 상단 — 로고 + 통합 검색 + 알림(배지) + 미모티콘
 struct HomeHeader: View {
     let unreadCount: Int
+    let onSearch: () -> Void
     let onBell: () -> Void
     let onAvatar: () -> Void
 
@@ -10,6 +11,15 @@ struct HomeHeader: View {
         HStack(spacing: Spacing.sm) {
             BrandLogo()
             Spacer(minLength: 0)
+            Button(action: onSearch) {
+                TSIcon.search.sized(.lg)
+                    .foregroundStyle(Color.tsInk)
+                    .frame(width: 36, height: 36)
+                    .background(Color.tsSurface, in: Circle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("통합 검색")
+
             Button(action: onBell) {
                 TSIcon.bell.sized(.lg)
                     .foregroundStyle(Color.tsInk)
@@ -67,7 +77,7 @@ struct HomeGreeting: View {
 
 #Preview {
     VStack {
-        HomeHeader(unreadCount: 3, onBell: {}, onAvatar: {})
+        HomeHeader(unreadCount: 3, onSearch: {}, onBell: {}, onAvatar: {})
         HomeGreeting(message: "옥물결 님, 오늘 확인할 일이 3건 있어요.")
     }
     .padding()

@@ -29,6 +29,7 @@ struct HomeView: View {
             VStack(alignment: .leading, spacing: Spacing.md) {
                 HomeHeader(
                     unreadCount: viewModel.unreadNotificationCount,
+                    onSearch: { onNavigate(.integratedSearch) },
                     onBell: { onNavigate(.notificationCenter) },
                     onAvatar: { isLogoutConfirmPresented = true }
                 )
