@@ -32,34 +32,43 @@ final class BoardTests: XCTestCase {
         await viewModel.load()
 
         XCTAssertEqual(viewModel.period, .week)
-        XCTAssertEqual(viewModel.posts.map(\.id), [41, 40, 31, 39, 36, 35, 28, 37, 34], "최근 7일 · 최신순")
+        XCTAssertEqual(Array(viewModel.posts.map(\.id).prefix(9)), [41, 40, 31, 39, 36, 35, 28, 37, 34], "최근 7일 · 최신순")
+        XCTAssertFalse(viewModel.posts.contains { $0.id == 22 }, "12일 전 글은 이번 주가 아니에요")
         XCTAssertEqual(viewModel.pinnedNotices.map(\.title), ["10월 프로젝트 정산 기준 안내", "외주 프로젝트 착수 전 체크리스트"])
         XCTAssertEqual(viewModel.posts.first?.authorText, "익명")
-        XCTAssertEqual(viewModel.posts.dropFirst().first?.authorText, "김민준 · Leader")
+        XCTAssertEqual(viewModel.posts.dropFirst().first?.authorText, "김민준", "서버는 작성자 역할을 주지 않아요")
+        XCTAssertEqual(viewModel.posts.first?.category, .question, "서버 분류 \"질문\"")
+        XCTAssertTrue(viewModel.posts.first { $0.id == 36 }?.hasImage == true, "첨부가 있으면 사진 표시")
         XCTAssertEqual(viewModel.inquiryCount, 2)
-        XCTAssertEqual(viewModel.board?.myRecord.proposalCount, 3)
+        XCTAssertEqual(viewModel.board?.myRecord?.proposalCount, 3)
+        XCTAssertFalse(viewModel.paging.hasMore)
     }
 
-    func testBoardFiltersAndSort() async {
+    func testBoardFiltersAndSortAskServerAgain() async {
         let viewModel = makeContainer().makeBoardViewModel()
         await viewModel.load()
 
-        viewModel.filter = .category(.question)
+        viewModel.selectFilter(.category(.question))
+        await viewModel.waitForReload()
         XCTAssertEqual(viewModel.posts.map(\.id), [41, 39, 28, 34])
         XCTAssertTrue(viewModel.pinnedNotices.isEmpty, "분류를 고르면 고정 공지는 숨겨요")
 
-        viewModel.filter = .notice
+        viewModel.selectFilter(.notice)
+        await viewModel.waitForReload()
         XCTAssertTrue(viewModel.posts.isEmpty)
         XCTAssertEqual(viewModel.pinnedNotices.count, 2)
         XCTAssertNil(viewModel.emptyMessage)
 
-        viewModel.filter = .all
-        viewModel.period = .today
+        viewModel.selectFilter(.all)
+        viewModel.selectPeriod(.today)
+        await viewModel.waitForReload()
         XCTAssertEqual(viewModel.posts.map(\.id), [41, 40])
 
-        viewModel.period = .all
+        viewModel.selectPeriod(.all)
+        await viewModel.waitForReload()
         XCTAssertEqual(viewModel.posts.count, 14)
-        viewModel.sort = .popular
+        viewModel.selectSort(.popular)
+        await viewModel.waitForReload()
         XCTAssertEqual(viewModel.posts.first?.id, 36, "추천 33")
     }
 
@@ -70,12 +79,67 @@ final class BoardTests: XCTestCase {
         XCTAssertEqual(viewModel.popularPosts.map(\.id), [36, 35, 37], "이번 주 추천 많은 순 3개")
         XCTAssertEqual(viewModel.popularPosts.first?.reactionText, "익명 · 추천 33 · 댓글 9")
 
-        viewModel.filter = .category(.info)
-        viewModel.period = .today
+        viewModel.selectFilter(.category(.info))
+        viewModel.selectPeriod(.today)
         viewModel.showPopular()
+        await viewModel.waitForReload()
         XCTAssertEqual(viewModel.filter, .all)
         XCTAssertEqual(viewModel.period, .week)
         XCTAssertEqual(viewModel.posts.prefix(3).map(\.id), [36, 35, 37])
+    }
+
+    func testPostsLoadNextPageWithServerCursor() async {
+        let tokenStorage = InMemoryTokenStorage()
+        let client = APIClient(baseURL: MockTransport.baseURL, transport: MockTransport(latencyNanoseconds: 0), tokenStorage: tokenStorage)
+        let container = DIContainer(apiClient: client, tokenStorage: tokenStorage)
+        let viewModel = BoardViewModel(
+            fetchBoardUseCase: container.fetchBoardUseCase,
+            fetchPostsUseCase: FetchPostsUseCase(boardRepository: BoardRepositoryImpl(client: client), pageSize: 5)
+        )
+        viewModel.selectPeriod(.all)
+        await viewModel.waitForReload()
+        XCTAssertEqual(viewModel.posts.count, 5)
+        XCTAssertEqual(viewModel.paging.nextCursor, "o:5")
+
+        await viewModel.loadMore()
+        await viewModel.loadMore()
+        XCTAssertEqual(viewModel.posts.count, 14)
+        XCTAssertFalse(viewModel.paging.hasMore)
+        XCTAssertEqual(Set(viewModel.posts.map(\.id)).count, 14, "겹치는 글 없이 이어 붙여요")
+    }
+
+    func testPostQueryUsesServerParameters() {
+        var query = PostListQuery(category: .info, period: .week, sort: .likes)
+        let items = Dictionary(uniqueKeysWithValues: query.queryItems(cursor: "o:20", limit: 20).map { ($0.name, $0.value ?? "") })
+        XCTAssertEqual(items, ["category": "정보공유", "period": "week", "sort": "likes", "cursor": "o:20", "limit": "20"])
+
+        let from = ISO8601DateFormatter().date(from: "2026-10-01T03:00:00Z") ?? Date()
+        let to = ISO8601DateFormatter().date(from: "2026-10-05T03:00:00Z") ?? Date()
+        query.period = .range(from: to, to: from)
+        let range = Dictionary(uniqueKeysWithValues: query.queryItems(cursor: nil, limit: 20).map { ($0.name, $0.value ?? "") })
+        XCTAssertEqual(range["from"], "2026-10-01")
+        XCTAssertEqual(range["to"], "2026-10-05")
+        XCTAssertEqual(range["period"], "all")
+    }
+
+    func testServerPostItemDecodesPythonDatesAndStringIds() throws {
+        let json = #"""
+        {"items":[{"id":"7","category":"정보공유","title":"t","body":"첫 줄\n둘째 줄","anonymous":false,"anonComments":false,
+          "views":3,"likes":2,"createdAt":"2026-11-02T01:20:00.123456+00:00","when":"2026-11-02T01:20:00.123456+00:00",
+          "pinned":false,"mine":true,"commentCount":1,"attachments":["upload-1",{"id":"2"}],"author":"안율"}],
+         "nextCursor":"o:20"}
+        """#
+        let page = try JSONCoder.makeDecoder().decode(CursorPageDTO<ServerPostItemDTO>.self, from: Data(json.utf8))
+        let post = try XCTUnwrap(page.items.first?.toEntity())
+        XCTAssertEqual(post.id, 7)
+        XCTAssertEqual(post.category, .info)
+        XCTAssertEqual(post.excerpt, "첫 줄 둘째 줄")
+        XCTAssertEqual(post.authorName, "안율")
+        XCTAssertTrue(post.isMine)
+        XCTAssertTrue(post.hasImage)
+        XCTAssertEqual(post.createdAt.timeIntervalSince1970, 1_793_582_400.123, accuracy: 0.001)
+        XCTAssertNotNil(ServerDate.parse("2026-11-02T01:20:00"), "시간대가 없으면 UTC")
+        XCTAssertNotNil(ServerDate.parse("2026-11-02T10:20:00+09:00"))
     }
 
     func testCustomPeriodIncludesWholeDays() {

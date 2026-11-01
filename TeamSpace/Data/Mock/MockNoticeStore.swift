@@ -79,12 +79,40 @@ final class MockNoticeStore: @unchecked Sendable {
         return ids.compactMap { id in all.first { $0.summary.id == id }?.summary }
     }
 
-    func search(_ keyword: String) -> [NoticeSummaryDTO] {
+    /// GET /notices?pinned=true · ?q= — 서버(develop) 형식 `{items, nextCursor}`
+    func serverItemsJSON(ids: [Int]? = nil, keyword: String? = nil) -> String {
         lock.lock()
         defer { lock.unlock() }
-        guard !keyword.isEmpty else { return [] }
-        return visible().map(\.summary).filter {
-            $0.title.localizedCaseInsensitiveContains(keyword) || $0.summary?.localizedCaseInsensitiveContains(keyword) == true
+        var list = visible()
+        if let ids { list = ids.compactMap { id in list.first { $0.summary.id == id } } }
+        if let keyword = keyword?.trimmingCharacters(in: .whitespacesAndNewlines), !keyword.isEmpty {
+            list = list.filter {
+                $0.summary.title.localizedCaseInsensitiveContains(keyword) || $0.body.localizedCaseInsensitiveContains(keyword)
+            }
+        }
+        let rows: [[String: Any]] = list.map { record in
+            [
+                "id": String(record.summary.id),
+                "kind": Self.serverKind(record.summary.category),
+                "title": record.summary.title,
+                "body": record.summary.summary ?? record.body,
+                "author": record.authorName,
+                "createdAt": MockBoardStore.pythonISO(record.summary.updatedAt),
+                "pinned": ids != nil || record.summary.isPinned,
+                "mustRead": record.summary.isImportant,
+                "confirmed": 0, "total": 0, "confirmedByMe": acknowledgedAt[record.summary.id] != nil
+            ]
+        }
+        let object: [String: Any] = ["items": rows, "nextCursor": NSNull()]
+        let data = (try? JSONSerialization.data(withJSONObject: object, options: [.sortedKeys])) ?? Data()
+        return String(decoding: data, as: UTF8.self)
+    }
+
+    private static func serverKind(_ category: NoticeCategory) -> String {
+        switch category {
+        case .finance: return "재무"
+        case .rule: return "규칙"
+        case .notice, .unknown: return "공지"
         }
     }
 

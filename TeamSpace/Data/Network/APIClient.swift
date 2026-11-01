@@ -153,7 +153,14 @@ private actor TokenRefresher {
 enum JSONCoder {
     static func makeDecoder() -> JSONDecoder {
         let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
+        decoder.dateDecodingStrategy = .custom { decoder in
+            let container = try decoder.singleValueContainer()
+            let text = try container.decode(String.self)
+            guard let date = ServerDate.parse(text) else {
+                throw DecodingError.dataCorruptedError(in: container, debugDescription: "날짜 형식이 아니에요: \(text)")
+            }
+            return date
+        }
         return decoder
     }
 

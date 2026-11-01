@@ -6,11 +6,18 @@ struct LoadMoreFooter: View {
     let paging: PagingState
     /// 실패 카드 보조 문구 — 예: "위의 알림은 그대로 볼 수 있어요."
     var failureHint: String = "위의 목록은 그대로 볼 수 있어요."
+    /// false 면 끝에 닿아도 자동으로 부르지 않고 "더 보기" 버튼을 보여줘요. (아래에 다른 카드가 있는 화면)
+    var loadsAutomatically: Bool = true
+    var moreTitle: String = "더 보기"
     let onLoadMore: () -> Void
 
     var body: some View {
         if paging.didFail {
             failedRow
+        } else if !loadsAutomatically, paging.hasMore, !paging.isLoading {
+            moreButton
+        } else if !loadsAutomatically, paging.isLoading {
+            loadingRow
         } else if paging.hasMore {
             loadingRow
                 // 커서가 바뀔 때마다(한 페이지 받을 때마다) 다시 확인해요 — 목록이 짧아 바로 보여도 이어서 불러와요.
@@ -31,6 +38,11 @@ struct LoadMoreFooter: View {
         }
         .frame(maxWidth: .infinity, minHeight: 48)
         .accessibilityElement(children: .combine)
+    }
+
+    private var moreButton: some View {
+        Button(moreTitle, action: onLoadMore)
+            .buttonStyle(.tsSecondary)
     }
 
     /// Figma 14-4 목록 끝 · 다음 목록 불러오기 실패

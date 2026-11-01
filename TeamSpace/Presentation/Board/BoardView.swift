@@ -64,9 +64,9 @@ struct BoardView: View {
                 inquiryCount: viewModel.inquiryCount,
                 sort: viewModel.sort,
                 onOpenInquiries: { onNavigate(.myInquiries) },
-                onSort: { viewModel.sort = $0 }
+                onSort: { viewModel.selectSort($0) }
             )
-            BoardFilterBar(selection: viewModel.filter) { viewModel.filter = $0 }
+            BoardFilterBar(selection: viewModel.filter) { viewModel.selectFilter($0) }
             posts
             if !viewModel.popularPosts.isEmpty {
                 PopularPostsCard(
@@ -80,7 +80,9 @@ struct BoardView: View {
                 onWrite: { onNavigate(.proposalCompose) },
                 onBrowse: { onNavigate(.proposals) }
             )
-            WorkspaceRecordsCard(records: board.myRecord, onOpen: onNavigate)
+            if let records = board.myRecord {
+                WorkspaceRecordsCard(records: records, onOpen: onNavigate)
+            }
         }
     }
 
@@ -92,8 +94,15 @@ struct BoardView: View {
         if let message = viewModel.emptyMessage {
             InfoBanner(message: message, icon: .search, style: .muted)
         }
+        if viewModel.isLoadingPosts && viewModel.posts.isEmpty {
+            LoadingSkeletonView(message: "게시글을 불러오는 중이에요")
+        }
         ForEach(viewModel.posts) { post in
             BoardPostCard(post: post) { onNavigate(.postDetail(id: post.id)) }
+        }
+        // 아래에 인기글 · 제안 · 기록 카드가 있어 자동으로 이어 붙이지 않고 버튼으로 더 불러와요.
+        LoadMoreFooter(paging: viewModel.paging, loadsAutomatically: false, moreTitle: "게시글 더 보기") {
+            Task { await viewModel.loadMore() }
         }
     }
 }

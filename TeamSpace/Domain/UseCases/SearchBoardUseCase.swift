@@ -1,6 +1,6 @@
 import Foundation
 
-/// 10-12 게시글 검색 — 빈 검색어는 요청하지 않고, 게시글은 최신순
+/// 10-12 게시글 검색 — 빈 검색어는 요청하지 않고, 게시글은 최신순 (서버는 고정글을 먼저 줘요)
 struct SearchBoardUseCase {
     private let boardRepository: BoardRepository
 

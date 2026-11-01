@@ -107,35 +107,88 @@ final class MockBoardStore: @unchecked Sendable {
         ]
     }
 
-    /// GET /posts
-    func boardJSON() -> String {
+    /// GET /posts — 서버(develop) 형식 `{items, nextCursor}`. 분류 · 기간 · 정렬 · 검색 · `o:N` 커서를 흉내 내요.
+    func listJSON(query: [String: String], now: Date = Date()) -> String {
         lock.lock()
         defer { lock.unlock() }
-        let pinned = encode(noticeStore.summaries(ids: Self.pinnedNoticeIds))
-        let latestMine = posts.filter(\.isMine).max { $0.createdAt < $1.createdAt }
-        let latestPost = latestMine.map { post in
-            #"{"title":"\#(post.title)","createdAt":"\#(ISO8601DateFormatter().string(from: post.createdAt))"}"#
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: now)
+        var items = posts
+        if let category = query["category"] {
+            items = items.filter { $0.category == PostCategory(serverValue: category) }
         }
-        // 운영 제안 · 문의는 07-1 내 공간(MockWorkspaceFixture)과 같은 내용
-        let records = #"{"latestPost":\#(latestPost ?? "null"),"proposalCount":3,"# +
-            #""latestProposal":{"title":"회의실 예약 현황을 한눈에 보고 싶어요","status":"IN_REVIEW","recommendCount":32},"# +
-            #""inquiries":[{"title":"회의실 예약 기준","status":"ANSWERED"},{"title":"안내 자료","status":"IN_REVIEW"}]}"#
-        let data = #"{"pinnedNotices":\#(pinned),"posts":\#(encode(posts)),"myRecord":\#(records)}"#
-        return #"{"code":200,"message":"성공","data":\#(data)}"#
+        switch query["period"] ?? "all" {
+        case "today": items = items.filter { $0.createdAt >= today }
+        case "week": items = items.filter { $0.createdAt >= now.addingTimeInterval(-7 * 86_400) }
+        case "month": items = items.filter { $0.createdAt >= now.addingTimeInterval(-30 * 86_400) }
+        default: break
+        }
+        let dayFormatter = DateFormatter()
+        dayFormatter.dateFormat = "yyyy-MM-dd"
+        dayFormatter.timeZone = TimeZone(identifier: "Asia/Seoul")
+        if let from = query["from"].flatMap(dayFormatter.date(from:)) {
+            items = items.filter { $0.createdAt >= from }
+        }
+        if let to = query["to"].flatMap(dayFormatter.date(from:)) {
+            items = items.filter { $0.createdAt < to.addingTimeInterval(86_400) }
+        }
+        if let keyword = query["q"]?.trimmingCharacters(in: .whitespacesAndNewlines), !keyword.isEmpty {
+            items = items.filter { post in
+                [post.title, bodies[post.id] ?? post.excerpt].contains { $0.localizedCaseInsensitiveContains(keyword) }
+            }
+        }
+        if query["sort"] == "likes" {
+            items.sort { ($0.likeCount, $0.createdAt, $0.id) > ($1.likeCount, $1.createdAt, $1.id) }
+        } else {
+            items.sort { ($0.createdAt, $0.id) > ($1.createdAt, $1.id) }
+        }
+        let start = query["cursor"].flatMap { $0.hasPrefix("o:") ? Int($0.dropFirst(2)) : nil } ?? 0
+        let limit = query["limit"].flatMap(Int.init) ?? 20
+        let page = Array(items.dropFirst(start).prefix(limit))
+        let next = start + limit < items.count ? "\"o:\(start + limit)\"" : "null"
+        let rows = page.map { serverItemJSON($0) }.joined(separator: ",")
+        return #"{"items":[\#(rows)],"nextCursor":\#(next)}"#
     }
 
-    /// GET /posts/search?keyword= — 제목 · 요약에 검색어가 들어간 공지 · 게시글
-    func searchJSON(keyword: String) -> String {
-        lock.lock()
-        defer { lock.unlock() }
-        let trimmed = keyword.trimmingCharacters(in: .whitespacesAndNewlines)
-        func matches(_ texts: [String?]) -> Bool {
-            !trimmed.isEmpty && texts.contains { $0?.localizedCaseInsensitiveContains(trimmed) == true }
-        }
-        return envelope(BoardSearchResponseDTO(
-            notices: noticeStore.search(trimmed),
-            posts: posts.filter { matches([$0.title, $0.excerpt]) }
-        ))
+    /// 서버 `_post_view` 모양 — id 는 문자열, 날짜는 Python isoformat(마이크로초) 처럼
+    private func serverItemJSON(_ post: PostSummaryDTO) -> String {
+        let category: String = post.category.serverValue ?? "자유"
+        let body: String = bodies[post.id] ?? post.excerpt
+        let commentCount: Int = comments[post.id]?.count ?? post.commentCount
+        let attachments: [[String: String]] = post.hasImage ? [["id": "upload-\(post.id)"]] : []
+        let createdAt: String = Self.pythonISO(post.createdAt)
+        var fields: [String: Any] = [:]
+        fields["id"] = String(post.id)
+        fields["category"] = category
+        fields["title"] = post.title
+        fields["body"] = body
+        fields["anonymous"] = post.isAnonymous
+        fields["anonComments"] = post.isAnonymous
+        fields["views"] = post.viewCount
+        fields["likes"] = post.likeCount
+        fields["pinned"] = false
+        fields["mine"] = post.isMine
+        fields["commentCount"] = commentCount
+        fields["attachments"] = attachments
+        fields["createdAt"] = createdAt
+        fields["when"] = createdAt
+        if !post.isAnonymous, let author = post.authorName { fields["author"] = author }
+        let data = (try? JSONSerialization.data(withJSONObject: fields, options: [.sortedKeys])) ?? Data("{}".utf8)
+        return String(decoding: data, as: UTF8.self)
+    }
+
+    /// `2026-11-02T01:20:00.123456+00:00`
+    static func pythonISO(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(identifier: "UTC")
+        formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSS'000+00:00'"
+        return formatter.string(from: date)
+    }
+
+    /// GET /notices?pinned=true — 10-1 고정 공지(41 · 42)
+    func pinnedNoticesJSON() -> String {
+        noticeStore.serverItemsJSON(ids: Self.pinnedNoticeIds)
     }
 
     /// GET /posts/{id} — 볼 때마다 조회 수가 1 올라가요.

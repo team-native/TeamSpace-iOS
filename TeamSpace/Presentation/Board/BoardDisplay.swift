@@ -73,6 +73,17 @@ enum BoardPeriod: Hashable {
         return false
     }
 
+    /// GET /posts 기간 조건
+    func serverPeriod(now: Date) -> PostListQuery.Period {
+        switch self {
+        case .today: return .today
+        case .week: return .week
+        case .month: return .month
+        case .all: return .all
+        case .custom(let start, let end): return .range(from: start, to: end)
+        }
+    }
+
     func contains(_ date: Date, now: Date, calendar: Calendar = .current) -> Bool {
         let today = calendar.startOfDay(for: now)
         switch self {
