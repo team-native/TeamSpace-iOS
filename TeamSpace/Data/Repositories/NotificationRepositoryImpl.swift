@@ -7,17 +7,12 @@ final class NotificationRepositoryImpl: NotificationRepository, @unchecked Senda
         self.client = client
     }
 
-    func fetchNotifications(page: Int, limit: Int) async throws -> [AppNotification] {
-        let endpoint = Endpoint(
-            method: .get,
-            path: "notifications",
-            queryItems: [
-                URLQueryItem(name: "page", value: String(page)),
-                URLQueryItem(name: "limit", value: String(limit))
-            ]
-        )
+    func fetchNotifications(cursor: String?, limit: Int) async throws -> CursorPage<AppNotification> {
+        var queryItems = [URLQueryItem(name: "limit", value: String(limit))]
+        if let cursor { queryItems.append(URLQueryItem(name: "cursor", value: cursor)) }
+        let endpoint = Endpoint(method: .get, path: "notifications", queryItems: queryItems)
         do {
-            return try await client.request(endpoint, as: NotificationListResponseDTO.self).list.map { $0.toEntity() }
+            return try await client.request(endpoint, as: NotificationListResponseDTO.self).toEntity()
         } catch let error as NetworkError {
             throw error.asAppError
         }

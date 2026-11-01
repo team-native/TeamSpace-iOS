@@ -43,16 +43,20 @@ enum MockSearchFixture {
              extra: ["author": "옥물결", "status": "IN_REVIEW", "likes": 18])
     ]
 
-    static func search(query: String) -> String {
+    /// `offset` · `limit` 은 서버의 `cursor` · `limit` 과 같아요 (커서 = 다음 시작 위치).
+    static func search(query: String, offset: Int = 0, limit: Int = 50) -> String {
         let needle = query.trimmingCharacters(in: .whitespacesAndNewlines)
         let matched = items.filter { $0.haystack.localizedCaseInsensitiveContains(needle) }
         var counts: [String: Int] = ["documents": 0, "projects": 0, "people": 0, "posts": 0, "proposals": 0]
         for item in matched { counts[item.category, default: 0] += 1 }
+        let start = min(max(offset, 0), matched.count)
+        let end = min(start + max(limit, 1), matched.count)
+        let page = matched[start..<end]
         let data: [String: Any] = [
             "query": needle,
-            "items": matched.map(\.json),
+            "items": page.map(\.json),
             "counts": counts,
-            "nextCursor": NSNull()
+            "nextCursor": end < matched.count ? String(end) as Any : NSNull()
         ]
         let body: [String: Any] = ["code": 200, "message": "OK", "data": data]
         guard

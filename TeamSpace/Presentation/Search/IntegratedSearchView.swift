@@ -92,6 +92,7 @@ struct IntegratedSearchView: View {
             ForEach(viewModel.sections) { section in
                 SearchSectionView(section: section, onOpen: { onNavigate($0.route) })
             }
+            LoadMoreFooter(paging: viewModel.paging) { Task { await viewModel.loadMore() } }
             Text(viewModel.baseDateText)
                 .tsFont(.micro)
                 .fontWeight(.regular)

@@ -79,4 +79,56 @@ final class IntegratedSearchTests: XCTestCase {
         XCTAssertFalse(viewModel.isFilteredEmpty)
         XCTAssertEqual(viewModel.sections.map(\.title), ["공개 게시글·운영 제안"])
     }
+
+    // MARK: COMMON-02 목록 페이지네이션
+
+    private func makePagedViewModel(pageSize: Int) -> IntegratedSearchViewModel {
+        let tokenStorage = InMemoryTokenStorage()
+        let client = APIClient(
+            baseURL: MockTransport.baseURL,
+            transport: MockTransport(latencyNanoseconds: 0),
+            tokenStorage: tokenStorage
+        )
+        return IntegratedSearchViewModel(
+            searchAllUseCase: SearchAllUseCase(searchRepository: SearchRepositoryImpl(client: client), pageSize: pageSize)
+        )
+    }
+
+    func testLoadMoreAppendsNextPages() async {
+        let viewModel = makePagedViewModel(pageSize: 4)
+        viewModel.query = "Book-on"
+        await viewModel.search()
+
+        XCTAssertEqual(viewModel.sections.flatMap(\.hits).count, 4)
+        XCTAssertEqual(viewModel.count(of: .all), 6, "개수는 처음부터 전체 기준")
+        XCTAssertTrue(viewModel.paging.hasMore)
+
+        await viewModel.loadMore()
+        XCTAssertEqual(viewModel.sections.flatMap(\.hits).count, 6)
+        XCTAssertEqual(viewModel.sections.map(\.title), ["문서·규정", "프로젝트", "팀원", "공개 게시글·운영 제안"])
+        XCTAssertFalse(viewModel.paging.hasMore)
+    }
+
+    func testClearQueryStopsPaging() async {
+        let viewModel = makePagedViewModel(pageSize: 2)
+        viewModel.query = "Book-on"
+        await viewModel.search()
+        XCTAssertTrue(viewModel.paging.hasMore)
+
+        viewModel.clearQuery()
+        XCTAssertFalse(viewModel.paging.hasMore)
+        await viewModel.loadMore()
+        XCTAssertNil(viewModel.state.value, "검색어를 지우면 다음 페이지도 부르지 않아요")
+    }
+
+    func testPagingStateRetriesSameCursorAfterFailure() {
+        var paging = PagingState(nextCursor: "50")
+        XCTAssertEqual(paging.begin(), "50")
+        XCTAssertNil(paging.begin(), "불러오는 중에는 또 부르지 않아요")
+        paging.fail()
+        XCTAssertTrue(paging.didFail)
+        XCTAssertEqual(paging.begin(), "50", "다시 불러오기는 같은 커서로")
+        paging.finish(nextCursor: nil)
+        XCTAssertFalse(paging.hasMore)
+    }
 }

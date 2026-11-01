@@ -1,8 +1,26 @@
 import Foundation
 
-/// GET /notifications 응답의 `data`
+/// GET /notifications 응답의 `data` — 서버(develop)는 `{ items, nextCursor }`, 예전 명세서 예시는 `{ list }`
 struct NotificationListResponseDTO: Decodable {
-    let list: [NotificationResponseDTO]
+    let items: [NotificationResponseDTO]
+    let nextCursor: String?
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        items = try container.decodeIfPresent([NotificationResponseDTO].self, forKey: .items)
+            ?? container.decode([NotificationResponseDTO].self, forKey: .list)
+        nextCursor = try container.decodeIfPresent(String.self, forKey: .nextCursor)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case items
+        case list
+        case nextCursor
+    }
+
+    func toEntity() -> CursorPage<AppNotification> {
+        CursorPage(items: items.map { $0.toEntity() }, nextCursor: nextCursor)
+    }
 }
 
 struct NotificationResponseDTO: Decodable {

@@ -49,6 +49,10 @@ final class IntegratedSearchViewModel {
     var query = ""
     var filter: SearchFilter = .all
     private(set) var state: ViewState<SearchResult> = .idle
+    /// COMMON-02 결과 아래 이어서 불러오기
+    private(set) var paging = PagingState()
+    /// 새로 검색할 때마다 올려서, 그 전에 시작한 다음 페이지 응답은 버려요.
+    private var generation = 0
 
     private let searchAllUseCase: SearchAllUseCase
     private let now: () -> Date
@@ -108,9 +112,11 @@ final class IntegratedSearchViewModel {
     }
 
     func search() async {
+        generation += 1
         let keyword = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard keyword.count >= SearchAllUseCase.minimumLength else {
             state = .idle
+            paging = PagingState()
             return
         }
         if state.value == nil { state = .loading }
@@ -118,12 +124,29 @@ final class IntegratedSearchViewModel {
             guard let result = try await searchAllUseCase.execute(query: keyword) else { return }
             guard !Task.isCancelled else { return }
             state = result.isEmpty ? .empty : .loaded(result)
+            paging = PagingState(nextCursor: result.nextCursor)
         } catch AppError.forbidden {
             state = .forbidden
         } catch {
             guard !Task.isCancelled else { return }
             AppLog.record(error, context: "search.all")
             state = .failed(error)
+        }
+    }
+
+    /// 다음 페이지 — 그사이 다시 검색했으면 받은 결과를 버려요.
+    func loadMore() async {
+        guard let current = state.value, let cursor = paging.begin() else { return }
+        let started = generation
+        do {
+            let next = try await searchAllUseCase.execute(query: current.query, cursor: cursor)
+            guard started == generation, let next, let latest = state.value else { return }
+            state = .loaded(latest.appending(next))
+            paging.finish(nextCursor: next.nextCursor)
+        } catch {
+            AppLog.record(error, context: "search.loadMore")
+            guard started == generation else { return }
+            paging.fail()
         }
     }
 
@@ -135,5 +158,7 @@ final class IntegratedSearchViewModel {
         query = ""
         filter = .all
         state = .idle
+        paging = PagingState()
+        generation += 1
     }
 }

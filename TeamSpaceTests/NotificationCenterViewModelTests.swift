@@ -54,8 +54,54 @@ final class NotificationCenterViewModelTests: XCTestCase {
          {"id":102,"type":"SOMETHING_NEW","title":"새 종류","deepLink":"/x","isRead":true,"createdAt":"2026-10-01T09:00:00Z"}]}}
         """#
         let envelope = try JSONCoder.makeDecoder().decode(APIResponseDTO<NotificationListResponseDTO>.self, from: Data(json.utf8))
-        let list = try XCTUnwrap(envelope.data).list.map { $0.toEntity() }
+        let list = try XCTUnwrap(envelope.data).items.map { $0.toEntity() }
         XCTAssertEqual(list.map(\.type), [.approval, .unknown])
         XCTAssertNil(list[0].message, "명세서에 없는 message 는 없어도 디코딩돼요")
+    }
+
+    // MARK: COMMON-02 목록 페이지네이션
+
+    func testNotificationPageDecodingFromServer() throws {
+        let json = #"""
+        {"code":200,"message":"조회 성공","data":{"items":[{"id":101,"type":"APPROVAL","title":"새 결재 요청",
+         "isRead":false,"createdAt":"2026-10-01T10:00:00Z"}],"nextCursor":"101"}}
+        """#
+        let envelope = try JSONCoder.makeDecoder().decode(APIResponseDTO<NotificationListResponseDTO>.self, from: Data(json.utf8))
+        let page = try XCTUnwrap(envelope.data).toEntity()
+        XCTAssertEqual(page.items.map(\.id), [101])
+        XCTAssertEqual(page.nextCursor, "101")
+        XCTAssertTrue(page.hasMore)
+    }
+
+    func testLoadMoreAppendsNextPages() async {
+        let tokenStorage = InMemoryTokenStorage()
+        let client = APIClient(
+            baseURL: MockTransport.baseURL,
+            transport: MockTransport(latencyNanoseconds: 0),
+            tokenStorage: tokenStorage
+        )
+        let container = DIContainer(apiClient: client, tokenStorage: tokenStorage)
+        let viewModel = NotificationCenterViewModel(
+            fetchNotificationsUseCase: FetchNotificationsUseCase(
+                notificationRepository: NotificationRepositoryImpl(client: client),
+                pageSize: 3
+            ),
+            markNotificationsReadUseCase: container.markNotificationsReadUseCase
+        )
+
+        await viewModel.load()
+        XCTAssertEqual(viewModel.sections().flatMap(\.items).count, 3)
+        XCTAssertTrue(viewModel.paging.hasMore)
+
+        await viewModel.loadMore()
+        await viewModel.loadMore()
+        let all = viewModel.sections().flatMap(\.items)
+        XCTAssertEqual(all.count, 8, "3 + 3 + 2")
+        XCTAssertEqual(Set(all.map(\.id)).count, 8, "겹치는 알림 없이")
+        XCTAssertEqual(all.map(\.createdAt), all.map(\.createdAt).sorted(by: >), "붙인 뒤에도 최신순")
+        XCTAssertFalse(viewModel.paging.hasMore, "마지막 페이지면 더 부르지 않아요")
+
+        await viewModel.loadMore()
+        XCTAssertEqual(viewModel.sections().flatMap(\.items).count, 8)
     }
 }
