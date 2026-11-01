@@ -1,20 +1,24 @@
 import SwiftUI
 
-/// Figma 10-11 · 07-12 토스트 — 위쪽에 잠깐 떴다가 사라지는 검정 알약
+/// Figma 10-11 링크 복사 · 07-12 다운로드 완료 토스트 — 위쪽에 잠깐 떴다가 사라지는 파란 알약
 struct TSToast: View {
     let message: String
 
     var body: some View {
-        HStack(spacing: Spacing.xs) {
-            TSIcon.checkCircle.sized(.base)
-                .foregroundStyle(Color.tsPositive)
+        HStack(spacing: Spacing.sm) {
+            TSIcon.checkSmall.sized(.sm)
+                .foregroundStyle(Color.tsOnPrimary)
+                .frame(width: 20, height: 20)
+                .background(Color.tsOnPrimary.opacity(0.15), in: Circle())
+                .accessibilityHidden(true)
             Text(message)
-                .tsFont(.footnoteBold)
-                .foregroundStyle(Color.tsOnInk)
+                .tsFont(.calloutBold)
+                .foregroundStyle(Color.tsOnPrimary)
         }
-        .padding(.horizontal, Spacing.lg)
-        .frame(height: 44)
-        .background(Color.tsInk.opacity(0.92), in: Capsule())
+        .padding(.horizontal, Spacing.lg + Spacing.xxxs)
+        .padding(.vertical, Spacing.md + 1)
+        .background(Color.tsPrimary, in: Capsule())
+        .tsShadow(.primaryGlow)
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.isStaticText)
     }
@@ -53,5 +57,5 @@ extension View {
 
 #Preview {
     Color.tsBackground
-        .tsToast(.constant("링크를 복사했어요"))
+        .tsToast(.constant("다운로드를 완료했어요"))
 }
