@@ -294,7 +294,7 @@ private struct SkeletonCard: View {
 }
 
 /// 14-3 불러오는 중 아이콘 (동작 줄이기면 멈춰 있어요)
-private struct SpinningLoader: View {
+struct SpinningLoader: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isSpinning = false
 

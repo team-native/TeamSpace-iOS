@@ -83,6 +83,7 @@ struct NotificationCenterView: View {
                     onNavigate(notification.type.targetRoute(deepLink: notification.deepLink))
                 }
             )
+            LoadMoreFooter(paging: viewModel.paging) { Task { await viewModel.loadMore() } }
             NotificationReadNotice(filter: viewModel.filter)
         case .empty, .forbidden:
             NotificationEmptyView()

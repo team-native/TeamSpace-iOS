@@ -9,6 +9,10 @@ final class NotificationCenterViewModel {
     var filter: NotificationFilter = .all
     /// 읽음 처리 실패 등 화면 아래 짧게 보여줄 메시지
     var toastMessage: String?
+    /// COMMON-02 목록 아래 이어서 불러오기
+    private(set) var paging = PagingState()
+    /// 새로 고칠 때마다 올려서, 그 전에 시작한 다음 페이지 응답은 버려요.
+    private var generation = 0
 
     private let fetchNotificationsUseCase: FetchNotificationsUseCase
     private let markNotificationsReadUseCase: MarkNotificationsReadUseCase
@@ -66,13 +70,32 @@ final class NotificationCenterViewModel {
     }
 
     func load() async {
+        generation += 1
         if state.value == nil { state = .loading }
         do {
-            let result = try await fetchNotificationsUseCase.execute()
-            state = result.isEmpty ? .empty : .loaded(result)
+            let page = try await fetchNotificationsUseCase.execute()
+            state = page.items.isEmpty ? .empty : .loaded(page.items)
+            paging = PagingState(nextCursor: page.nextCursor)
         } catch {
             AppLog.record(error, context: "notificationCenter.load")
             state = .failed(error)
+        }
+    }
+
+    /// 다음 페이지를 붙이고 다시 최신순으로 정렬해요.
+    func loadMore() async {
+        guard state.value != nil, let cursor = paging.begin() else { return }
+        let started = generation
+        do {
+            let page = try await fetchNotificationsUseCase.execute(cursor: cursor)
+            guard started == generation else { return }
+            let merged = notifications.appendingUnique(page.items).sorted { $0.createdAt > $1.createdAt }
+            state = .loaded(merged)
+            paging.finish(nextCursor: page.nextCursor)
+        } catch {
+            AppLog.record(error, context: "notificationCenter.loadMore")
+            guard started == generation else { return }
+            paging.fail()
         }
     }
 

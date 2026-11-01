@@ -44,4 +44,15 @@ struct SearchResult: Equatable, Sendable {
 
     var totalCount: Int { counts.values.reduce(0, +) }
     var isEmpty: Bool { items.isEmpty }
+
+    /// COMMON-02 다음 페이지를 이어 붙여요 — 개수는 최신 응답 기준, 이미 받은 결과는 빼요.
+    func appending(_ next: SearchResult) -> SearchResult {
+        let existing = Set(items.map(\.id))
+        return SearchResult(
+            query: query,
+            items: items + next.items.filter { !existing.contains($0.id) },
+            counts: next.counts.isEmpty ? counts : next.counts,
+            nextCursor: next.nextCursor
+        )
+    }
 }

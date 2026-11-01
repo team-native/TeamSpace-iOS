@@ -113,8 +113,15 @@ struct MockTransport: HTTPTransport {
         """)
     }
 
+    /// 서버처럼 `{ items, nextCursor }` — 커서는 다음 시작 위치예요.
     private func notifications(_ request: URLRequest) throws -> (Data, HTTPURLResponse) {
-        let payload = MockEnvelope(code: 200, message: "조회 성공", data: ["list": notificationStore.items()])
+        let queryItems = request.url.flatMap { URLComponents(url: $0, resolvingAgainstBaseURL: false) }?.queryItems ?? []
+        let value = { (name: String) in queryItems.first { $0.name == name }?.value.flatMap(Int.init) }
+        let all = notificationStore.items()
+        let start = min(value("cursor") ?? 0, all.count)
+        let end = min(start + (value("limit") ?? 20), all.count)
+        let page = MockNotificationPage(items: Array(all[start..<end]), nextCursor: end < all.count ? String(end) : nil)
+        let payload = MockEnvelope(code: 200, message: "조회 성공", data: page)
         return try respond(request, status: 200, json: String(decoding: try JSONEncoder().encode(payload), as: UTF8.self))
     }
 
@@ -198,12 +205,17 @@ struct MockTransport: HTTPTransport {
         guard let url = request.url else { return nil }
         let components = url.pathComponents.filter { $0 != "/" && $0 != MockTransport.baseURL.lastPathComponent }
         if components == ["search"], request.httpMethod == "GET" {
-            let query = URLComponents(url: url, resolvingAgainstBaseURL: false)?
-                .queryItems?.first { $0.name == "query" }?.value ?? ""
+            let queryItems = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
+            let value = { (name: String) in queryItems.first { $0.name == name }?.value }
+            let query = value("query") ?? ""
             guard query.trimmingCharacters(in: .whitespacesAndNewlines).count >= 2 else {
                 return try respond(request, status: 422, json: #"{"code":422,"message":"검색어는 2자 이상 입력해주세요.","data":null}"#)
             }
-            return try respond(request, status: 200, json: MockSearchFixture.search(query: query))
+            return try respond(request, status: 200, json: MockSearchFixture.search(
+                query: query,
+                offset: value("cursor").flatMap(Int.init) ?? 0,
+                limit: value("limit").flatMap(Int.init) ?? 50
+            ))
         }
         if components.first == "applications" {
             return try applicationRoute(request, components: components)
@@ -688,6 +700,22 @@ private struct MockEnvelope<T: Encodable>: Encodable {
     let code: Int
     let message: String
     let data: T
+}
+
+private struct MockNotificationPage: Encodable {
+    let items: [MockNotificationStore.Item]
+    let nextCursor: String?
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(items, forKey: .items)
+        try container.encode(nextCursor, forKey: .nextCursor)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case items
+        case nextCursor
+    }
 }
 
 private struct MockAccountRequestData: Encodable {
