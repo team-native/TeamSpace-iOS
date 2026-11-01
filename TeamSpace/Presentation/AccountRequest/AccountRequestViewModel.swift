@@ -49,6 +49,16 @@ final class AccountRequestViewModel {
         return form.isPasswordValid ? .valid : .invalid
     }
 
+    /// 하고 싶은 말 글자 수 — Figma 01-2 수정안 "0 / 200"
+    var messageCountText: String {
+        "\(form.message.count) / \(AccountRequestForm.messageLimit)"
+    }
+
+    /// 200자를 넘기면 넘친 만큼 잘라요.
+    func updateMessage(_ text: String) {
+        form.message = String(text.prefix(AccountRequestForm.messageLimit))
+    }
+
     func select(_ department: Department) {
         form.department = department
         isDepartmentPickerPresented = false

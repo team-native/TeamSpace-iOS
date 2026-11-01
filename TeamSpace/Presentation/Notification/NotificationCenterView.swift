@@ -83,7 +83,7 @@ struct NotificationCenterView: View {
                     onNavigate(notification.type.targetRoute(deepLink: notification.deepLink))
                 }
             )
-            LoadMoreFooter(paging: viewModel.paging) { Task { await viewModel.loadMore() } }
+            LoadMoreFooter(paging: viewModel.paging, failureHint: "위의 알림은 그대로 볼 수 있어요.") { Task { await viewModel.loadMore() } }
             NotificationReadNotice(filter: viewModel.filter)
         case .empty, .forbidden:
             NotificationEmptyView()
