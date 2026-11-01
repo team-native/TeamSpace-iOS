@@ -21,6 +21,7 @@ import Foundation
 /// - GET · PATCH /workspace/profile: Figma 07-13 (MockProfileStore, 저장 내용 기억)
 /// - /projects/~ · /applications/~: Figma 08 (MockProjectStore, 신청 · 결과 등록 기억)
 /// - GET /rules · /rules/{id} · POST /rules/{id}/acknowledge: Figma 09 (MockRuleStore, 읽음 확인 기억)
+/// - /proposals/~: Figma 12 운영 제안 (MockProposalStore, 추천 · 댓글 기억)
 /// - /inquiries/~: Figma 11 익명 문의 · 담당자 받은함 (MockInquiryStore, 제출 · 배정 · 답변 기억)
 /// - /notices/~: Figma 10-5 ~ 10-7 공지 (MockNoticeStore, 확인 · 게시 기억)
 /// - /posts/~: Figma 10 팀 게시판 (MockBoardStore, 글 · 댓글 · 공감 · 신고 · 삭제 기억)
@@ -42,6 +43,7 @@ struct MockTransport: HTTPTransport {
     private let ruleStore = MockRuleStore()
     private let boardStore = MockBoardStore()
     private let inquiryStore = MockInquiryStore()
+    private let proposalStore = MockProposalStore()
 
     func send(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
         try await Task.sleep(nanoseconds: latencyNanoseconds)
@@ -208,6 +210,9 @@ struct MockTransport: HTTPTransport {
         }
         if components.first == "inquiries" {
             return try inquiryRoute(request, components: components)
+        }
+        if components.first == "proposals" {
+            return try proposalRoute(request, components: components)
         }
         guard components.first == "projects" else { return nil }
         let notFound = #"{"code":404,"message":"해당 프로젝트를 찾을 수 없습니다."}"#
@@ -387,6 +392,32 @@ struct MockTransport: HTTPTransport {
                 let dto = try? JSONDecoder().decode(InquirySubmitRequestDTO.self, from: body)
             else { return try respond(request, status: 400, json: #"{"code":400,"message":"잘못된 요청입니다."}"#) }
             return try respond(request, status: 201, json: inquiryStore.submit(dto))
+        default:
+            return nil
+        }
+    }
+
+    /// 12 운영 제안 — /proposals · /proposals/{id} · recommend · comments
+    private func proposalRoute(_ request: URLRequest, components: [String]) throws -> (Data, HTTPURLResponse)? {
+        let notFound = #"{"code":404,"message":"해당 제안을 찾을 수 없습니다."}"#
+        let id = components.count > 1 ? Int(components[1]) : nil
+        switch (request.httpMethod ?? "", components.count) {
+        case ("GET", 1):
+            return try respond(request, status: 200, json: proposalStore.listJSON())
+        case ("GET", 2):
+            guard let id = id, let json = proposalStore.detailJSON(id: id) else { return try respond(request, status: 404, json: notFound) }
+            return try respond(request, status: 200, json: json)
+        case ("POST", 3) where components[2] == "recommend":
+            guard let id = id, let json = proposalStore.toggleRecommend(id: id) else { return try respond(request, status: 404, json: notFound) }
+            return try respond(request, status: 200, json: json)
+        case ("POST", 3) where components[2] == "comments":
+            guard
+                let id = id,
+                let body = request.httpBody,
+                let dto = try? JSONDecoder().decode(ProposalCommentRequestDTO.self, from: body),
+                let json = proposalStore.addComment(id: id, request: dto)
+            else { return try respond(request, status: 404, json: notFound) }
+            return try respond(request, status: 201, json: json)
         default:
             return nil
         }

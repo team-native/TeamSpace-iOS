@@ -20,6 +20,7 @@ final class DIContainer {
     private let boardRepository: BoardRepository
     private let noticeRepository: NoticeRepository
     private let inquiryRepository: InquiryRepository
+    private let proposalRepository: ProposalRepository
     private let boardRecentSearchRepository: RecentSearchRepository
     private let postDraftRepository: PostDraftRepository
 
@@ -52,6 +53,7 @@ final class DIContainer {
         self.boardRepository = BoardRepositoryImpl(client: apiClient)
         self.noticeRepository = NoticeRepositoryImpl(client: apiClient)
         self.inquiryRepository = InquiryRepositoryImpl(client: apiClient)
+        self.proposalRepository = ProposalRepositoryImpl(client: apiClient)
         self.boardRecentSearchRepository = boardRecentSearchRepository
         self.postDraftRepository = postDraftRepository
     }
@@ -396,6 +398,22 @@ final class DIContainer {
 
     var replyInquiryUseCase: ReplyInquiryUseCase {
         ReplyInquiryUseCase(inquiryRepository: inquiryRepository)
+    }
+
+    var fetchProposalsUseCase: FetchProposalsUseCase {
+        FetchProposalsUseCase(proposalRepository: proposalRepository)
+    }
+
+    var fetchProposalDetailUseCase: FetchProposalDetailUseCase {
+        FetchProposalDetailUseCase(proposalRepository: proposalRepository)
+    }
+
+    var toggleProposalRecommendUseCase: ToggleProposalRecommendUseCase {
+        ToggleProposalRecommendUseCase(proposalRepository: proposalRepository)
+    }
+
+    var addProposalCommentUseCase: AddProposalCommentUseCase {
+        AddProposalCommentUseCase(proposalRepository: proposalRepository)
     }
 
     var boardRecentSearchUseCase: RecentSearchUseCase {
@@ -747,6 +765,19 @@ extension DIContainer {
             assignInquiryUseCase: assignInquiryUseCase,
             replyInquiryUseCase: replyInquiryUseCase,
             fetchRulesUseCase: fetchRulesUseCase
+        )
+    }
+
+    func makeProposalListViewModel() -> ProposalListViewModel {
+        ProposalListViewModel(fetchProposalsUseCase: fetchProposalsUseCase)
+    }
+
+    func makeProposalDetailViewModel(proposalId: Int) -> ProposalDetailViewModel {
+        ProposalDetailViewModel(
+            proposalId: proposalId,
+            fetchProposalDetailUseCase: fetchProposalDetailUseCase,
+            toggleProposalRecommendUseCase: toggleProposalRecommendUseCase,
+            addProposalCommentUseCase: addProposalCommentUseCase
         )
     }
 }

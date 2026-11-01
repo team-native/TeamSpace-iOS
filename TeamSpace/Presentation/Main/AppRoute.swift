@@ -66,6 +66,9 @@ enum AppRoute: Hashable {
     case inquiryDetail(id: Int)          // 11-4 문의 상세 · 11-7 반려
     case inquiryInbox                    // 11-5 문의 담당자 받은함
     case inquiryReview(id: Int)          // 11-6 문의 검토 · 공식 답변 작성
+    // 12 운영 제안
+    case proposals                       // 12-1b 운영 제안 목록
+    case proposalDetail(id: Int)         // 12-2b 운영 제안 상세
     // 아직 만들지 않은 화면
     case comingSoon(title: String)
 }

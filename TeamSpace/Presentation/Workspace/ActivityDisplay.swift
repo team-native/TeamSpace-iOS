@@ -5,8 +5,10 @@ extension ProposalStatus: BadgeRepresentable {
 
     var badgeTone: BadgeTone {
         switch self {
+        case .received: return .neutral
         case .reviewing: return .primary
-        case .answered, .adopted: return .positive
+        case .inProgress: return .violet
+        case .completed, .answered, .adopted: return .positive
         case .closed, .unknown: return .neutral
         }
     }

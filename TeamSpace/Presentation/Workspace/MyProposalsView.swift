@@ -31,7 +31,7 @@ struct MyProposalsView: View {
                 }
                 WorkspaceNote(message: "팀 게시판의 일반 제안 글과는 구분돼요. 운영 제안의 검토 상태와 추천수를 함께 확인해요.")
                 content
-                Button("운영 제안 전체 보기") { onNavigate(.comingSoon(title: "운영 제안")) }
+                Button("운영 제안 전체 보기") { onNavigate(.proposals) }
                     .buttonStyle(.tsSecondary)
                 Text(viewModel.baseDateText)
                     .tsFont(.micro)
@@ -69,7 +69,7 @@ struct MyProposalsView: View {
                 InfoBanner(message: "이 상태의 제안이 없어요.", icon: .infoCircle, style: .muted)
             }
             ForEach(viewModel.proposals) { proposal in
-                MyProposalCard(proposal: proposal) { onNavigate(.comingSoon(title: proposal.title)) }
+                MyProposalCard(proposal: proposal) { onNavigate(.proposalDetail(id: proposal.id)) }
             }
         }
     }

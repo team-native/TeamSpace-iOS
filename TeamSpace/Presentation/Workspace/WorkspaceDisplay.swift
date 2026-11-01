@@ -71,7 +71,10 @@ extension WorkspaceSchedule {
 extension ProposalStatus {
     var title: String {
         switch self {
+        case .received: return "접수"
         case .reviewing: return "검토 중"
+        case .inProgress: return "진행 중"
+        case .completed: return "완료"
         case .answered: return "답변 완료"
         case .adopted: return "채택"
         case .closed: return "종료"

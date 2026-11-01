@@ -37,6 +37,8 @@ struct AppRouteView: View {
             noticeScreen
         case .myInquiries, .inquiryCompose, .inquiryDetail, .inquiryInbox, .inquiryReview:
             inquiryScreen
+        case .proposals, .proposalDetail:
+            proposalScreen
         case .comingSoon(let title):
             ComingSoonView(title: title, showsBackButton: true)
         }
@@ -241,6 +243,16 @@ struct AppRouteView: View {
             InquiryReviewView(viewModel: container.makeInquiryReviewViewModel(inquiryId: id, user: user))
         default:
             MyInquiriesView(viewModel: container.makeMyInquiriesViewModel(), onNavigate: onNavigate)
+        }
+    }
+
+    /// 12 운영 제안
+    @ViewBuilder
+    private var proposalScreen: some View {
+        if case .proposalDetail(let id) = route {
+            ProposalDetailView(viewModel: container.makeProposalDetailViewModel(proposalId: id))
+        } else {
+            ProposalListView(viewModel: container.makeProposalListViewModel(), onNavigate: onNavigate)
         }
     }
 }
