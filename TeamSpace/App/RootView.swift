@@ -10,10 +10,16 @@ struct RootView: View {
     @AppStorage(AppAppearance.storageKey) private var appearance = AppAppearance.system.rawValue
 
     var body: some View {
+        @Bindable var session = session
         content
             .preferredColorScheme(AppAppearance(rawValue: appearance)?.colorScheme)
             .animation(.easeInOut(duration: 0.2), value: session.state)
             .task { await session.restore() }
+            .alert("로그인이 만료됐어요", isPresented: $session.isExpiredNoticePresented) {
+                Button("확인", role: .cancel) {}
+            } message: {
+                Text("보안을 위해 다시 로그인해 주세요.")
+            }
     }
 
     @ViewBuilder

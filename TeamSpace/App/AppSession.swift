@@ -12,6 +12,8 @@ final class AppSession {
     }
 
     private(set) var state: State = .launching
+    /// 로그인이 만료돼 로그인 화면으로 돌아왔을 때 한 번 보여줄 안내
+    var isExpiredNoticePresented = false
 
     private let restoreSessionUseCase: RestoreSessionUseCase
     private let logoutUseCase: LogoutUseCase
@@ -44,6 +46,13 @@ final class AppSession {
 
     func signIn(_ user: AuthUser) {
         state = .signedIn(user)
+    }
+
+    /// 토큰 갱신까지 실패해 토큰이 지워졌을 때 — 다시 로그인하도록 안내해요.
+    func expire() {
+        guard case .signedIn = state else { return }
+        isExpiredNoticePresented = true
+        state = .signedOut
     }
 
     func signOut() {

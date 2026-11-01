@@ -13,6 +13,12 @@ final class InMemoryTokenStorage: TokenStorage, @unchecked Sendable {
         lastSavedAsPersistent = persistent
     }
 
+    func update(_ token: AuthToken) throws {
+        lock.lock()
+        defer { lock.unlock() }
+        self.token = token
+    }
+
     func load() -> AuthToken? {
         lock.lock()
         defer { lock.unlock() }

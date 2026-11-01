@@ -29,6 +29,11 @@ final class KeychainRepository: TokenStorage, @unchecked Sendable {
         }
     }
 
+    /// 이번 실행 동안만 보관 중이면 메모리만, 아니면 Keychain 을 바꿔요.
+    func update(_ token: AuthToken) throws {
+        try save(token, persistent: currentSessionToken() == nil)
+    }
+
     func load() -> AuthToken? {
         if let token = currentSessionToken() { return token }
         var query = baseQuery

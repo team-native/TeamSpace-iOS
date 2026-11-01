@@ -32,6 +32,11 @@ struct MockTransport: HTTPTransport {
     static let failingPassword = "wrong"
     /// FA 계정으로 로그인했을 때 받는 가짜 토큰
     static let faToken = "mock-fa-token"
+    /// 만료된 액세스 토큰 — 이 토큰으로 부르면 401, `/auth/refresh` 로 갱신하면 돼요.
+    static let expiredAccessToken = "mock-expired-access-token"
+    /// 만료된 리프레시 토큰 — `/auth/refresh` 가 401
+    static let expiredRefreshToken = "mock-expired-refresh-token"
+    private static let unauthorizedDetail = #"{"detail":"유효하지 않거나 만료된 토큰입니다. 로그인해 주세요."}"#
     private static let scheduleNotFound = #"{"code":404,"message":"해당 일정을 찾을 수 없습니다."}"#
 
     var latencyNanoseconds: UInt64 = 700_000_000
@@ -76,6 +81,8 @@ struct MockTransport: HTTPTransport {
             return try notifications(request)
         case ("PATCH", "read"):
             return try markRead(request)
+        case ("POST", "refresh"):
+            return try refresh(request)
         case ("GET", "me"):
             return try me(request)
         case ("GET", "home"):
@@ -102,14 +109,31 @@ struct MockTransport: HTTPTransport {
             """)
         }
         if dto.password == Self.failingPassword {
-            return try respond(request, status: 401, json: #"{"code":401,"message":"이메일 또는 비밀번호가 일치하지 않습니다."}"#)
+            return try respond(request, status: 401, json: #"{"detail":"이메일 또는 비밀번호가 일치하지 않습니다."}"#)
         }
         let isFA = dto.email.lowercased().hasPrefix("fa")
         let token = isFA ? Self.faToken : "mock-access-token"
+        let refreshToken = isFA ? "mock-fa-refresh-token" : "mock-refresh-token"
         let roles = isFA ? #"["FA"]"# : #"["Member"]"#
+        // 서버(develop)처럼 공통 형식 없이 바로, user.id 는 문자열
         return try respond(request, status: 200, json: """
-        {"code":200,"message":"로그인 성공","data":{"accessToken":"\(token)","refreshToken":"mock-refresh-token",\
-        "user":{"id":1,"name":"홍길동","roles":\(roles)}}}
+        {"accessToken":"\(token)","refreshToken":"\(refreshToken)","user":{"id":"1","name":"홍길동","roles":\(roles)}}
+        """)
+    }
+
+    /// POST /auth/refresh — 서버처럼 공통 형식 없이 새 토큰 한 쌍
+    private func refresh(_ request: URLRequest) throws -> (Data, HTTPURLResponse) {
+        guard
+            let body = request.httpBody,
+            let dto = try? JSONDecoder().decode(RefreshTokenRequestDTO.self, from: body),
+            dto.refreshToken != Self.expiredRefreshToken
+        else {
+            return try respond(request, status: 401, json: #"{"detail":"refresh token이 유효하지 않거나 만료되었습니다."}"#)
+        }
+        let isFA = dto.refreshToken.contains("fa")
+        let token = isFA ? Self.faToken : "mock-access-token"
+        return try respond(request, status: 200, json: """
+        {"accessToken":"\(token)","refreshToken":"\(dto.refreshToken)"}
         """)
     }
 
@@ -647,16 +671,17 @@ struct MockTransport: HTTPTransport {
         return try respond(request, status: 200, json: #"{"code":200,"message":"등록 완료","data":{"success":true}}"#)
     }
 
+    /// GET /users/me — 서버처럼 공통 형식 없이 바로
     private func me(_ request: URLRequest) throws -> (Data, HTTPURLResponse) {
-        guard request.value(forHTTPHeaderField: "Authorization") != nil else {
-            return try respond(request, status: 401, json: #"{"code":401,"message":"유효하지 않거나 만료된 토큰입니다. 로그인해 주세요."}"#)
+        let authorization = request.value(forHTTPHeaderField: "Authorization")
+        guard let authorization, !authorization.contains(Self.expiredAccessToken) else {
+            return try respond(request, status: 401, json: Self.unauthorizedDetail)
         }
-        let isFA = request.value(forHTTPHeaderField: "Authorization")?.contains(Self.faToken) == true
+        let isFA = authorization.contains(Self.faToken)
         let department = isFA ? "FA" : "NativeOps"
         let roles = isFA ? #"["FA"]"# : #"["Member","PM"]"#
         return try respond(request, status: 200, json: """
-        {"code":200,"message":"조회 성공","data":{"id":1,"name":"홍길동","email":"s00000@gsm.hs.kr",\
-        "department":"\(department)","roles":\(roles)}}
+        {"id":1,"name":"홍길동","email":"s00000@gsm.hs.kr","department":"\(department)","roles":\(roles)}
         """)
     }
 
