@@ -60,6 +60,12 @@ enum AppRoute: Hashable {
     case notices                         // 10-5 공지 · 알아야 할 것들
     case noticeDetail(id: Int)           // 10-6 공지 상세
     case noticeCompose                   // 10-7 전체 공지 작성 (담당자)
+    // 11 문의 · 건의
+    case myInquiries                     // 11-1 내 문의
+    case inquiryCompose(InquiryComposeContext) // 11-2 문의 · 건의 작성 (11-3 접수 알림)
+    case inquiryDetail(id: Int)          // 11-4 문의 상세 · 11-7 반려
+    case inquiryInbox                    // 11-5 문의 담당자 받은함
+    case inquiryReview(id: Int)          // 11-6 문의 검토 · 공식 답변 작성
     // 아직 만들지 않은 화면
     case comingSoon(title: String)
 }

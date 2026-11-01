@@ -19,6 +19,7 @@ final class DIContainer {
     private let ruleRepository: RuleRepository
     private let boardRepository: BoardRepository
     private let noticeRepository: NoticeRepository
+    private let inquiryRepository: InquiryRepository
     private let boardRecentSearchRepository: RecentSearchRepository
     private let postDraftRepository: PostDraftRepository
 
@@ -50,6 +51,7 @@ final class DIContainer {
         self.ruleRepository = RuleRepositoryImpl(client: apiClient)
         self.boardRepository = BoardRepositoryImpl(client: apiClient)
         self.noticeRepository = NoticeRepositoryImpl(client: apiClient)
+        self.inquiryRepository = InquiryRepositoryImpl(client: apiClient)
         self.boardRecentSearchRepository = boardRecentSearchRepository
         self.postDraftRepository = postDraftRepository
     }
@@ -366,6 +368,34 @@ final class DIContainer {
 
     var publishNoticeUseCase: PublishNoticeUseCase {
         PublishNoticeUseCase(noticeRepository: noticeRepository)
+    }
+
+    var fetchMyInquiriesUseCase: FetchMyInquiriesUseCase {
+        FetchMyInquiriesUseCase(inquiryRepository: inquiryRepository)
+    }
+
+    var fetchInquiryDetailUseCase: FetchInquiryDetailUseCase {
+        FetchInquiryDetailUseCase(inquiryRepository: inquiryRepository)
+    }
+
+    var submitInquiryUseCase: SubmitInquiryUseCase {
+        SubmitInquiryUseCase(inquiryRepository: inquiryRepository)
+    }
+
+    var fetchInquiryInboxUseCase: FetchInquiryInboxUseCase {
+        FetchInquiryInboxUseCase(inquiryRepository: inquiryRepository)
+    }
+
+    var fetchInquiryReviewUseCase: FetchInquiryReviewUseCase {
+        FetchInquiryReviewUseCase(inquiryRepository: inquiryRepository)
+    }
+
+    var assignInquiryUseCase: AssignInquiryUseCase {
+        AssignInquiryUseCase(inquiryRepository: inquiryRepository)
+    }
+
+    var replyInquiryUseCase: ReplyInquiryUseCase {
+        ReplyInquiryUseCase(inquiryRepository: inquiryRepository)
     }
 
     var boardRecentSearchUseCase: RecentSearchUseCase {
@@ -690,5 +720,33 @@ extension DIContainer {
 
     func makeNoticeComposeViewModel(user: AuthUser) -> NoticeComposeViewModel {
         NoticeComposeViewModel(user: user, publishNoticeUseCase: publishNoticeUseCase)
+    }
+
+    func makeMyInquiriesViewModel() -> MyInquiriesViewModel {
+        MyInquiriesViewModel(fetchMyInquiriesUseCase: fetchMyInquiriesUseCase)
+    }
+
+    func makeInquiryDetailViewModel(inquiryId: Int) -> InquiryDetailViewModel {
+        InquiryDetailViewModel(inquiryId: inquiryId, fetchInquiryDetailUseCase: fetchInquiryDetailUseCase)
+    }
+
+    func makeInquiryComposeViewModel(context: InquiryComposeContext) -> InquiryComposeViewModel {
+        InquiryComposeViewModel(context: context, submitInquiryUseCase: submitInquiryUseCase)
+    }
+
+    func makeInquiryInboxViewModel(user: AuthUser) -> InquiryInboxViewModel {
+        InquiryInboxViewModel(user: user, fetchInquiryInboxUseCase: fetchInquiryInboxUseCase)
+    }
+
+    func makeInquiryReviewViewModel(inquiryId: Int, user: AuthUser) -> InquiryReviewViewModel {
+        InquiryReviewViewModel(
+            inquiryId: inquiryId,
+            user: user,
+            fetchInquiryReviewUseCase: fetchInquiryReviewUseCase,
+            fetchInquiryInboxUseCase: fetchInquiryInboxUseCase,
+            assignInquiryUseCase: assignInquiryUseCase,
+            replyInquiryUseCase: replyInquiryUseCase,
+            fetchRulesUseCase: fetchRulesUseCase
+        )
     }
 }

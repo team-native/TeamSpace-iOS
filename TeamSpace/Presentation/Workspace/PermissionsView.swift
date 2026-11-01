@@ -24,7 +24,9 @@ struct PermissionsView: View {
                 AllowedFeaturesCard(features: viewModel.user.allowedFeatures)
                 RoleScopeCard()
                 RestrictedFinanceCard()
-                PermissionRequestCard { onNavigate(.comingSoon(title: "문의 · 건의")) }
+                PermissionRequestCard {
+                    onNavigate(.inquiryCompose(InquiryComposeContext(department: .leader, title: "권한 요청")))
+                }
             }
             .padding(.horizontal, Spacing.screen)
             .padding(.bottom, Spacing.xxxl)
