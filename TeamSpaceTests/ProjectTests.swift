@@ -64,6 +64,51 @@ final class ProjectTests: XCTestCase {
         XCTAssertEqual(viewModel.countText, "전체 프로젝트 5개")
     }
 
+    // MARK: 07-18 프로젝트 목록
+
+    func testWorkspaceProjectListTabs() async {
+        let viewModel = makeContainer().makeWorkspaceProjectListViewModel()
+        await viewModel.load()
+
+        let total = viewModel.count(of: .all)
+        XCTAssertGreaterThan(total, 0)
+        XCTAssertEqual(viewModel.count(of: .recruiting), 2, "Book-on · Native 팀 가이드")
+
+        viewModel.tab = .recruiting
+        XCTAssertTrue(viewModel.projects.allSatisfy(\.isRecruiting))
+        viewModel.tab = .inProgress
+        XCTAssertTrue(viewModel.projects.allSatisfy { $0.status == .inProgress && !$0.isRecruiting })
+        viewModel.tab = .completed
+        XCTAssertEqual(viewModel.projects.map(\.name), ["Inspace 리서치"])
+    }
+
+    func testWorkspaceProjectListMetaText() {
+        let calendar = Calendar(identifier: .gregorian)
+        let now = calendar.date(from: DateComponents(year: 2026, month: 10, day: 30))!
+        let nov6 = calendar.date(from: DateComponents(year: 2026, month: 11, day: 6))!
+        let oct22 = calendar.date(from: DateComponents(year: 2026, month: 10, day: 22))!
+        func project(status: ProjectRunStatus, end: Date, pm: String = "이시우", openings: [ProjectOpening] = []) -> ProjectSummary {
+            ProjectSummary(
+                id: 1, name: "학과 행사 웹페이지", summary: "", department: "NativeLab", pmName: pm, memberCount: 2,
+                status: status, startDate: now, endDate: end, progress: 60, openings: openings, resultNote: nil, updatedAt: now
+            )
+        }
+        let opening = { (role: String) in
+            ProjectOpening(id: 1, role: role, title: role, headcount: 1, startDate: now, endDate: nov6, description: "")
+        }
+
+        XCTAssertEqual(project(status: .inProgress, end: nov6).listMetaText(now: now, calendar: calendar),
+                       "PM 이시우 · NativeLab · 2명 · 마감 \(TSFormat.monthDay(nov6))")
+        XCTAssertEqual(project(status: .completed, end: oct22).listMetaText(now: now, calendar: calendar),
+                       "PM 이시우 · NativeLab · 2명 · \(TSFormat.monthDay(oct22)) 종료")
+        XCTAssertEqual(project(status: .inProgress, end: nov6, pm: "").listMetaText(now: now.addingTimeInterval(-60 * 86_400), calendar: calendar),
+                       "PM 모집 · NativeLab · 2명", "마감이 30일보다 많이 남으면 안 붙여요")
+
+        let recruiting = project(status: .planned, end: nov6, pm: "옥물결", openings: [opening("디자인"), opening("개발")])
+        XCTAssertEqual(recruiting.listMetaText(now: now, calendar: calendar), "PM 옥물결 · NativeLab · 팀원 2명 모집")
+        XCTAssertEqual(recruiting.openingsNeedText, "디자인 1 · 개발 1 필요")
+    }
+
     // MARK: 08-2 프로젝트 상세
 
     func testProjectDetail() async {

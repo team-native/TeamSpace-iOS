@@ -22,7 +22,7 @@ struct AppRouteView: View {
             financeScreen
         case .approvalDetail, .approvalCompose, .approvalResume, .librarySearch, .templateDetail, .templateCompose:
             documentScreen
-        case .workspaceDashboard, .workspaceTodos, .workspaceDocuments, .workspaceDrafts, .workspaceProjects,
+        case .workspaceDashboard, .workspaceTodos, .workspaceDocuments, .workspaceDrafts, .workspaceProjects, .workspaceProjectList,
              .workspaceSchedules, .workspaceScheduleDetail, .workspaceMyPosts, .workspaceMyProposals, .workspaceActivity:
             workspaceScreen
         case .workspaceProfile, .workspaceSettings, .workspacePermissions:
@@ -145,6 +145,8 @@ struct AppRouteView: View {
             ActivitySummaryView(viewModel: container.makeActivitySummaryViewModel(), onNavigate: onNavigate)
         case .workspaceProjects:
             WorkspaceProjectsView(viewModel: container.makeWorkspaceProjectsViewModel(), onNavigate: onNavigate)
+        case .workspaceProjectList:
+            WorkspaceProjectListView(viewModel: container.makeWorkspaceProjectListViewModel(), onNavigate: onNavigate)
         default:
             WorkspaceHomeView(viewModel: container.makeWorkspaceHomeViewModel(user: user), onNavigate: onNavigate)
         }
