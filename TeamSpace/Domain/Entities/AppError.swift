@@ -12,6 +12,8 @@ enum AppError: Error, Equatable {
     case forbidden(String?)
     /// 404
     case notFound(String?)
+    /// 409 — 이미 처리된 요청 (중복)
+    case conflict(String?)
     case network
     case server(statusCode: Int)
     case decoding(String)
@@ -29,6 +31,8 @@ enum AppError: Error, Equatable {
             return message ?? "이 정보를 볼 수 있는 권한이 없어요."
         case .notFound(let message):
             return message ?? "요청한 정보를 찾을 수 없어요."
+        case .conflict(let message):
+            return message ?? "이미 처리된 요청이에요."
         case .network:
             return "네트워크 연결을 확인해 주세요."
         case .server, .decoding, .unknown:

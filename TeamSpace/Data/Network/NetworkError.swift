@@ -24,6 +24,7 @@ enum NetworkError: Error {
             case 401: return .unauthorized(message)
             case 403: return .forbidden(message)
             case 404: return .notFound(message)
+            case 409: return .conflict(message)
             default: return .server(statusCode: code)
             }
         case .emptyData:

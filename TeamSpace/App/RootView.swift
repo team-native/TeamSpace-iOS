@@ -11,10 +11,7 @@ struct RootView: View {
             if let signedInUser {
                 SignedInPlaceholderView(user: signedInUser)
             } else {
-                LoginView(
-                    viewModel: container.makeLoginViewModel(),
-                    onLoginSucceeded: { user in signedInUser = user }
-                )
+                AuthFlowView(container: container, onLoginSucceeded: { user in signedInUser = user })
             }
         }
         .animation(.easeInOut(duration: 0.2), value: signedInUser)
