@@ -1,15 +1,30 @@
 import Foundation
 
-/// POST /auth/login 응답의 `data`
+/// POST /auth/login 응답 — 서버(develop)는 공통 형식 없이 바로 `{ accessToken, refreshToken, user { id: "1", name, roles } }`
 ///
-/// 명세서의 응답 표는 `userId · userName · userRoles` (평평한 형태),
-/// 예시 JSON 은 `user { id, name, roles }` (묶인 형태)라서 두 형태를 모두 받습니다.
-/// TODO: 백엔드와 형태 확정 후 하나로 정리
+/// 예전 명세서의 평평한 형태(`userId · userName · userRoles`)도 받습니다.
 struct LoginResponseDTO: Decodable {
     struct UserDTO: Decodable {
         let id: Int
         let name: String
         let roles: [UserRole]
+
+        init(id: Int, name: String, roles: [UserRole]) {
+            self.id = id
+            self.name = name
+            self.roles = roles
+        }
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            id = try container.decodeIntOrString(forKey: .id)
+            name = try container.decode(String.self, forKey: .name)
+            roles = try container.decode([UserRole].self, forKey: .roles)
+        }
+
+        private enum CodingKeys: String, CodingKey {
+            case id, name, roles
+        }
     }
 
     let accessToken: String
@@ -28,7 +43,7 @@ struct LoginResponseDTO: Decodable {
             user = nested
         } else {
             user = UserDTO(
-                id: try container.decode(Int.self, forKey: .userId),
+                id: try container.decodeIntOrString(forKey: .userId),
                 name: try container.decode(String.self, forKey: .userName),
                 roles: try container.decode([UserRole].self, forKey: .userRoles)
             )

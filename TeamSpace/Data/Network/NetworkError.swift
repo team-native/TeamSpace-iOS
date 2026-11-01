@@ -25,6 +25,7 @@ enum NetworkError: Error {
             case 403: return .forbidden(message)
             case 404: return .notFound(message)
             case 409: return .conflict(message)
+            case 422: return .invalidInput(message ?? "입력한 정보를 다시 확인해 주세요.")
             default: return .server(statusCode: code)
             }
         case .emptyData:

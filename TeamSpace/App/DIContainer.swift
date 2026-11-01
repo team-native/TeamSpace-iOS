@@ -26,6 +26,8 @@ final class DIContainer {
     private let postDraftRepository: PostDraftRepository
     private let proposalDraftRepository: ProposalDraftRepository
 
+    private let apiClient: APIClient
+
     init(
         apiClient: APIClient,
         tokenStorage: TokenStorage,
@@ -38,6 +40,7 @@ final class DIContainer {
         postDraftRepository: PostDraftRepository = UserDefaultsPostDraftRepository(),
         proposalDraftRepository: ProposalDraftRepository = UserDefaultsProposalDraftRepository()
     ) {
+        self.apiClient = apiClient
         self.tokenStorage = tokenStorage
         self.authRepository = AuthRepositoryImpl(client: apiClient)
         self.notificationRepository = NotificationRepositoryImpl(client: apiClient)
@@ -464,7 +467,12 @@ final class DIContainer {
 @MainActor
 extension DIContainer {
     func makeAppSession() -> AppSession {
-        AppSession(restoreSessionUseCase: restoreSessionUseCase, logoutUseCase: logoutUseCase)
+        let session = AppSession(restoreSessionUseCase: restoreSessionUseCase, logoutUseCase: logoutUseCase)
+        // 리프레시 토큰까지 만료되면 로그인 화면으로
+        apiClient.setSessionExpiredHandler { [weak session] in
+            Task { @MainActor in session?.expire() }
+        }
+        return session
     }
 
     func makeLoginViewModel() -> LoginViewModel {
