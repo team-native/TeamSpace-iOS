@@ -60,6 +60,13 @@ enum TSIcon: String {
     case lock = "ic-lock"
     case file = "ic-file"
     case filter = "ic-filter"
+
+    // 14 공통 상태
+    case listPlus = "ic-list-plus"
+    case searchX = "ic-search-x"
+    case cloudAlert = "ic-cloud-alert"
+    case circleX = "ic-circle-x"
+    case loader = "ic-loader"
     // 하단 탭바 — Figma 원본 SVG (Resources/Assets.xcassets/Icons)
     case tabHome = "tab-home"
     case tabFinance = "tab-finance"
@@ -73,6 +80,7 @@ enum TSIcon: String {
         .chevronLeft, .clipboard, .creditCard, .calendar, .bookOpen, .bell, .checkCircle, .settings,
         .bellRing, .bellOff, .clipboardCheck, .wallet, .megaphone, .infoCircle, .checkSmall, .moon,
         .chevronRight, .arrowRight, .search, .link, .mailOutline, .message, .organization, .lock, .file, .filter,
+        .listPlus, .searchX, .cloudAlert, .circleX, .loader,
         .tabHome, .tabFinance, .tabApproval, .tabDocuments, .tabWorkspace
     ]
 
