@@ -75,7 +75,7 @@ struct MockTransport: HTTPTransport {
         switch (request.httpMethod, path) {
         case ("POST", "login"):
             return try login(request)
-        case ("POST", "account-requests"):
+        case ("POST", "signup-requests"):
             return try accountRequest(request)
         case ("GET", "notifications"):
             return try notifications(request)
@@ -89,8 +89,8 @@ struct MockTransport: HTTPTransport {
             return try respond(request, status: 200, json: MockDashboardFixture.json())
         case ("POST", "push-token"):
             return try pushToken(request)
-        case ("POST", "password-reset"):
-            return try respond(request, status: 200, json: #"{"code":200,"message":"메일 발송 완료","data":{"success":true}}"#)
+        case ("POST", "password-reset-requests"):
+            return try respond(request, status: 202, json: #"{"accepted":true}"#)
         default:
             return try respond(request, status: 404, json: #"{"code":404,"message":"Mock 에 없는 API 입니다."}"#)
         }
@@ -685,29 +685,18 @@ struct MockTransport: HTTPTransport {
         """)
     }
 
+    /// `POST /auth/signup-requests` — `taken@` 으로 시작하면 이미 있는 이메일
     private func accountRequest(_ request: URLRequest) throws -> (Data, HTTPURLResponse) {
         guard
             let body = request.httpBody,
             let dto = try? JSONDecoder().decode(AccountRequestRequestDTO.self, from: body)
         else {
-            return try respond(request, status: 400, json: #"{"code":400,"message":"잘못된 요청 파라미터입니다."}"#)
+            return try respond(request, status: 422, json: #"{"detail":"입력한 정보를 다시 확인해 주세요."}"#)
         }
         if dto.email.hasPrefix("taken@") {
-            return try respond(request, status: 409, json: #"{"code":409,"message":"이미 요청된 이메일입니다."}"#)
+            return try respond(request, status: 409, json: #"{"detail":"이미 등록된 이메일입니다."}"#)
         }
-        let payload = MockEnvelope(
-            code: 201,
-            message: "요청 완료",
-            data: MockAccountRequestData(
-                name: dto.name,
-                email: dto.email,
-                department: dto.department,
-                status: "REVIEWING",
-                requestedAt: ISO8601DateFormatter().string(from: Date())
-            )
-        )
-        let data = try JSONEncoder().encode(payload)
-        return try respond(request, status: 201, json: String(decoding: data, as: UTF8.self))
+        return try respond(request, status: 202, json: #"{"id":"12","status":"PENDING"}"#)
     }
 
     private func respond(_ request: URLRequest, status: Int, json: String) throws -> (Data, HTTPURLResponse) {
@@ -741,14 +730,6 @@ private struct MockNotificationPage: Encodable {
         case items
         case nextCursor
     }
-}
-
-private struct MockAccountRequestData: Encodable {
-    let name: String
-    let email: String
-    let department: String
-    let status: String
-    let requestedAt: String
 }
 
 /// Mock 알림 — Figma 02-2 · 02-3 · 02-4 알림 센터 예시 내용

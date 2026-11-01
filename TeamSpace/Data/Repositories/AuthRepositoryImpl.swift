@@ -32,34 +32,35 @@ final class AuthRepositoryImpl: AuthRepository, @unchecked Sendable {
         }
     }
 
-    // TODO: API 명세서에 계정 요청 API 추가되면 경로 · 필드명 확인
+    /// `POST /auth/signup-requests` — 202 `{id, status}`, 이미 있는 이메일이면 409
     func requestAccount(_ form: AccountRequestForm) async throws -> AccountRequestReceipt {
         guard let department = form.department else {
             throw AppError.invalidInput("소속 부서를 선택해 주세요.")
         }
         let endpoint = Endpoint(
             method: .post,
-            path: "auth/account-requests",
+            path: "auth/signup-requests",
             body: AccountRequestRequestDTO(
-                name: form.name,
                 email: form.email,
-                department: department.rawValue,
+                name: form.name,
+                dept: department.rawValue,
                 password: form.password
             ),
             requiresAuth: false
         )
         do {
-            return try await client.request(endpoint, as: AccountRequestResponseDTO.self).toEntity()
+            return try await client.request(endpoint, as: AccountRequestResponseDTO.self)
+                .toEntity(form: form, department: department)
         } catch let error as NetworkError {
             throw error.asAppError
         }
     }
 
-    // TODO: API 명세서에 비밀번호 재설정 API 추가되면 경로 확인
+    /// `POST /auth/password-reset-requests` — 가입 여부와 상관없이 202 `{accepted: true}`
     func requestPasswordReset(email: String) async throws {
         let endpoint = Endpoint(
             method: .post,
-            path: "auth/password-reset",
+            path: "auth/password-reset-requests",
             body: PasswordResetRequestDTO(email: email),
             requiresAuth: false
         )

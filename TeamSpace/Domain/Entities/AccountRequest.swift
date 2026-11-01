@@ -35,6 +35,14 @@ enum AccountRequestStatus: String, UnknownCaseDecodable {
     case unknown = "UNKNOWN"
 
     static let unknownCase: AccountRequestStatus = .unknown
+
+    /// 서버는 막 접수된 요청을 `PENDING` 으로 보내요 — 화면에선 "검토 중"
+    init(serverValue: String) {
+        switch serverValue.uppercased() {
+        case "PENDING", "REVIEWING": self = .reviewing
+        default: self = AccountRequestStatus(rawValue: serverValue.uppercased()) ?? .unknown
+        }
+    }
 }
 
 /// 01-3 요청 완료 화면에 보여줄 접수 결과
