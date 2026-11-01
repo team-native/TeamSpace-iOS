@@ -6,6 +6,10 @@ struct AccountRequestRequestDTO: Codable {
     let name: String
     let dept: String
     let password: String
+    /// 선택 항목 — nil 이면 바디에서 빠져요.
+    var major: String?
+    var cohort: String?
+    var message: String?
 }
 
 /// `POST /auth/signup-requests` 응답 — `{ "id": "12", "status": "PENDING" }`

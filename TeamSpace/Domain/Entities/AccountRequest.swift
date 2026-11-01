@@ -6,6 +6,12 @@ struct AccountRequestForm: Equatable {
     var email: String = ""
     var department: Department?
     var password: String = ""
+    /// 아래는 선택 입력 — 비워 두면 보내지 않아요.
+    var major: String = ""
+    var cohort: String = ""
+    var message: String = ""
+
+    static let messageLimit = 200
 
     var trimmedName: String {
         name.trimmingCharacters(in: .whitespaces)
@@ -25,6 +31,7 @@ struct AccountRequestForm: Equatable {
 
     var isSubmittable: Bool {
         !trimmedName.isEmpty && isEmailValid && department != nil && isPasswordValid
+            && message.count <= Self.messageLimit
     }
 }
 

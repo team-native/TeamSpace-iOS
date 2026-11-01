@@ -55,6 +55,16 @@ final class AccountRequestViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.errorMessage, "이미 등록된 이메일입니다.")
     }
 
+    func testMessageIsLimitedTo200Characters() {
+        let viewModel = filledViewModel()
+
+        viewModel.updateMessage(String(repeating: "가", count: 250))
+
+        XCTAssertEqual(viewModel.form.message.count, 200)
+        XCTAssertEqual(viewModel.messageCountText, "200 / 200")
+        XCTAssertTrue(viewModel.canSubmit, "선택 항목은 비어 있어도, 꽉 차도 요청할 수 있어요")
+    }
+
     func testPasswordResetValidatesEmail() async {
         let viewModel = makeContainer().makePasswordResetViewModel()
 

@@ -4,6 +4,8 @@ import SwiftUI
 /// 마지막 페이지면 아무것도 그리지 않아요.
 struct LoadMoreFooter: View {
     let paging: PagingState
+    /// 실패 카드 보조 문구 — 예: "위의 알림은 그대로 볼 수 있어요."
+    var failureHint: String = "위의 목록은 그대로 볼 수 있어요."
     let onLoadMore: () -> Void
 
     var body: some View {
@@ -19,34 +21,44 @@ struct LoadMoreFooter: View {
         }
     }
 
+    /// Figma 14-3 목록 끝 · 더 불러오는 중
     private var loadingRow: some View {
         HStack(spacing: Spacing.sm) {
             SpinningLoader()
             Text("더 불러오는 중이에요")
-                .tsFont(.caption)
-                .foregroundStyle(Color.tsInk2)
+                .tsFont(.footnoteBold)
+                .foregroundStyle(Color.tsPrimary)
         }
         .frame(maxWidth: .infinity, minHeight: 48)
         .accessibilityElement(children: .combine)
     }
 
+    /// Figma 14-4 목록 끝 · 다음 목록 불러오기 실패
     private var failedRow: some View {
-        VStack(spacing: Spacing.xs) {
-            Text("다음 목록을 불러오지 못했어요")
-                .tsFont(.caption)
-                .foregroundStyle(Color.tsInk2)
+        HStack(spacing: Spacing.md) {
+            VStack(alignment: .leading, spacing: Spacing.xxs) {
+                Text("다음 목록을 불러오지 못했어요")
+                    .tsFont(.footnoteBold)
+                    .foregroundStyle(Color.tsInk)
+                Text(failureHint)
+                    .tsFont(.caption)
+                    .foregroundStyle(Color.tsInk3)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .accessibilityElement(children: .combine)
             Button(action: onLoadMore) {
                 Text("다시 불러오기")
-                    .tsFont(.captionBold)
-                .foregroundStyle(Color.tsPrimary)
-                .padding(.horizontal, Spacing.md)
-                .frame(minHeight: 44)
-                .contentShape(Rectangle())
+                    .tsFont(.footnoteBold)
+                    .foregroundStyle(Color.tsInk2)
+                    .padding(.horizontal, Spacing.lg + Spacing.xxxs)
+                    .frame(minHeight: 38)
+                    .background(Color.tsSurface2, in: RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, Spacing.xs)
+        .padding(Spacing.lg)
+        .background(Color.tsSurface, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
     }
 }
 

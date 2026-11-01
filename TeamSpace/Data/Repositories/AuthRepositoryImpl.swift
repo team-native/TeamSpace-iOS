@@ -44,7 +44,10 @@ final class AuthRepositoryImpl: AuthRepository, @unchecked Sendable {
                 email: form.email,
                 name: form.name,
                 dept: department.rawValue,
-                password: form.password
+                password: form.password,
+                major: form.major.nilIfEmpty,
+                cohort: form.cohort.nilIfEmpty,
+                message: form.message.nilIfEmpty
             ),
             requiresAuth: false
         )
@@ -73,4 +76,8 @@ final class AuthRepositoryImpl: AuthRepository, @unchecked Sendable {
             throw error.asAppError
         }
     }
+}
+
+private extension String {
+    var nilIfEmpty: String? { isEmpty ? nil : self }
 }

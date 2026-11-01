@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// 이름 · 이메일 · 소속 부서(01-5 메뉴) · 비밀번호
+/// 이름 · 이메일 · 소속 부서(01-5 메뉴) · 비밀번호 · 선택 정보(전공 · 기수 · 하고 싶은 말)
 struct AccountRequestFormSection: View {
     @Bindable var viewModel: AccountRequestViewModel
     let onSubmit: () -> Void
@@ -8,6 +8,8 @@ struct AccountRequestFormSection: View {
     @FocusState private var isNameFocused: Bool
     @FocusState private var isEmailFocused: Bool
     @FocusState private var isPasswordFocused: Bool
+    @FocusState private var isMajorFocused: Bool
+    @FocusState private var isCohortFocused: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.lg) {
@@ -28,8 +30,67 @@ struct AccountRequestFormSection: View {
                 viewModel.isDepartmentPickerPresented = true
             }
             passwordField
+            optionalFields
         }
         .disabled(viewModel.isSubmitting)
+    }
+
+    /// Figma 01-2 수정안 — 전공 · 기수 한 줄, 하고 싶은 말 여러 줄
+    private var optionalFields: some View {
+        VStack(alignment: .leading, spacing: Spacing.lg) {
+            HStack(alignment: .top, spacing: Spacing.sm + Spacing.xxxs) {
+                TSTextField(
+                    label: "전공 (선택)",
+                    placeholder: "예: 스마트IoT과",
+                    text: $viewModel.form.major,
+                    submitLabel: .next,
+                    focus: $isMajorFocused,
+                    onSubmit: { isCohortFocused = true }
+                )
+                TSTextField(
+                    label: "기수 (선택)",
+                    placeholder: "예: 9기",
+                    text: $viewModel.form.cohort,
+                    submitLabel: .next,
+                    focus: $isCohortFocused,
+                    onSubmit: { isCohortFocused = false }
+                )
+            }
+            messageField
+        }
+    }
+
+    private var messageField: some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            Text("하고 싶은 말 (선택)")
+                .tsFont(.footnoteBold)
+                .foregroundStyle(Color.tsInk)
+            TextEditor(text: Binding(get: { viewModel.form.message }, set: { viewModel.updateMessage($0) }))
+                .tsFont(.body)
+                .foregroundStyle(Color.tsInk)
+                .scrollContentBackground(.hidden)
+                .frame(minHeight: 96)
+                .padding(.horizontal, Spacing.md)
+                .padding(.vertical, Spacing.sm)
+                .background(alignment: .topLeading) {
+                    if viewModel.form.message.isEmpty {
+                        Text("참여하고 싶은 프로젝트나 운영진에게 전할 말을 적어 주세요.")
+                            .tsFont(.body)
+                            .foregroundStyle(Color.tsInk3)
+                            .padding(.horizontal, Spacing.lg)
+                            .padding(.vertical, Spacing.md + Spacing.xxxs)
+                            .accessibilityHidden(true)
+                    }
+                }
+                .background(Color.tsBackground, in: RoundedRectangle(cornerRadius: Radius.lg, style: .continuous))
+                .accessibilityLabel("하고 싶은 말, 선택")
+                .accessibilityValue(viewModel.messageCountText)
+            Text(viewModel.messageCountText)
+                .tsFont(.caption)
+                .foregroundStyle(Color.tsInk3)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+                .accessibilityHidden(true)
+        }
     }
 
     private var emailField: some View {

@@ -31,6 +31,23 @@ final class AccountAPITests: XCTestCase {
         XCTAssertEqual(receipt.department, .design)
     }
 
+    func testOptionalFieldsAreSentOnlyWhenFilled() async throws {
+        let transport = RecordingTransport(status: 202, json: #"{"id":"13","status":"PENDING"}"#)
+        let useCase = RequestAccountUseCase(authRepository: makeRepository(transport))
+        var filled = form
+        filled.major = " 스마트IoT과 "
+        filled.cohort = "9기"
+        filled.message = "  "
+
+        _ = try await useCase.execute(filled)
+
+        let request = await transport.lastRequest
+        let body = try XCTUnwrap(request?.httpBody.flatMap { try JSONSerialization.jsonObject(with: $0) as? [String: String] })
+        XCTAssertEqual(body["major"], "스마트IoT과", "앞뒤 공백은 지워요")
+        XCTAssertEqual(body["cohort"], "9기")
+        XCTAssertNil(body["message"], "비어 있으면 보내지 않아요")
+    }
+
     func testDuplicateEmailIsConflict() async {
         let transport = RecordingTransport(status: 409, json: #"{"detail":"이미 검토 중인 가입 요청이 있습니다."}"#)
 

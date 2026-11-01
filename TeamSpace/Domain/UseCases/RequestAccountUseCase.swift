@@ -14,6 +14,9 @@ struct RequestAccountUseCase {
         var trimmed = form
         trimmed.name = form.trimmedName
         trimmed.email = form.email.trimmingCharacters(in: .whitespaces)
+        trimmed.major = form.major.trimmingCharacters(in: .whitespacesAndNewlines)
+        trimmed.cohort = form.cohort.trimmingCharacters(in: .whitespacesAndNewlines)
+        trimmed.message = form.message.trimmingCharacters(in: .whitespacesAndNewlines)
         return try await authRepository.requestAccount(trimmed)
     }
 }
