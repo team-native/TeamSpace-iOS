@@ -10,6 +10,7 @@ final class DIContainer {
     private let pushTokenRepository: PushTokenRepository
     private let dashboardRepository: DashboardRepository
     private let memberRepository: MemberRepository
+    private let financeRepository: FinanceRepository
 
     init(
         apiClient: APIClient,
@@ -25,6 +26,7 @@ final class DIContainer {
         self.pushTokenRepository = PushTokenRepositoryImpl(client: apiClient)
         self.dashboardRepository = DashboardRepositoryImpl(client: apiClient)
         self.memberRepository = MemberRepositoryImpl(client: apiClient)
+        self.financeRepository = FinanceRepositoryImpl(client: apiClient)
     }
 
     /// xcconfig 의 USE_MOCK_API / API_BASE_URL 에 따라 실서버 또는 Mock 서버를 씁니다.
@@ -120,6 +122,26 @@ final class DIContainer {
     var fetchOrganizationUseCase: FetchOrganizationUseCase {
         FetchOrganizationUseCase(memberRepository: memberRepository)
     }
+
+    var fetchFinanceOverviewUseCase: FetchFinanceOverviewUseCase {
+        FetchFinanceOverviewUseCase(financeRepository: financeRepository)
+    }
+
+    var fetchContractLedgerUseCase: FetchContractLedgerUseCase {
+        FetchContractLedgerUseCase(financeRepository: financeRepository)
+    }
+
+    var fetchContractDetailUseCase: FetchContractDetailUseCase {
+        FetchContractDetailUseCase(financeRepository: financeRepository)
+    }
+
+    var fetchMonthlyFlowsUseCase: FetchMonthlyFlowsUseCase {
+        FetchMonthlyFlowsUseCase(financeRepository: financeRepository)
+    }
+
+    var fetchProjectAmountsUseCase: FetchProjectAmountsUseCase {
+        FetchProjectAmountsUseCase(financeRepository: financeRepository)
+    }
 }
 
 @MainActor
@@ -183,5 +205,33 @@ extension DIContainer {
 
     func makeMemberDetailViewModel(memberId: Int) -> MemberDetailViewModel {
         MemberDetailViewModel(memberId: memberId, fetchMemberDetailUseCase: fetchMemberDetailUseCase)
+    }
+
+    func makeFinanceViewModel(user: AuthUser) -> FinanceViewModel {
+        FinanceViewModel(user: user, fetchFinanceOverviewUseCase: fetchFinanceOverviewUseCase)
+    }
+
+    func makeContractLedgerViewModel(year: Int) -> ContractLedgerViewModel {
+        ContractLedgerViewModel(year: year, fetchContractLedgerUseCase: fetchContractLedgerUseCase)
+    }
+
+    func makeContractDetailViewModel(contractId: Int) -> ContractDetailViewModel {
+        ContractDetailViewModel(contractId: contractId, fetchContractDetailUseCase: fetchContractDetailUseCase)
+    }
+
+    func makeMonthlyFlowViewModel(endMonth: Date) -> MonthlyFlowViewModel {
+        MonthlyFlowViewModel(endMonth: endMonth, fetchMonthlyFlowsUseCase: fetchMonthlyFlowsUseCase)
+    }
+
+    func makeFinanceCompositionViewModel(month: Date) -> FinanceCompositionViewModel {
+        FinanceCompositionViewModel(month: month, fetchFinanceOverviewUseCase: fetchFinanceOverviewUseCase)
+    }
+
+    func makeFinanceAccessViewModel(user: AuthUser, year: Int = Calendar.current.component(.year, from: Date())) -> FinanceAccessViewModel {
+        FinanceAccessViewModel(year: year, user: user, fetchContractLedgerUseCase: fetchContractLedgerUseCase)
+    }
+
+    func makeProjectAmountsViewModel(year: Int, user: AuthUser) -> ProjectAmountsViewModel {
+        ProjectAmountsViewModel(year: year, user: user, fetchProjectAmountsUseCase: fetchProjectAmountsUseCase)
     }
 }

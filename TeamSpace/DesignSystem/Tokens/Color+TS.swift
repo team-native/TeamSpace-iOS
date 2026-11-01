@@ -41,6 +41,10 @@ extension Color {
     static let tsPreviewStart = Color(light: 0xDDEBFF, dark: 0x1D2A3D)
     static let tsPreviewEnd = Color(light: 0xFFF8D7, dark: 0x2B2716)
 
+    // MARK: 강조 카드 그라디언트 (04-1 사용 가능 금액)
+    static let tsPrimaryDeep = Color(light: 0x1A6FE8, dark: 0x1A5FCC)
+    static let tsPrimaryLight = Color(light: 0x56A1FF, dark: 0x3F86F0)
+
     // MARK: Avatar placeholder
     static let tsAvatarStart = Color(light: 0xE2E2E2, dark: 0x2A2C32)
     static let tsAvatarEnd = Color(light: 0xF1F1F1, dark: 0x202227)
