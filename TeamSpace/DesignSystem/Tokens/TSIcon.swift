@@ -11,6 +11,9 @@ enum TSIcon: String {
     case chevronDown = "chevron.down"
     case shield = "checkmark.shield"
     case clock = "clock"
+    case users = "person.2"
+    case plus = "plus"
+    case close = "xmark"
     // 02 알림 — Figma 원본 SVG
     case clipboard = "ic-clipboard"
     case creditCard = "ic-credit-card"

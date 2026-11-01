@@ -72,7 +72,12 @@ struct NotificationCenterView: View {
                 onOpen: { notification in Task { await viewModel.markAsRead(notification) } },
                 onReview: { notification in
                     Task { await viewModel.markAsRead(notification) }
-                    onNavigate(.comingSoon(title: "결재"))
+                    // deepLink "/approvals/12" → 05-4 받은 결재 검토
+                    if let id = notification.deepLink.flatMap({ Int(URL(fileURLWithPath: $0).lastPathComponent) }) {
+                        onNavigate(.approvalDetail(documentId: id))
+                    } else {
+                        onNavigate(.comingSoon(title: "결재"))
+                    }
                 },
                 onOpenTarget: { notification in
                     Task { await viewModel.markAsRead(notification) }

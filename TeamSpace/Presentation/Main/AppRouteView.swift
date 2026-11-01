@@ -43,6 +43,10 @@ struct AppRouteView: View {
                 viewModel: container.makeProjectAmountsViewModel(year: Calendar.current.component(.year, from: Date()), user: user),
                 onNavigate: onNavigate
             )
+        case .approvalDetail(let documentId):
+            ApprovalDetailView(viewModel: container.makeApprovalDetailViewModel(documentId: documentId), onNavigate: onNavigate)
+        case .approvalCompose:
+            ApprovalComposeView(container: container, onNavigate: onNavigate)
         case .comingSoon(let title):
             ComingSoonView(title: title, showsBackButton: true)
         }
