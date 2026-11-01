@@ -46,6 +46,17 @@ struct AccountRequestView: View {
                 onBackToLogin: onBackToLogin
             )
         }
+        .overlay {
+            if viewModel.isDepartmentPickerPresented {
+                DepartmentPickerOverlay(
+                    departments: viewModel.departments,
+                    selection: viewModel.form.department,
+                    onSelect: { viewModel.select($0) },
+                    onDismiss: { viewModel.isDepartmentPickerPresented = false }
+                )
+            }
+        }
+        .animation(.easeOut(duration: 0.2), value: viewModel.isDepartmentPickerPresented)
         .background(Color.tsSurface.ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)
         .onChange(of: viewModel.form) { _, _ in viewModel.clearError() }

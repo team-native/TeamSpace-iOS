@@ -37,6 +37,14 @@ final class DIContainer {
         LoginUseCase(authRepository: authRepository, tokenStorage: tokenStorage)
     }
 
+    var restoreSessionUseCase: RestoreSessionUseCase {
+        RestoreSessionUseCase(authRepository: authRepository, tokenStorage: tokenStorage)
+    }
+
+    var logoutUseCase: LogoutUseCase {
+        LogoutUseCase(tokenStorage: tokenStorage)
+    }
+
     var requestAccountUseCase: RequestAccountUseCase {
         RequestAccountUseCase(authRepository: authRepository)
     }
@@ -48,6 +56,10 @@ final class DIContainer {
 
 @MainActor
 extension DIContainer {
+    func makeAppSession() -> AppSession {
+        AppSession(restoreSessionUseCase: restoreSessionUseCase, logoutUseCase: logoutUseCase)
+    }
+
     func makeLoginViewModel() -> LoginViewModel {
         LoginViewModel(loginUseCase: loginUseCase)
     }

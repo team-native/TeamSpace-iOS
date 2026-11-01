@@ -21,11 +21,12 @@ struct AccountRequestFormSection: View {
                 onSubmit: { isEmailFocused = true }
             )
             emailField
-            DepartmentMenuField(
-                departments: viewModel.departments,
-                selection: viewModel.form.department,
-                onSelect: { viewModel.select($0) }
-            )
+            DepartmentSelectField(selection: viewModel.form.department) {
+                isNameFocused = false
+                isEmailFocused = false
+                isPasswordFocused = false
+                viewModel.isDepartmentPickerPresented = true
+            }
             passwordField
         }
         .disabled(viewModel.isSubmitting)

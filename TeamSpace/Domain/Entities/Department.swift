@@ -17,14 +17,15 @@ enum Department: String, UnknownCaseDecodable, Hashable, CaseIterable {
         allCases.filter { $0 != .unknown }
     }
 
+    /// 화면 표시 이름 — Figma 01-5 소속 부서 선택 기준
     var displayName: String {
         switch self {
         case .leader: return "Leader"
-        case .nativeOps: return "NativeOps"
+        case .nativeOps: return "OL"
         case .pmo: return "PMO"
         case .fa: return "FA"
-        case .design: return "NativeLab · Design"
-        case .dev: return "NativeLab · Dev"
+        case .design: return "Native"
+        case .dev: return "NativeLab"
         case .unknown: return "기타"
         }
     }

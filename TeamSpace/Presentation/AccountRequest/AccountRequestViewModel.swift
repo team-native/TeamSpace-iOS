@@ -12,6 +12,8 @@ enum PasswordRuleState {
 @MainActor
 final class AccountRequestViewModel {
     var form = AccountRequestForm()
+    /// 01-5 소속 부서 선택 카드 표시 여부
+    var isDepartmentPickerPresented = false
     private(set) var submitState: ViewState<AccountRequestReceipt> = .idle
 
     private let requestAccountUseCase: RequestAccountUseCase
@@ -49,6 +51,7 @@ final class AccountRequestViewModel {
 
     func select(_ department: Department) {
         form.department = department
+        isDepartmentPickerPresented = false
         clearError()
     }
 
