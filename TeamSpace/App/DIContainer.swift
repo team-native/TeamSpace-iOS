@@ -15,6 +15,7 @@ final class DIContainer {
     private let libraryRepository: LibraryRepository
     private let recentSearchRepository: RecentSearchRepository
     private let workspaceRepository: WorkspaceRepository
+    private let projectRepository: ProjectRepository
 
     init(
         apiClient: APIClient,
@@ -36,6 +37,7 @@ final class DIContainer {
         self.libraryRepository = LibraryRepositoryImpl(client: apiClient)
         self.recentSearchRepository = recentSearchRepository
         self.workspaceRepository = WorkspaceRepositoryImpl(client: apiClient)
+        self.projectRepository = ProjectRepositoryImpl(client: apiClient)
     }
 
     /// xcconfig 의 USE_MOCK_API / API_BASE_URL 에 따라 실서버 또는 Mock 서버를 씁니다.
@@ -250,6 +252,42 @@ final class DIContainer {
         UpdateProfileUseCase(workspaceRepository: workspaceRepository)
     }
 
+    var fetchProjectsUseCase: FetchProjectsUseCase {
+        FetchProjectsUseCase(projectRepository: projectRepository)
+    }
+
+    var fetchProjectDetailUseCase: FetchProjectDetailUseCase {
+        FetchProjectDetailUseCase(projectRepository: projectRepository)
+    }
+
+    var fetchProjectTimelineUseCase: FetchProjectTimelineUseCase {
+        FetchProjectTimelineUseCase(projectRepository: projectRepository)
+    }
+
+    var fetchRecruitmentUseCase: FetchRecruitmentUseCase {
+        FetchRecruitmentUseCase(projectRepository: projectRepository)
+    }
+
+    var applyProjectUseCase: ApplyProjectUseCase {
+        ApplyProjectUseCase(projectRepository: projectRepository)
+    }
+
+    var fetchMyApplicationsUseCase: FetchMyApplicationsUseCase {
+        FetchMyApplicationsUseCase(projectRepository: projectRepository)
+    }
+
+    var cancelApplicationUseCase: CancelApplicationUseCase {
+        CancelApplicationUseCase(projectRepository: projectRepository)
+    }
+
+    var fetchApplicantsUseCase: FetchApplicantsUseCase {
+        FetchApplicantsUseCase(projectRepository: projectRepository)
+    }
+
+    var decideApplicantUseCase: DecideApplicantUseCase {
+        DecideApplicantUseCase(projectRepository: projectRepository)
+    }
+
     var fetchTodosUseCase: FetchTodosUseCase {
         FetchTodosUseCase(workspaceRepository: workspaceRepository)
     }
@@ -462,5 +500,40 @@ extension DIContainer {
 
     func makePermissionsViewModel(user: AuthUser) -> PermissionsViewModel {
         PermissionsViewModel(user: user, fetchProfileUseCase: fetchProfileUseCase)
+    }
+
+    func makeProjectListViewModel() -> ProjectListViewModel {
+        ProjectListViewModel(fetchProjectsUseCase: fetchProjectsUseCase, fetchProfileUseCase: fetchProfileUseCase)
+    }
+
+    func makeProjectDetailViewModel(projectId: Int) -> ProjectDetailViewModel {
+        ProjectDetailViewModel(projectId: projectId, fetchProjectDetailUseCase: fetchProjectDetailUseCase)
+    }
+
+    func makeProjectTimelineViewModel(projectId: Int) -> ProjectTimelineViewModel {
+        ProjectTimelineViewModel(projectId: projectId, fetchProjectTimelineUseCase: fetchProjectTimelineUseCase)
+    }
+
+    func makeRecruitmentViewModel(projectId: Int) -> RecruitmentViewModel {
+        RecruitmentViewModel(
+            projectId: projectId,
+            fetchRecruitmentUseCase: fetchRecruitmentUseCase,
+            applyProjectUseCase: applyProjectUseCase
+        )
+    }
+
+    func makeMyApplicationsViewModel() -> MyApplicationsViewModel {
+        MyApplicationsViewModel(
+            fetchMyApplicationsUseCase: fetchMyApplicationsUseCase,
+            cancelApplicationUseCase: cancelApplicationUseCase
+        )
+    }
+
+    func makeApplicantReviewViewModel(projectId: Int) -> ApplicantReviewViewModel {
+        ApplicantReviewViewModel(
+            projectId: projectId,
+            fetchApplicantsUseCase: fetchApplicantsUseCase,
+            decideApplicantUseCase: decideApplicantUseCase
+        )
     }
 }

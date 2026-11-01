@@ -58,7 +58,7 @@ struct WorkspaceProjectsView: View {
             VStack(spacing: 0) {
                 ForEach(Array(projects.enumerated()), id: \.element.id) { index, project in
                     if index > 0 { TSDivider() }
-                    Button { onNavigate(.comingSoon(title: project.name)) } label: { JoinedProjectRow(project: project) }
+                    Button { onNavigate(.projectDetail(id: project.id)) } label: { JoinedProjectRow(project: project) }
                         .buttonStyle(.plain)
                 }
             }
