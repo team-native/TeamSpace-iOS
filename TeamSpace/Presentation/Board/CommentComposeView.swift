@@ -53,11 +53,11 @@ struct CommentComposeView: View {
     private var content: some View {
         switch viewModel.state {
         case .idle, .loading:
-            ProgressView().frame(maxWidth: .infinity, minHeight: 240)
+            LoadingSkeletonView()
         case .empty, .forbidden:
             InfoBanner(message: "이 게시글에는 댓글을 남길 수 없어요.", icon: .lock, style: .muted)
         case .failed(let error):
-            RetryView(message: error.userMessage) { Task { await viewModel.load() } }
+            ErrorStateView(message: error.userMessage) { Task { await viewModel.load() } }
         case .loaded(let detail):
             WorkspacePageTitle(eyebrow: "다른 팀원들에게 자유롭게 생각을 들려주세요", title: detail.post.title)
             CommentOriginCard(originText: viewModel.originText, excerpt: detail.post.excerpt)

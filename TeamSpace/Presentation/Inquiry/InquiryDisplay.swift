@@ -120,6 +120,9 @@ struct InquiryComposeContext: Hashable {
 
     static let blank = InquiryComposeContext()
 
+    /// 14-5 접근 불가 "NativeOps에 권한 문의"
+    static let accessRequest = InquiryComposeContext(department: .nativeOps, title: "[권한 문의] ACCESS-403")
+
     /// 11-4 "이 답변에 후속 문의하기" · 11-7 "다시 문의하기"
     static func followUp(_ inquiry: InquirySummary) -> InquiryComposeContext {
         InquiryComposeContext(department: inquiry.department, title: "[후속] \(inquiry.title)", followUpOf: inquiry.id)

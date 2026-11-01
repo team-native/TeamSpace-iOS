@@ -33,13 +33,13 @@ struct MonthlyFlowView: View {
     private var content: some View {
         switch viewModel.state {
         case .idle, .loading:
-            ProgressView().frame(maxWidth: .infinity, minHeight: 280)
+            LoadingSkeletonView()
         case .empty:
-            InfoBanner(message: "아직 기록된 흐름이 없어요.", icon: .infoCircle, style: .muted)
+            EmptyStateView(icon: .wallet, title: "아직 기록된 흐름이 없어요", message: "들어온 돈과 나간 돈이 기록되면 월별로 보여드려요.")
         case .forbidden:
             InfoBanner(message: "월별 흐름을 볼 수 있는 권한이 없어요.", icon: .lock, style: .muted)
         case .failed(let error):
-            RetryView(message: error.userMessage) { Task { await viewModel.load() } }
+            ErrorStateView(message: error.userMessage) { Task { await viewModel.load() } }
         case .loaded(let flows):
             FlowChartCard(
                 headline: viewModel.headline,

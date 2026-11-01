@@ -50,11 +50,11 @@ struct MemberDetailView: View {
     private var content: some View {
         switch viewModel.state {
         case .idle, .loading:
-            ProgressView().frame(maxWidth: .infinity, minHeight: 300)
+            LoadingSkeletonView(message: "내용을 불러오는 중이에요", count: 2)
         case .empty, .forbidden:
             InfoBanner(message: "이 팀원의 정보를 볼 수 있는 권한이 없어요.", icon: .infoCircle, style: .muted)
         case .failed(let error):
-            RetryView(message: error.userMessage) { Task { await viewModel.load() } }
+            ErrorStateView(message: error.userMessage, title: "내용을 불러오지 못했어요") { Task { await viewModel.load() } }
         case .loaded(let detail):
             MemberProfileHeader(detail: detail)
             MemberContactButtons(

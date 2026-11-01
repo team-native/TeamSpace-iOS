@@ -15,6 +15,8 @@ enum TSIconSize {
     case xxl    // 26
     case heroSmall // 30 — 알림 권한 화면 큰 종 아이콘
     case hero   // 32
+    case stateSmall // 48 — 14-2 검색 결과 없음 · 14-5 접근 불가
+    case state  // 52 — 14-1 빈 화면 · 14-4 불러오기 오류
 
     var size: CGFloat {
         switch self {
@@ -31,6 +33,8 @@ enum TSIconSize {
         case .xxl: return 26
         case .heroSmall: return 30
         case .hero: return 32
+        case .stateSmall: return 48
+        case .state: return 52
         }
     }
 }

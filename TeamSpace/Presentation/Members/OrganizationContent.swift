@@ -10,11 +10,11 @@ struct OrganizationContent: View {
     var body: some View {
         switch state {
         case .idle, .loading:
-            ProgressView().frame(maxWidth: .infinity, minHeight: 200)
+            LoadingSkeletonView()
         case .empty, .forbidden:
             InfoBanner(message: "조직도를 볼 수 있는 권한이 없어요.", icon: .infoCircle, style: .muted)
         case .failed(let error):
-            RetryView(message: error.userMessage, onRetry: onRetry)
+            ErrorStateView(message: error.userMessage, onRetry: onRetry)
         case .loaded(let tree):
             LeaderNode(leader: tree.leader) { onSelectMember(tree.leader) }
             VStack(spacing: Spacing.xs) {

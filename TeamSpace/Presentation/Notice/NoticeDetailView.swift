@@ -54,11 +54,14 @@ struct NoticeDetailView: View {
     private var content: some View {
         switch viewModel.state {
         case .idle, .loading:
-            ProgressView().frame(maxWidth: .infinity, minHeight: 240)
+            LoadingSkeletonView(message: "내용을 불러오는 중이에요", count: 2)
         case .empty, .forbidden:
-            InfoBanner(message: "이 공지를 볼 수 있는 권한이 없어요.", icon: .lock, style: .muted)
+            AccessDeniedView(
+                onInquire: { onNavigate(.inquiryCompose(.accessRequest)) },
+                onBack: { dismiss() }
+            )
         case .failed(let error):
-            RetryView(message: error.userMessage) { Task { await viewModel.load() } }
+            ErrorStateView(message: error.userMessage, title: "내용을 불러오지 못했어요") { Task { await viewModel.load() } }
         case .loaded(let detail):
             NoticeDetailHeader(detail: detail)
             if let document = detail.linkedDocument {

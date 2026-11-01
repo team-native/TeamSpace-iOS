@@ -56,7 +56,7 @@ struct ScheduleCalendarView: View {
         case .empty, .forbidden:
             InfoBanner(message: "일정을 볼 수 있는 권한이 없어요.", icon: .lock, style: .muted)
         case .failed(let error):
-            RetryView(message: error.userMessage) { Task { await viewModel.load() } }
+            ErrorStateView(message: error.userMessage) { Task { await viewModel.load() } }
         case .loaded:
             if viewModel.selectedEvents.isEmpty {
                 InfoBanner(message: "이 날은 일정이 없어요.", icon: .calendar, style: .muted)

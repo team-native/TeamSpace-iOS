@@ -49,11 +49,11 @@ struct MyApplicationsView: View {
     private var content: some View {
         switch viewModel.state {
         case .idle, .loading:
-            ProgressView().frame(maxWidth: .infinity, minHeight: 200)
+            LoadingSkeletonView()
         case .empty, .forbidden:
             InfoBanner(message: "신청 현황을 볼 수 있는 권한이 없어요.", icon: .lock, style: .muted)
         case .failed(let error):
-            RetryView(message: error.userMessage) { Task { await viewModel.load() } }
+            ErrorStateView(message: error.userMessage) { Task { await viewModel.load() } }
         case .loaded:
             if viewModel.applications.isEmpty {
                 InfoBanner(message: "이 상태의 신청이 없어요. 전체 프로젝트에서 모집 중인 자리를 찾아보세요.", icon: .infoCircle, style: .muted)

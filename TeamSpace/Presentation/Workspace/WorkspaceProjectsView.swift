@@ -47,13 +47,13 @@ struct WorkspaceProjectsView: View {
     private var content: some View {
         switch viewModel.state {
         case .idle, .loading:
-            ProgressView().frame(maxWidth: .infinity, minHeight: 200)
+            LoadingSkeletonView()
         case .empty:
-            InfoBanner(message: "아직 참여 중인 프로젝트가 없어요. 모집 중인 프로젝트에 참여하면 여기에 보여요.", icon: .infoCircle, style: .muted)
+            EmptyStateView(title: "아직 참여 중인 프로젝트가 없어요", message: "모집 중인 프로젝트에 참여하면 여기에 보여요.")
         case .forbidden:
             InfoBanner(message: "프로젝트를 볼 수 있는 권한이 없어요.", icon: .lock, style: .muted)
         case .failed(let error):
-            RetryView(message: error.userMessage) { Task { await viewModel.load() } }
+            ErrorStateView(message: error.userMessage) { Task { await viewModel.load() } }
         case .loaded(let projects):
             VStack(spacing: 0) {
                 ForEach(Array(projects.enumerated()), id: \.element.id) { index, project in

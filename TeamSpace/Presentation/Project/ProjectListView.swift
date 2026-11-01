@@ -47,11 +47,11 @@ struct ProjectListView: View {
     private var content: some View {
         switch viewModel.state {
         case .idle, .loading:
-            ProgressView().frame(maxWidth: .infinity, minHeight: 200)
+            LoadingSkeletonView(message: "프로젝트 목록을 불러오는 중이에요")
         case .empty, .forbidden:
             InfoBanner(message: "프로젝트를 볼 수 있는 권한이 없어요.", icon: .lock, style: .muted)
         case .failed(let error):
-            RetryView(message: error.userMessage) { Task { await viewModel.load() } }
+            ErrorStateView(message: error.userMessage) { Task { await viewModel.load() } }
         case .loaded:
             HStack {
                 Text(viewModel.countText)
@@ -61,7 +61,15 @@ struct ProjectListView: View {
                 StatusBadge(title: "최근 업데이트순", tone: .neutral, size: .small)
             }
             if viewModel.projects.isEmpty {
-                InfoBanner(message: viewModel.emptyMessage, icon: .search, style: .muted)
+                if viewModel.interestOnly && !viewModel.hasInterests {
+                    InfoBanner(message: viewModel.emptyMessage, icon: .search, style: .muted)
+                } else {
+                    NoResultsView(
+                        query: viewModel.query,
+                        onResetFilters: viewModel.hasActiveFilters ? { viewModel.resetFilters() } : nil,
+                        onEditQuery: viewModel.query.isEmpty ? nil : { viewModel.query = "" }
+                    )
+                }
             }
             ForEach(viewModel.projects) { project in
                 ProjectCard(project: project) {

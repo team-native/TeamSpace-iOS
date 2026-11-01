@@ -46,6 +46,24 @@ final class ProjectTests: XCTestCase {
         XCTAssertTrue(viewModel.projects.isEmpty, "UI · 타이포 직군 모집은 없어요")
     }
 
+    // MARK: 14-2 검색 결과 없음 — 필터 초기화
+
+    func testResetFiltersRestoresAllProjects() async {
+        let viewModel = makeContainer().makeProjectListViewModel()
+        await viewModel.load()
+        XCTAssertFalse(viewModel.hasActiveFilters)
+
+        viewModel.statusFilter = .completed
+        viewModel.department = "NativeOps"
+        viewModel.recruitingOnly = true
+        XCTAssertTrue(viewModel.hasActiveFilters)
+        XCTAssertTrue(viewModel.projects.isEmpty)
+
+        viewModel.resetFilters()
+        XCTAssertFalse(viewModel.hasActiveFilters)
+        XCTAssertEqual(viewModel.countText, "전체 프로젝트 5개")
+    }
+
     // MARK: 08-2 프로젝트 상세
 
     func testProjectDetail() async {

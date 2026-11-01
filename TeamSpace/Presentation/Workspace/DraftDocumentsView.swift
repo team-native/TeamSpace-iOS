@@ -50,13 +50,19 @@ struct DraftDocumentsView: View {
     private var content: some View {
         switch viewModel.state {
         case .idle, .loading:
-            ProgressView().frame(maxWidth: .infinity, minHeight: 200)
+            LoadingSkeletonView()
         case .empty:
-            InfoBanner(message: "임시 저장된 문서가 없어요. 결재 올리기에서 작성하다 저장하면 여기에 보여요.", icon: .infoCircle, style: .muted)
+            EmptyStateView(
+                icon: .file,
+                title: "임시 저장된 문서가 없어요",
+                message: "결재 올리기에서 작성하다 저장하면 여기에 보여요.",
+                actionTitle: "결재 올리기",
+                action: { onNavigate(.approvalCompose) }
+            )
         case .forbidden:
             InfoBanner(message: "문서를 볼 수 있는 권한이 없어요.", icon: .lock, style: .muted)
         case .failed(let error):
-            RetryView(message: error.userMessage) { Task { await viewModel.load() } }
+            ErrorStateView(message: error.userMessage) { Task { await viewModel.load() } }
         case .loaded(let drafts):
             ForEach(drafts) { draft in
                 DraftDocumentCard(

@@ -36,11 +36,11 @@ struct ApplicantReviewView: View {
     private var content: some View {
         switch viewModel.state {
         case .idle, .loading:
-            ProgressView().frame(maxWidth: .infinity, minHeight: 240)
+            LoadingSkeletonView()
         case .empty, .forbidden:
             InfoBanner(message: "지원자 정보는 해당 프로젝트 PM 등 허용된 담당자만 볼 수 있어요.", icon: .lock, style: .muted)
         case .failed(let error):
-            RetryView(message: error.userMessage) { Task { await viewModel.load() } }
+            ErrorStateView(message: error.userMessage) { Task { await viewModel.load() } }
         case .loaded(let board):
             ApplicantBoardHeader(board: board, viewModel: viewModel)
             if viewModel.applicants.isEmpty {
