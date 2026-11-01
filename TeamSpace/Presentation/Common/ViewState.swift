@@ -14,6 +14,12 @@ enum ViewState<Value> {
         return false
     }
 
+    /// 불러온 값 (loaded 일 때만)
+    var value: Value? {
+        if case .loaded(let value) = self { return value }
+        return nil
+    }
+
     var error: Error? {
         if case .failed(let error) = self { return error }
         return nil

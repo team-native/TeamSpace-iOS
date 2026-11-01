@@ -7,6 +7,7 @@ import Foundation
 /// - GET /users/me: Authorization 헤더가 없으면 401
 /// - GET /notifications · PATCH /notifications/{id}/read: 읽음 상태를 메모리에 기억
 /// - 계정 요청: 이메일이 `taken@` 으로 시작하면 409 (이미 요청됨)
+/// - POST /notifications/push-token: Authorization 헤더가 없으면 401
 struct MockTransport: HTTPTransport {
     static let baseURL = URL(fileURLWithPath: "/mock-api")
     static let failingPassword = "wrong"
@@ -28,6 +29,8 @@ struct MockTransport: HTTPTransport {
             return try markRead(request)
         case ("GET", "me"):
             return try me(request)
+        case ("POST", "push-token"):
+            return try pushToken(request)
         case ("POST", "password-reset"):
             return try respond(request, status: 200, json: #"{"code":200,"message":"메일 발송 완료","data":{"success":true}}"#)
         default:
@@ -67,6 +70,20 @@ struct MockTransport: HTTPTransport {
             return try respond(request, status: 404, json: #"{"code":404,"message":"해당 알림을 찾을 수 없습니다."}"#)
         }
         return try respond(request, status: 200, json: #"{"code":200,"message":"읽음 처리 완료","data":{"success":true,"updatedId":\#(id)}}"#)
+    }
+
+    private func pushToken(_ request: URLRequest) throws -> (Data, HTTPURLResponse) {
+        guard request.value(forHTTPHeaderField: "Authorization") != nil else {
+            return try respond(request, status: 401, json: #"{"code":401,"message":"유효하지 않거나 만료된 토큰입니다. 로그인해 주세요."}"#)
+        }
+        guard
+            let body = request.httpBody,
+            let dto = try? JSONDecoder().decode(PushTokenRequestDTO.self, from: body),
+            !dto.token.isEmpty
+        else {
+            return try respond(request, status: 400, json: #"{"code":400,"message":"잘못된 요청 파라미터입니다."}"#)
+        }
+        return try respond(request, status: 200, json: #"{"code":200,"message":"등록 완료","data":{"success":true}}"#)
     }
 
     private func me(_ request: URLRequest) throws -> (Data, HTTPURLResponse) {

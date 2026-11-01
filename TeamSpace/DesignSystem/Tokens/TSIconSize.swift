@@ -10,7 +10,9 @@ enum TSIconSize {
     case base   // 16 — 원형 버튼 안 쉐브론
     case lg     // 17
     case xl     // 20
+    case xlLarge // 22 — 방해 금지(달) 아이콘
     case xxl    // 26
+    case heroSmall // 30 — 알림 권한 화면 큰 종 아이콘
     case hero   // 32
 
     var size: CGFloat {
@@ -23,7 +25,9 @@ enum TSIconSize {
         case .base: return 16
         case .lg: return 17
         case .xl: return 20
+        case .xlLarge: return 22
         case .xxl: return 26
+        case .heroSmall: return 30
         case .hero: return 32
         }
     }

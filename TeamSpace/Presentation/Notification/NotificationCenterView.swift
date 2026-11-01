@@ -73,7 +73,7 @@ struct NotificationCenterView: View {
 
     private var settingsLink: some View {
         Button {
-            onNavigate(.comingSoon(title: "알림 설정"))
+            onNavigate(.notificationSettings)
         } label: {
             HStack(spacing: Spacing.xs) {
                 TSIcon.settings.sized(.mdLarge)

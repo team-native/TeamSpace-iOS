@@ -5,11 +5,22 @@ final class DIContainer {
     private let tokenStorage: TokenStorage
     private let authRepository: AuthRepository
     private let notificationRepository: NotificationRepository
+    private let notificationSettingsRepository: NotificationSettingsRepository
+    private let notificationPermissionRepository: NotificationPermissionRepository
+    private let pushTokenRepository: PushTokenRepository
 
-    init(apiClient: APIClient, tokenStorage: TokenStorage) {
+    init(
+        apiClient: APIClient,
+        tokenStorage: TokenStorage,
+        notificationSettingsRepository: NotificationSettingsRepository = UserDefaultsNotificationSettingsRepository(),
+        notificationPermissionRepository: NotificationPermissionRepository = SystemNotificationPermissionRepository()
+    ) {
         self.tokenStorage = tokenStorage
         self.authRepository = AuthRepositoryImpl(client: apiClient)
         self.notificationRepository = NotificationRepositoryImpl(client: apiClient)
+        self.notificationSettingsRepository = notificationSettingsRepository
+        self.notificationPermissionRepository = notificationPermissionRepository
+        self.pushTokenRepository = PushTokenRepositoryImpl(client: apiClient)
     }
 
     /// xcconfig 의 USE_MOCK_API / API_BASE_URL 에 따라 실서버 또는 Mock 서버를 씁니다.
@@ -24,15 +35,22 @@ final class DIContainer {
         return DIContainer(apiClient: apiClient, tokenStorage: tokenStorage)
     }
 
-    /// Preview 전용 (Mock 서버 + 메모리 토큰)
-    static func preview() -> DIContainer {
+    /// Preview 전용 (Mock 서버 + 메모리 토큰 + 가짜 알림 권한)
+    static func preview(permission: NotificationPermissionStatus = .notDetermined) -> DIContainer {
         let tokenStorage = InMemoryTokenStorage()
         let apiClient = APIClient(
             baseURL: MockTransport.baseURL,
             transport: MockTransport(latencyNanoseconds: 300_000_000),
             tokenStorage: tokenStorage
         )
-        return DIContainer(apiClient: apiClient, tokenStorage: tokenStorage)
+        return DIContainer(
+            apiClient: apiClient,
+            tokenStorage: tokenStorage,
+            notificationSettingsRepository: UserDefaultsNotificationSettingsRepository(
+                defaults: UserDefaults(suiteName: "preview.notification.settings") ?? .standard
+            ),
+            notificationPermissionRepository: MockNotificationPermissionRepository(status: permission)
+        )
     }
 
     var loginUseCase: LoginUseCase {
@@ -62,6 +80,26 @@ final class DIContainer {
     var requestPasswordResetUseCase: RequestPasswordResetUseCase {
         RequestPasswordResetUseCase(authRepository: authRepository)
     }
+
+    var fetchNotificationSettingsUseCase: FetchNotificationSettingsUseCase {
+        FetchNotificationSettingsUseCase(settingsRepository: notificationSettingsRepository)
+    }
+
+    var updateNotificationSettingsUseCase: UpdateNotificationSettingsUseCase {
+        UpdateNotificationSettingsUseCase(settingsRepository: notificationSettingsRepository)
+    }
+
+    var checkNotificationPermissionUseCase: CheckNotificationPermissionUseCase {
+        CheckNotificationPermissionUseCase(permissionRepository: notificationPermissionRepository)
+    }
+
+    var requestNotificationPermissionUseCase: RequestNotificationPermissionUseCase {
+        RequestNotificationPermissionUseCase(permissionRepository: notificationPermissionRepository)
+    }
+
+    var registerPushTokenUseCase: RegisterPushTokenUseCase {
+        RegisterPushTokenUseCase(pushTokenRepository: pushTokenRepository)
+    }
 }
 
 @MainActor
@@ -86,6 +124,29 @@ extension DIContainer {
         NotificationCenterViewModel(
             fetchNotificationsUseCase: fetchNotificationsUseCase,
             markNotificationsReadUseCase: markNotificationsReadUseCase
+        )
+    }
+
+    func makeNotificationSettingsViewModel() -> NotificationSettingsViewModel {
+        NotificationSettingsViewModel(
+            fetchSettingsUseCase: fetchNotificationSettingsUseCase,
+            updateSettingsUseCase: updateNotificationSettingsUseCase,
+            checkPermissionUseCase: checkNotificationPermissionUseCase
+        )
+    }
+
+    func makeNotificationPermissionViewModel() -> NotificationPermissionViewModel {
+        NotificationPermissionViewModel(
+            fetchSettingsUseCase: fetchNotificationSettingsUseCase,
+            updateSettingsUseCase: updateNotificationSettingsUseCase,
+            requestPermissionUseCase: requestNotificationPermissionUseCase
+        )
+    }
+
+    func makeNotificationTroubleshootViewModel() -> NotificationTroubleshootViewModel {
+        NotificationTroubleshootViewModel(
+            fetchSettingsUseCase: fetchNotificationSettingsUseCase,
+            checkPermissionUseCase: checkNotificationPermissionUseCase
         )
     }
 }
