@@ -3,14 +3,20 @@ import XCTest
 
 @MainActor
 final class ProposalTests: XCTestCase {
-    private func makeContainer() -> DIContainer {
+    private func makeContainer(defaultsName: String = #function) -> DIContainer {
         let tokenStorage = InMemoryTokenStorage()
         let client = APIClient(
             baseURL: MockTransport.baseURL,
             transport: MockTransport(latencyNanoseconds: 0),
             tokenStorage: tokenStorage
         )
-        return DIContainer(apiClient: client, tokenStorage: tokenStorage)
+        let defaults = UserDefaults(suiteName: "test.proposal.\(defaultsName)") ?? .standard
+        defaults.removeObject(forKey: UserDefaultsProposalDraftRepository.key)
+        return DIContainer(
+            apiClient: client,
+            tokenStorage: tokenStorage,
+            proposalDraftRepository: UserDefaultsProposalDraftRepository(defaults: defaults)
+        )
     }
 
     // MARK: 12-1b 운영 제안 목록
@@ -98,5 +104,53 @@ final class ProposalTests: XCTestCase {
         let list = container.makeProposalListViewModel()
         await list.load()
         XCTAssertEqual(list.proposals.first { $0.id == 12 }?.commentCount, 3)
+    }
+
+    // MARK: 12-3 운영 제안 쓰기
+
+    func testCreateAnonymousProposal() async throws {
+        let container = makeContainer()
+        let compose = container.makeProposalComposeViewModel()
+        XCTAssertEqual(compose.draft.department, "NativeOps")
+        XCTAssertEqual(compose.submitTitle, "익명으로 제안 올리기")
+        XCTAssertFalse(compose.canSubmit)
+
+        compose.draft.department = "Design"
+        compose.draft.title = "디자인 리뷰 일정을 고정해요"
+        compose.draft.body = "격주 목요일로 고정하면 준비하기 좋아요."
+        await compose.submit()
+        let proposal = try XCTUnwrap(compose.published)
+        XCTAssertEqual(proposal.status, .received)
+        XCTAssertTrue(proposal.isMine)
+        XCTAssertEqual(compose.completionMessage, "익명으로 올라가 작성자는 표시되지 않아요. Design가 검토하면 진행 상태가 바뀌어요.")
+
+        let list = container.makeProposalListViewModel()
+        await list.load()
+        XCTAssertEqual(list.proposals.first?.id, proposal.id, "새 제안이 맨 위")
+        XCTAssertTrue(list.departments.contains("Design"))
+
+        let detail = container.makeProposalDetailViewModel(proposalId: proposal.id)
+        await detail.load()
+        XCTAssertEqual(detail.detail?.stepDates.map { $0.date != nil }, [true, false, false, false])
+    }
+
+    func testProposalDraftSaveAndRestore() async {
+        let container = makeContainer()
+        XCTAssertFalse(container.makeProposalComposeViewModel().saveDraft(), "빈 글은 저장하지 않아요")
+
+        let first = container.makeProposalComposeViewModel()
+        first.draft.title = "임시 제안"
+        first.draft.isAnonymous = false
+        XCTAssertTrue(first.saveDraft())
+
+        let restored = container.makeProposalComposeViewModel()
+        XCTAssertTrue(restored.didRestoreDraft)
+        XCTAssertEqual(restored.draft.title, "임시 제안")
+        XCTAssertEqual(restored.submitTitle, "실명으로 제안 올리기")
+
+        restored.draft.body = "내용"
+        await restored.submit()
+        XCTAssertNotNil(restored.published)
+        XCTAssertFalse(container.makeProposalComposeViewModel().didRestoreDraft, "올리면 임시 저장은 지워요")
     }
 }

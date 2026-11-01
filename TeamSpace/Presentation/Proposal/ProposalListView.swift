@@ -24,7 +24,7 @@ struct ProposalListView: View {
         }
         .safeAreaInset(edge: .top, spacing: 0) {
             TSNavigationBar(title: "운영 제안", onBack: { dismiss() }) {
-                Button("글쓰기") { onNavigate(.comingSoon(title: "운영 제안 쓰기")) }
+                Button("글쓰기") { onNavigate(.proposalCompose) }
                     .tsFont(.footnoteBold)
                     .foregroundStyle(Color.tsPrimary)
             }

@@ -59,3 +59,21 @@ struct ProposalRecommend: Equatable, Sendable {
     let isRecommended: Bool
     let recommendCount: Int
 }
+
+/// 12-3 운영 제안 쓰기 (임시 저장도 이 모양 그대로)
+struct ProposalDraft: Equatable, Codable, Sendable {
+    static let titleLimit = 60
+    static let bodyLimit = 2_000
+    /// 12-3 대상 부서
+    static let departments = ["NativeOps", "PMO", "FA", "Design"]
+
+    var department = "NativeOps"
+    var title = ""
+    var body = ""
+    var isAnonymous = true
+
+    var isEmpty: Bool {
+        title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && body.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+}

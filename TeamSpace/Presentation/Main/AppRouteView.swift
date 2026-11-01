@@ -37,7 +37,7 @@ struct AppRouteView: View {
             noticeScreen
         case .myInquiries, .inquiryCompose, .inquiryDetail, .inquiryInbox, .inquiryReview:
             inquiryScreen
-        case .proposals, .proposalDetail:
+        case .proposals, .proposalDetail, .proposalCompose:
             proposalScreen
         case .comingSoon(let title):
             ComingSoonView(title: title, showsBackButton: true)
@@ -249,9 +249,12 @@ struct AppRouteView: View {
     /// 12 운영 제안
     @ViewBuilder
     private var proposalScreen: some View {
-        if case .proposalDetail(let id) = route {
+        switch route {
+        case .proposalDetail(let id):
             ProposalDetailView(viewModel: container.makeProposalDetailViewModel(proposalId: id))
-        } else {
+        case .proposalCompose:
+            ProposalComposeView(viewModel: container.makeProposalComposeViewModel(), onNavigate: onNavigate)
+        default:
             ProposalListView(viewModel: container.makeProposalListViewModel(), onNavigate: onNavigate)
         }
     }

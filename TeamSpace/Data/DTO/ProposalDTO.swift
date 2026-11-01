@@ -88,3 +88,11 @@ struct ProposalCommentRequestDTO: Codable {
     let body: String
     let isAnonymous: Bool
 }
+
+/// POST /proposals 요청
+struct ProposalCreateRequestDTO: Codable {
+    let department: String
+    let title: String
+    let body: String
+    let isAnonymous: Bool
+}

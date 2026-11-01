@@ -170,6 +170,23 @@ final class MockProposalStore: @unchecked Sendable {
         return envelope(comment)
     }
 
+    /// POST /proposals — 접수 상태의 내 제안으로 맨 앞에 추가해요.
+    func create(_ request: ProposalCreateRequestDTO) -> String {
+        lock.lock()
+        defer { lock.unlock() }
+        let now = Date()
+        let firstLine = request.body.split(separator: "\n").first.map(String.init) ?? request.body
+        let summary = Self.summary(
+            (records.map(\.summary.id).max() ?? 0) + 1, request.department, request.title, String(firstLine.prefix(60)),
+            author: request.isAnonymous ? nil : Self.me, now, .received, recommend: 0, comments: 0, mine: true
+        )
+        records.insert(Record(
+            summary: summary, body: request.body, viewCount: 0,
+            steps: [ProposalStepDTO(status: .received, reachedAt: now)], answer: nil, comments: []
+        ), at: 0)
+        return envelope(summary)
+    }
+
     private func envelope<T: Encodable>(_ value: T) -> String {
         let data = (try? JSONCoder.makeEncoder().encode(value)).map { String(decoding: $0, as: UTF8.self) } ?? "null"
         return #"{"code":200,"message":"성공","data":\#(data)}"#

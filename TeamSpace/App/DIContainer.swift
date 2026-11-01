@@ -23,6 +23,7 @@ final class DIContainer {
     private let proposalRepository: ProposalRepository
     private let boardRecentSearchRepository: RecentSearchRepository
     private let postDraftRepository: PostDraftRepository
+    private let proposalDraftRepository: ProposalDraftRepository
 
     init(
         apiClient: APIClient,
@@ -33,7 +34,8 @@ final class DIContainer {
         boardRecentSearchRepository: RecentSearchRepository = UserDefaultsRecentSearchRepository(
             key: UserDefaultsRecentSearchRepository.boardKey
         ),
-        postDraftRepository: PostDraftRepository = UserDefaultsPostDraftRepository()
+        postDraftRepository: PostDraftRepository = UserDefaultsPostDraftRepository(),
+        proposalDraftRepository: ProposalDraftRepository = UserDefaultsProposalDraftRepository()
     ) {
         self.tokenStorage = tokenStorage
         self.authRepository = AuthRepositoryImpl(client: apiClient)
@@ -56,6 +58,7 @@ final class DIContainer {
         self.proposalRepository = ProposalRepositoryImpl(client: apiClient)
         self.boardRecentSearchRepository = boardRecentSearchRepository
         self.postDraftRepository = postDraftRepository
+        self.proposalDraftRepository = proposalDraftRepository
     }
 
     /// xcconfig 의 USE_MOCK_API / API_BASE_URL 에 따라 실서버 또는 Mock 서버를 씁니다.
@@ -108,6 +111,9 @@ final class DIContainer {
             ),
             postDraftRepository: UserDefaultsPostDraftRepository(
                 defaults: UserDefaults(suiteName: "preview.board.draft") ?? .standard
+            ),
+            proposalDraftRepository: UserDefaultsProposalDraftRepository(
+                defaults: UserDefaults(suiteName: "preview.proposal.draft") ?? .standard
             )
         )
     }
@@ -414,6 +420,14 @@ final class DIContainer {
 
     var addProposalCommentUseCase: AddProposalCommentUseCase {
         AddProposalCommentUseCase(proposalRepository: proposalRepository)
+    }
+
+    var createProposalUseCase: CreateProposalUseCase {
+        CreateProposalUseCase(proposalRepository: proposalRepository, proposalDraftRepository: proposalDraftRepository)
+    }
+
+    var proposalDraftUseCase: ProposalDraftUseCase {
+        ProposalDraftUseCase(proposalDraftRepository: proposalDraftRepository)
     }
 
     var boardRecentSearchUseCase: RecentSearchUseCase {
@@ -779,5 +793,9 @@ extension DIContainer {
             toggleProposalRecommendUseCase: toggleProposalRecommendUseCase,
             addProposalCommentUseCase: addProposalCommentUseCase
         )
+    }
+
+    func makeProposalComposeViewModel() -> ProposalComposeViewModel {
+        ProposalComposeViewModel(createProposalUseCase: createProposalUseCase, proposalDraftUseCase: proposalDraftUseCase)
     }
 }

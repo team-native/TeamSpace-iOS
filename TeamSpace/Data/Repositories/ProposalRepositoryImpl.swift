@@ -32,6 +32,16 @@ final class ProposalRepositoryImpl: ProposalRepository, @unchecked Sendable {
         return try await request(endpoint, as: ProposalCommentDTO.self).toEntity()
     }
 
+    func create(_ draft: ProposalDraft) async throws -> ProposalSummary {
+        let body = ProposalCreateRequestDTO(
+            department: draft.department,
+            title: draft.title,
+            body: draft.body,
+            isAnonymous: draft.isAnonymous
+        )
+        return try await request(Endpoint(method: .post, path: "proposals", body: body), as: ProposalSummaryDTO.self).toEntity()
+    }
+
     private func request<Response: Decodable>(_ endpoint: Endpoint, as type: Response.Type) async throws -> Response {
         do {
             return try await client.request(endpoint, as: type)

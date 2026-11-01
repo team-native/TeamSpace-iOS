@@ -11,4 +11,6 @@ protocol ProposalRepository: Sendable {
     func toggleRecommend(proposalId: Int) async throws -> ProposalRecommend
     /// POST /proposals/{proposalId}/comments — 댓글 등록
     func addComment(proposalId: Int, body: String, isAnonymous: Bool) async throws -> ProposalComment
+    /// POST /proposals — 12-3 제안 올리기 (접수 상태로 시작)
+    func create(_ draft: ProposalDraft) async throws -> ProposalSummary
 }
