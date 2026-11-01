@@ -126,7 +126,11 @@ final class APIClient: @unchecked Sendable {
         if endpoint.requiresAuth, let token = tokenStorage.load() {
             request.setValue("Bearer \(token.accessToken)", forHTTPHeaderField: "Authorization")
         }
-        if let body = endpoint.body {
+        if let file = endpoint.file {
+            let boundary = "TeamSpace-\(UUID().uuidString)"
+            request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+            request.httpBody = file.encoded(boundary: boundary)
+        } else if let body = endpoint.body {
             do {
                 request.httpBody = try JSONCoder.makeEncoder().encode(body)
             } catch let error as EncodingError {

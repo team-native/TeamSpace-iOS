@@ -152,6 +152,15 @@ final class MockBoardStore: @unchecked Sendable {
 
     /// 서버 `_post_view` 모양 — id 는 문자열, 날짜는 Python isoformat(마이크로초) 처럼
     private func serverItemJSON(_ post: PostSummaryDTO) -> String {
+        Self.json(serverItemFields(post))
+    }
+
+    private static func json(_ object: Any) -> String {
+        let data = (try? JSONSerialization.data(withJSONObject: object, options: [.sortedKeys])) ?? Data("{}".utf8)
+        return String(decoding: data, as: UTF8.self)
+    }
+
+    private func serverItemFields(_ post: PostSummaryDTO) -> [String: Any] {
         let category: String = post.category.serverValue ?? "자유"
         let body: String = bodies[post.id] ?? post.excerpt
         let commentCount: Int = comments[post.id]?.count ?? post.commentCount
@@ -173,8 +182,27 @@ final class MockBoardStore: @unchecked Sendable {
         fields["createdAt"] = createdAt
         fields["when"] = createdAt
         if !post.isAnonymous, let author = post.authorName { fields["author"] = author }
-        let data = (try? JSONSerialization.data(withJSONObject: fields, options: [.sortedKeys])) ?? Data("{}".utf8)
-        return String(decoding: data, as: UTF8.self)
+        return fields
+    }
+
+    /// 서버 `_comment_view` 모양 — 익명 글에서 글쓴이 댓글은 author 가 "글쓴이"
+    private func serverCommentFields(_ comment: PostCommentDTO, postId: Int, postAnonymous: Bool) -> [String: Any] {
+        var fields: [String: Any] = [:]
+        fields["id"] = String(comment.id)
+        fields["postId"] = String(postId)
+        fields["anonymous"] = comment.isAnonymous
+        fields["text"] = comment.body
+        fields["createdAt"] = Self.pythonISO(comment.createdAt)
+        fields["when"] = Self.pythonISO(comment.createdAt)
+        fields["likes"] = 0
+        fields["replyTo"] = NSNull()
+        fields["mine"] = comment.isMine
+        if postAnonymous && comment.isPostAuthor {
+            fields["author"] = "글쓴이"
+        } else if !comment.isAnonymous {
+            fields["author"] = comment.authorName ?? Self.me.name
+        }
+        return fields
     }
 
     /// `2026-11-02T01:20:00.123456+00:00`
@@ -191,62 +219,61 @@ final class MockBoardStore: @unchecked Sendable {
         noticeStore.serverItemsJSON(ids: Self.pinnedNoticeIds)
     }
 
-    /// GET /posts/{id} — 볼 때마다 조회 수가 1 올라가요.
+    /// GET /posts/{id} — 볼 때마다 조회 수가 1 올라가요. (서버 형식)
     func detailJSON(id: Int) -> String? {
         lock.lock()
         defer { lock.unlock() }
         guard let index = posts.firstIndex(where: { $0.id == id }) else { return nil }
         posts[index].viewCount += 1
         let post = posts[index]
-        return envelope(PostDetailDTO(
-            post: post,
-            body: bodies[id] ?? Self.body(for: post),
-            commentPolicy: policies[id] ?? (post.isAnonymous ? .anonymous : .realName),
-            isLiked: likedIds.contains(id),
-            comments: comments[id] ?? []
-        ))
+        var fields = serverItemFields(post)
+        fields["body"] = bodies[id] ?? Self.body(for: post)
+        fields["anonComments"] = (policies[id] ?? (post.isAnonymous ? .anonymous : .realName)) == .anonymous
+        fields["comments"] = (comments[id] ?? []).map { serverCommentFields($0, postId: id, postAnonymous: post.isAnonymous) }
+        return Self.json(fields)
     }
 
-    /// POST /posts — 내 글로 맨 앞에 추가해요.
-    func create(_ request: PostCreateRequestDTO) -> String {
+    /// POST /posts — 내 글로 맨 앞에 추가하고 `{id}` 만 돌려줘요.
+    func create(_ request: ServerPostCreateRequestDTO) -> String {
         lock.lock()
         defer { lock.unlock() }
         let id = (posts.map(\.id).max() ?? 0) + 1
-        let firstLine = request.body.split(separator: "\n").first.map(String.init) ?? request.body
         let post = PostSummaryDTO(
-            id: id, category: request.category, title: request.title, excerpt: String(firstLine.prefix(60)),
-            authorName: request.isAnonymous ? nil : Self.me.name, authorRole: request.isAnonymous ? nil : Self.me.role,
-            isAnonymous: request.isAnonymous, createdAt: Date(), likeCount: 0, commentCount: 0, viewCount: 0,
-            hasImage: !request.images.isEmpty, isMine: true
+            id: id, category: PostCategory(serverValue: request.category), title: request.title,
+            excerpt: ServerPostItemDTO.excerpt(of: request.body),
+            authorName: request.anonymous ? nil : Self.me.name, authorRole: nil,
+            isAnonymous: request.anonymous, createdAt: Date(), likeCount: 0, commentCount: 0, viewCount: 0,
+            hasImage: !request.attachments.isEmpty, isMine: true
         )
         posts.insert(post, at: 0)
         bodies[id] = request.body
-        policies[id] = request.commentPolicy
+        policies[id] = request.anonComments ? .anonymous : .realName
         comments[id] = []
-        return envelope(post)
+        return #"{"id":"\#(id)"}"#
     }
 
-    /// POST /posts/{id}/comments — 익명이면 이 글 안의 번호를 이어서 붙여요. (같은 사람은 같은 번호)
-    func createComment(postId: Int, request: CommentCreateRequestDTO) -> String? {
+    /// POST /posts/{id}/comments — 익명 글의 글쓴이는 익명으로 남아요. (서버 형식)
+    func createComment(postId: Int, request: ServerCommentCreateRequestDTO) -> String? {
         lock.lock()
         defer { lock.unlock() }
         guard let index = posts.firstIndex(where: { $0.id == postId }) else { return nil }
+        let post = posts[index]
         let existing = comments[postId] ?? []
-        let myNumber = existing.first { $0.isMine && $0.isAnonymous }?.anonymousNumber
-        let nextNumber = (existing.compactMap(\.anonymousNumber).max() ?? 0) + 1
+        let isPostAuthor = post.isMine
+        let isAnonymous = request.anonymous || policies[postId] == .anonymous || (post.isAnonymous && isPostAuthor)
         let comment = PostCommentDTO(
             id: (existing.map(\.id).max() ?? postId * 100) + 1,
-            authorName: request.isAnonymous ? nil : Self.me.name,
-            isAnonymous: request.isAnonymous,
-            anonymousNumber: request.isAnonymous ? myNumber ?? nextNumber : nil,
-            isPostAuthor: posts[index].isMine,
+            authorName: isAnonymous ? nil : Self.me.name,
+            isAnonymous: isAnonymous,
+            anonymousNumber: nil,
+            isPostAuthor: isPostAuthor,
             isMine: true,
-            body: request.body,
+            body: request.text,
             createdAt: Date()
         )
         comments[postId] = existing + [comment]
         posts[index].commentCount += 1
-        return envelope(comment)
+        return Self.json(serverCommentFields(comment, postId: postId, postAnonymous: post.isAnonymous))
     }
 
     /// POST /posts/{id}/like
@@ -257,10 +284,10 @@ final class MockBoardStore: @unchecked Sendable {
         let isLiked = !likedIds.contains(id)
         if isLiked { likedIds.insert(id) } else { likedIds.remove(id) }
         posts[index].likeCount += isLiked ? 1 : -1
-        return envelope(PostLikeResponseDTO(isLiked: isLiked, likeCount: posts[index].likeCount))
+        return #"{"liked":\#(isLiked),"likes":\#(posts[index].likeCount)}"#
     }
 
-    /// POST /posts/{id}/reports — 내 글이면 false (403)
+    /// POST /posts/{id}/report — 내 글이면 false (403)
     func report(id: Int, reason: String) -> Bool {
         lock.lock()
         defer { lock.unlock() }
