@@ -77,8 +77,8 @@ struct BoardView: View {
                 )
             }
             BoardProposalCard(
-                onWrite: { onNavigate(.comingSoon(title: "운영 제안 쓰기")) },
-                onBrowse: { onNavigate(.comingSoon(title: "운영 제안")) }
+                onWrite: { onNavigate(.proposalCompose) },
+                onBrowse: { onNavigate(.proposals) }
             )
             WorkspaceRecordsCard(records: board.myRecord, onOpen: onNavigate)
         }

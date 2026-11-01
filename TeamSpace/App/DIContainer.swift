@@ -20,8 +20,10 @@ final class DIContainer {
     private let boardRepository: BoardRepository
     private let noticeRepository: NoticeRepository
     private let inquiryRepository: InquiryRepository
+    private let proposalRepository: ProposalRepository
     private let boardRecentSearchRepository: RecentSearchRepository
     private let postDraftRepository: PostDraftRepository
+    private let proposalDraftRepository: ProposalDraftRepository
 
     init(
         apiClient: APIClient,
@@ -32,7 +34,8 @@ final class DIContainer {
         boardRecentSearchRepository: RecentSearchRepository = UserDefaultsRecentSearchRepository(
             key: UserDefaultsRecentSearchRepository.boardKey
         ),
-        postDraftRepository: PostDraftRepository = UserDefaultsPostDraftRepository()
+        postDraftRepository: PostDraftRepository = UserDefaultsPostDraftRepository(),
+        proposalDraftRepository: ProposalDraftRepository = UserDefaultsProposalDraftRepository()
     ) {
         self.tokenStorage = tokenStorage
         self.authRepository = AuthRepositoryImpl(client: apiClient)
@@ -52,8 +55,10 @@ final class DIContainer {
         self.boardRepository = BoardRepositoryImpl(client: apiClient)
         self.noticeRepository = NoticeRepositoryImpl(client: apiClient)
         self.inquiryRepository = InquiryRepositoryImpl(client: apiClient)
+        self.proposalRepository = ProposalRepositoryImpl(client: apiClient)
         self.boardRecentSearchRepository = boardRecentSearchRepository
         self.postDraftRepository = postDraftRepository
+        self.proposalDraftRepository = proposalDraftRepository
     }
 
     /// xcconfig 의 USE_MOCK_API / API_BASE_URL 에 따라 실서버 또는 Mock 서버를 씁니다.
@@ -106,6 +111,9 @@ final class DIContainer {
             ),
             postDraftRepository: UserDefaultsPostDraftRepository(
                 defaults: UserDefaults(suiteName: "preview.board.draft") ?? .standard
+            ),
+            proposalDraftRepository: UserDefaultsProposalDraftRepository(
+                defaults: UserDefaults(suiteName: "preview.proposal.draft") ?? .standard
             )
         )
     }
@@ -396,6 +404,30 @@ final class DIContainer {
 
     var replyInquiryUseCase: ReplyInquiryUseCase {
         ReplyInquiryUseCase(inquiryRepository: inquiryRepository)
+    }
+
+    var fetchProposalsUseCase: FetchProposalsUseCase {
+        FetchProposalsUseCase(proposalRepository: proposalRepository)
+    }
+
+    var fetchProposalDetailUseCase: FetchProposalDetailUseCase {
+        FetchProposalDetailUseCase(proposalRepository: proposalRepository)
+    }
+
+    var toggleProposalRecommendUseCase: ToggleProposalRecommendUseCase {
+        ToggleProposalRecommendUseCase(proposalRepository: proposalRepository)
+    }
+
+    var addProposalCommentUseCase: AddProposalCommentUseCase {
+        AddProposalCommentUseCase(proposalRepository: proposalRepository)
+    }
+
+    var createProposalUseCase: CreateProposalUseCase {
+        CreateProposalUseCase(proposalRepository: proposalRepository, proposalDraftRepository: proposalDraftRepository)
+    }
+
+    var proposalDraftUseCase: ProposalDraftUseCase {
+        ProposalDraftUseCase(proposalDraftRepository: proposalDraftRepository)
     }
 
     var boardRecentSearchUseCase: RecentSearchUseCase {
@@ -748,5 +780,22 @@ extension DIContainer {
             replyInquiryUseCase: replyInquiryUseCase,
             fetchRulesUseCase: fetchRulesUseCase
         )
+    }
+
+    func makeProposalListViewModel() -> ProposalListViewModel {
+        ProposalListViewModel(fetchProposalsUseCase: fetchProposalsUseCase)
+    }
+
+    func makeProposalDetailViewModel(proposalId: Int) -> ProposalDetailViewModel {
+        ProposalDetailViewModel(
+            proposalId: proposalId,
+            fetchProposalDetailUseCase: fetchProposalDetailUseCase,
+            toggleProposalRecommendUseCase: toggleProposalRecommendUseCase,
+            addProposalCommentUseCase: addProposalCommentUseCase
+        )
+    }
+
+    func makeProposalComposeViewModel() -> ProposalComposeViewModel {
+        ProposalComposeViewModel(createProposalUseCase: createProposalUseCase, proposalDraftUseCase: proposalDraftUseCase)
     }
 }
