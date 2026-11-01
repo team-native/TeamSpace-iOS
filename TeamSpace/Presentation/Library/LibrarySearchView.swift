@@ -54,13 +54,13 @@ struct LibrarySearchView: View {
         case .idle:
             EmptyView()
         case .loading:
-            ProgressView().frame(maxWidth: .infinity, minHeight: 200)
+            LoadingSkeletonView()
         case .empty:
-            InfoBanner(message: viewModel.emptyMessage, icon: .search, style: .muted)
+            NoResultsView(query: viewModel.searchedKeyword, onEditQuery: { viewModel.query = "" })
         case .forbidden:
             InfoBanner(message: "문서함을 볼 수 있는 권한이 없어요.", icon: .lock, style: .muted)
         case .failed(let error):
-            RetryView(message: error.userMessage) { Task { await viewModel.search() } }
+            ErrorStateView(message: error.userMessage) { Task { await viewModel.search() } }
         case .loaded:
             LibraryDocumentSection(
                 title: viewModel.resultTitle,

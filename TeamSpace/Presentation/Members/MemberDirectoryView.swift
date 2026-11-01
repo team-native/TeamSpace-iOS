@@ -77,11 +77,11 @@ private struct MemberListContent: View {
     var body: some View {
         switch viewModel.state {
         case .idle, .loading:
-            ProgressView().frame(maxWidth: .infinity, minHeight: 200)
+            LoadingSkeletonView()
         case .empty, .forbidden:
             InfoBanner(message: "볼 수 있는 팀원이 없어요.", icon: .infoCircle, style: .muted)
         case .failed(let error):
-            RetryView(message: error.userMessage) { Task { await viewModel.load() } }
+            ErrorStateView(message: error.userMessage) { Task { await viewModel.load() } }
         case .loaded:
             FilterChipBar(
                 items: viewModel.departmentFilters,
@@ -99,7 +99,12 @@ private struct MemberListContent: View {
     @ViewBuilder
     private var list: some View {
         if viewModel.filteredMembers.isEmpty {
-            InfoBanner(message: "‘\(viewModel.query)’에 맞는 팀원이 없어요. 이름이나 부서를 다시 확인해 주세요.", icon: .infoCircle, style: .muted)
+            NoResultsView(
+                query: viewModel.query,
+                onResetFilters: viewModel.departmentFilter == .all ? nil : { viewModel.departmentFilter = .all },
+                onEditQuery: viewModel.query.isEmpty ? nil : { viewModel.query = "" },
+                showsPrivacyNote: false
+            )
         } else {
             VStack(spacing: 0) {
                 ForEach(viewModel.visibleMembers) { member in
@@ -152,23 +157,6 @@ private struct NewMemberSpotlight: View {
 }
 
 /// 불러오기 실패 + 다시 시도
-struct RetryView: View {
-    let message: String
-    let onRetry: () -> Void
-
-    var body: some View {
-        VStack(spacing: Spacing.md) {
-            Text(message)
-                .tsFont(.footnote)
-                .foregroundStyle(Color.tsInk2)
-                .multilineTextAlignment(.center)
-            Button("다시 시도", action: onRetry)
-                .buttonStyle(.ts(.secondary, size: .small, fullWidth: false))
-        }
-        .frame(maxWidth: .infinity, minHeight: 200)
-    }
-}
-
 #Preview {
     NavigationStack {
         MemberDirectoryView(viewModel: DIContainer.preview().makeMemberDirectoryViewModel(), onNavigate: { _ in })

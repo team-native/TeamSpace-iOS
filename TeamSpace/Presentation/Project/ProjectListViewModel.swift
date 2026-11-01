@@ -49,6 +49,20 @@ final class ProjectListViewModel {
         "\(statusFilter == .all ? "전체" : statusFilter.title) 프로젝트 \(projects.count)개"
     }
 
+    var hasInterests: Bool { !interests.isEmpty }
+
+    /// 14-2 검색 결과 없음 — 필터가 하나라도 걸려 있으면 "필터 초기화"를 보여줘요.
+    var hasActiveFilters: Bool {
+        statusFilter != .all || department != nil || recruitingOnly || interestOnly
+    }
+
+    func resetFilters() {
+        statusFilter = .all
+        department = nil
+        recruitingOnly = false
+        interestOnly = false
+    }
+
     var emptyMessage: String {
         interestOnly && interests.isEmpty
             ? "프로필에 관심사를 추가하면 맞는 모집을 찾아드려요."

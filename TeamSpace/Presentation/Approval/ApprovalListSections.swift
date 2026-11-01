@@ -34,7 +34,7 @@ struct MyApprovalsSection: View {
         }
         .padding(.horizontal, Spacing.xxs)
         if viewModel.recentMine.isEmpty {
-            InfoBanner(message: "아직 올린 결재가 없어요. ‘결재 올리기’로 첫 안건을 올려 보세요.", icon: .infoCircle, style: .muted)
+            EmptyStateView(icon: .clipboard, title: "아직 올린 결재가 없어요", message: "‘결재 올리기’로 첫 안건을 올려 보세요.")
         } else {
             VStack(spacing: 0) {
                 ForEach(Array(viewModel.recentMine.enumerated()), id: \.element.id) { index, item in
@@ -87,7 +87,7 @@ struct ReceivedApprovalsSection: View {
 
     var body: some View {
         if viewModel.waitingReceived.isEmpty {
-            InfoBanner(message: "지금 검토할 결재가 없어요. 새 요청이 오면 알림으로 알려드릴게요.", icon: .infoCircle, style: .muted)
+            EmptyStateView(icon: .clipboardCheck, title: "지금 검토할 결재가 없어요", message: "새 요청이 오면 알림으로 알려드릴게요.")
         } else {
             VStack(spacing: Spacing.sm) {
                 ForEach(viewModel.waitingReceived) { item in

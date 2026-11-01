@@ -64,8 +64,7 @@ struct NotificationCenterView: View {
     private var content: some View {
         switch viewModel.state {
         case .idle, .loading:
-            ProgressView()
-                .frame(maxWidth: .infinity, minHeight: 240)
+            LoadingSkeletonView(message: "알림을 불러오는 중이에요")
         case .loaded:
             NotificationSectionList(
                 sections: viewModel.sections(),

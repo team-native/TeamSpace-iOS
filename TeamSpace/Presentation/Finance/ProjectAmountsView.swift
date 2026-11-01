@@ -36,13 +36,13 @@ struct ProjectAmountsView: View {
     private var content: some View {
         switch viewModel.state {
         case .idle, .loading:
-            ProgressView().frame(maxWidth: .infinity, minHeight: 280)
+            LoadingSkeletonView()
         case .empty:
-            InfoBanner(message: "올해 수주한 프로젝트가 아직 없어요.", icon: .infoCircle, style: .muted)
+            EmptyStateView(icon: .wallet, title: "올해 수주한 프로젝트가 아직 없어요", message: "새 수주가 등록되면 프로젝트별 금액이 여기에 보여요.")
         case .forbidden:
             InfoBanner(message: "프로젝트별 금액을 볼 수 있는 권한이 없어요.", icon: .lock, style: .muted)
         case .failed(let error):
-            RetryView(message: error.userMessage) { Task { await viewModel.load() } }
+            ErrorStateView(message: error.userMessage) { Task { await viewModel.load() } }
         case .loaded(let summary):
             if viewModel.isAmountHidden {
                 HiddenAmountContent(summary: summary) { onNavigate(.financeAccess) }

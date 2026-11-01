@@ -41,11 +41,11 @@ struct InquiryReviewView: View {
     private var content: some View {
         switch viewModel.state {
         case .idle, .loading:
-            ProgressView().frame(maxWidth: .infinity, minHeight: 240)
+            LoadingSkeletonView()
         case .empty, .forbidden:
             InfoBanner(message: "문의 담당자만 볼 수 있는 화면이에요.", icon: .lock, style: .muted)
         case .failed(let error):
-            RetryView(message: error.userMessage) { Task { await viewModel.load() } }
+            ErrorStateView(message: error.userMessage) { Task { await viewModel.load() } }
         case .loaded(let item):
             VStack(alignment: .leading, spacing: Spacing.sm) {
                 StatusBadge(title: "\(item.inquiry.department.title) 담당자 권한", tone: .primary, icon: .lock, size: .small)

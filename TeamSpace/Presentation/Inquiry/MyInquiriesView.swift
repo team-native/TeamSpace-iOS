@@ -59,11 +59,11 @@ struct MyInquiriesView: View {
     private var content: some View {
         switch viewModel.state {
         case .idle, .loading:
-            ProgressView().frame(maxWidth: .infinity, minHeight: 200)
+            LoadingSkeletonView()
         case .empty, .forbidden:
             InfoBanner(message: "문의를 볼 수 있는 권한이 없어요.", icon: .lock, style: .muted)
         case .failed(let error):
-            RetryView(message: error.userMessage) { Task { await viewModel.load() } }
+            ErrorStateView(message: error.userMessage) { Task { await viewModel.load() } }
         case .loaded:
             if viewModel.inquiries.isEmpty {
                 InfoBanner(message: viewModel.emptyMessage, style: .muted)

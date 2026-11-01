@@ -57,7 +57,7 @@ struct FinanceAccessView: View {
         case .empty, .forbidden:
             EmptyView()
         case .failed(let error):
-            RetryView(message: error.userMessage) { Task { await viewModel.load() } }
+            ErrorStateView(message: error.userMessage) { Task { await viewModel.load() } }
         case .loaded(let ledger):
             PublicSummaryCard(year: viewModel.year, total: ledger.totalAmount, latest: viewModel.latestCollected)
         }

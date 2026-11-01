@@ -33,13 +33,13 @@ struct FinanceCompositionView: View {
     private var content: some View {
         switch viewModel.state {
         case .idle, .loading:
-            ProgressView().frame(maxWidth: .infinity, minHeight: 280)
+            LoadingSkeletonView()
         case .empty:
-            InfoBanner(message: "아직 배분된 돈이 없어요.", icon: .infoCircle, style: .muted)
+            EmptyStateView(icon: .wallet, title: "아직 배분된 돈이 없어요", message: "수금이 들어와 풀에 배분되면 여기에 보여요.")
         case .forbidden:
             InfoBanner(message: "돈의 구성을 볼 수 있는 권한이 없어요.", icon: .lock, style: .muted)
         case .failed(let error):
-            RetryView(message: error.userMessage) { Task { await viewModel.load() } }
+            ErrorStateView(message: error.userMessage) { Task { await viewModel.load() } }
         case .loaded(let pools):
             VStack(alignment: .leading, spacing: Spacing.lg) {
                 VStack(alignment: .leading, spacing: Spacing.xs) {

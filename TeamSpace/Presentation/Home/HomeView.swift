@@ -53,8 +53,7 @@ struct HomeView: View {
     private var content: some View {
         switch viewModel.state {
         case .idle, .loading:
-            ProgressView()
-                .frame(maxWidth: .infinity, minHeight: 240)
+            LoadingSkeletonView(message: "홈을 불러오는 중이에요")
         case .loaded(let home):
             HomeSections(
                 home: home,
