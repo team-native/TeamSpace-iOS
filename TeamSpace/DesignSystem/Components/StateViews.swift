@@ -172,47 +172,8 @@ struct AccessDeniedView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.lg) {
-            VStack(alignment: .leading, spacing: Spacing.card) {
-                TSIcon.circleX.sized(.stateSmall)
-                    .foregroundStyle(Color.tsPrimary)
-                    .accessibilityHidden(true)
-                StatusBadge(title: "현재 계정에 권한 없음", tone: .neutral)
-                Text("이 자료를 볼 수 있는\n권한이 없어요.")
-                    .tsFont(.title3)
-                    .foregroundStyle(Color.tsInk)
-                    .accessibilityAddTraits(.isHeader)
-                Text("접근 권한이 변경되어 연결된 자료를 열 수 없어요. 필요한 업무라면 담당자에게 확인해 주세요.")
-                    .tsFont(.footnote)
-                    .foregroundStyle(Color.tsInk2)
-                    .lineSpacing(Spacing.xxs)
-            }
-            .fixedSize(horizontal: false, vertical: true)
-            .padding(.vertical, Spacing.xl + Spacing.xxxs)
-
-            VStack(alignment: .leading, spacing: Spacing.md) {
-                Text("안전하게 보호된 자료")
-                    .tsFont(.bodyBold)
-                    .foregroundStyle(Color.tsInk)
-                Text("자료 제목, 요청자, 금액 등 민감한 정보는 이 화면에 표시하지 않아요.")
-                    .tsFont(.footnote)
-                    .foregroundStyle(Color.tsInk2)
-                    .lineSpacing(Spacing.xxs)
-                HStack(spacing: Spacing.lg) {
-                    Text("문의 코드")
-                        .tsFont(.caption)
-                        .foregroundStyle(Color.tsInk3)
-                        .frame(width: 88, alignment: .leading)
-                    Text(code)
-                        .tsFont(.footnoteMedium)
-                        .foregroundStyle(Color.tsInk)
-                        .textSelection(.enabled)
-                }
-                .accessibilityElement(children: .combine)
-                StateFootnote("문의 시 이 코드와 알림을 받은 시각만 전달해 주세요.")
-            }
-            .fixedSize(horizontal: false, vertical: true)
-            .tsCard()
-
+            header
+            protectedCard
             if let onInquire {
                 Button("NativeOps에 권한 문의", action: onInquire)
                     .buttonStyle(.tsPrimary)
@@ -225,6 +186,51 @@ struct AccessDeniedView: View {
                 style: .hint
             )
         }
+    }
+
+    private var header: some View {
+        VStack(alignment: .leading, spacing: Spacing.card) {
+            TSIcon.circleX.sized(.stateSmall)
+                .foregroundStyle(Color.tsPrimary)
+                .accessibilityHidden(true)
+            StatusBadge(title: "현재 계정에 권한 없음", tone: .neutral)
+            Text("이 자료를 볼 수 있는\n권한이 없어요.")
+                .tsFont(.title3)
+                .foregroundStyle(Color.tsInk)
+                .accessibilityAddTraits(.isHeader)
+            Text("접근 권한이 변경되어 연결된 자료를 열 수 없어요. 필요한 업무라면 담당자에게 확인해 주세요.")
+                .tsFont(.footnote)
+                .foregroundStyle(Color.tsInk2)
+                .lineSpacing(Spacing.xxs)
+    }
+    .fixedSize(horizontal: false, vertical: true)
+    .padding(.vertical, Spacing.xl + Spacing.xxxs)
+    }
+
+    private var protectedCard: some View {
+        VStack(alignment: .leading, spacing: Spacing.md) {
+            Text("안전하게 보호된 자료")
+                .tsFont(.bodyBold)
+                .foregroundStyle(Color.tsInk)
+            Text("자료 제목, 요청자, 금액 등 민감한 정보는 이 화면에 표시하지 않아요.")
+                .tsFont(.footnote)
+                .foregroundStyle(Color.tsInk2)
+                .lineSpacing(Spacing.xxs)
+            HStack(spacing: Spacing.lg) {
+                Text("문의 코드")
+                    .tsFont(.caption)
+                    .foregroundStyle(Color.tsInk3)
+                    .frame(width: 88, alignment: .leading)
+                Text(code)
+                    .tsFont(.footnoteMedium)
+                    .foregroundStyle(Color.tsInk)
+                    .textSelection(.enabled)
+            }
+            .accessibilityElement(children: .combine)
+            StateFootnote("문의 시 이 코드와 알림을 받은 시각만 전달해 주세요.")
+    }
+    .fixedSize(horizontal: false, vertical: true)
+    .tsCard()
     }
 }
 
