@@ -7,6 +7,7 @@ enum TSFontStyle {
     case title1         // 28 Bold
     case title2         // 24 Bold
     case title3         // 22 Bold
+    case logo           // 21 Bold — 브랜드 로고
     case headline       // 17 Bold
     case subheadline    // 16 Bold
     case bodyLarge      // 16 Regular — 메뉴 항목
@@ -33,6 +34,7 @@ enum TSFontStyle {
         case .title1: return 28
         case .title2: return 24
         case .title3: return 22
+        case .logo: return 21
         case .headline: return 17
         case .subheadline, .bodyLarge: return 16
         case .body, .bodyBold: return 15

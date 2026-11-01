@@ -6,15 +6,20 @@ struct CircleIconButton: View {
     let accessibilityLabel: String
     var size: CGFloat = 36
     var background: Color = .tsBackground
+    var hasBorder: Bool = false
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            icon.image
-                .tsIconSize(.lg, weight: .semibold)
+            icon.sized(.base, weight: .semibold)
                 .foregroundStyle(Color.tsInk)
                 .frame(width: size, height: size)
                 .background(background, in: Circle())
+                .overlay {
+                    if hasBorder {
+                        Circle().stroke(Color.tsLine, lineWidth: 1)
+                    }
+                }
         }
         .buttonStyle(.plain)
         .accessibilityLabel(accessibilityLabel)
