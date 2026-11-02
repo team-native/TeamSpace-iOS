@@ -19,12 +19,13 @@ struct ApplyProjectUseCase {
         return nil
     }
 
-    func execute(projectId: Int, draft: ApplicationDraft) async throws -> ProjectApplication {
+    func execute(projectId: String, draft: ApplicationDraft) async throws -> ProjectApplication {
         if let message = Self.validationMessage(message: draft.message, availability: draft.availability) {
             throw AppError.invalidInput(message)
         }
         let trimmed = ApplicationDraft(
             openingId: draft.openingId,
+            position: draft.position,
             availability: draft.availability,
             message: draft.message.trimmingCharacters(in: .whitespacesAndNewlines)
         )

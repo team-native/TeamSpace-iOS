@@ -16,11 +16,11 @@ final class ApplicantReviewViewModel {
     /// 결과 등록 후 안내
     var doneMessage: String?
 
-    private let projectId: Int
+    private let projectId: String
     private let fetchApplicantsUseCase: FetchApplicantsUseCase
     private let decideApplicantUseCase: DecideApplicantUseCase
 
-    init(projectId: Int, fetchApplicantsUseCase: FetchApplicantsUseCase, decideApplicantUseCase: DecideApplicantUseCase) {
+    init(projectId: String, fetchApplicantsUseCase: FetchApplicantsUseCase, decideApplicantUseCase: DecideApplicantUseCase) {
         self.projectId = projectId
         self.fetchApplicantsUseCase = fetchApplicantsUseCase
         self.decideApplicantUseCase = decideApplicantUseCase

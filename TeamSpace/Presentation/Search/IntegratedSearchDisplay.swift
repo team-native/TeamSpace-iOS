@@ -69,7 +69,7 @@ extension SearchHit {
         guard let id = targetId else { return .comingSoon(title: title) }
         switch category {
         case .documents: return .comingSoon(title: title)
-        case .projects: return .projectDetail(id: id)
+        case .projects: return .projectDetail(id: serverId)  // 서버 상세는 레코드 번호 · slug 둘 다 받아요
         case .people: return .memberDetail(id: id)
         case .posts: return .postDetail(id: id)
         case .proposals: return .proposalDetail(id: id)

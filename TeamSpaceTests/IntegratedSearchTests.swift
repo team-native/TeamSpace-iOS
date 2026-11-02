@@ -29,7 +29,7 @@ final class IntegratedSearchTests: XCTestCase {
 
         viewModel.filter = .projects
         XCTAssertEqual(viewModel.sections.map(\.title), ["프로젝트"])
-        XCTAssertEqual(viewModel.sections.first?.hits.first?.route, .projectDetail(id: 1))
+        XCTAssertEqual(viewModel.sections.first?.hits.first?.route, .projectDetail(id: "1"))
     }
 
     func testHitTextAndRoutes() async {

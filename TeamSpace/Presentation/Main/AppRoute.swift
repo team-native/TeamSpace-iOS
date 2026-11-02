@@ -43,11 +43,11 @@ enum AppRoute: Hashable {
     case workspacePermissions            // 07-15 내 권한 · 접근 범위
     // 08 프로젝트
     case projects                        // 08-1 전체 프로젝트 탐색
-    case projectDetail(id: Int)          // 08-2 프로젝트 상세
-    case projectTimeline(id: Int)        // 08-8 프로젝트 일정과 변경 이력
-    case projectRecruitment(id: Int)     // 08-3 모집 공고 (08-4 신청 시트 · 08-5 완료)
+    case projectDetail(id: String)        // 08-2 프로젝트 상세
+    case projectTimeline(id: String)      // 08-8 프로젝트 일정과 변경 이력
+    case projectRecruitment(id: String)   // 08-3 모집 공고 (08-4 신청 시트 · 08-5 완료)
     case myApplications                  // 08-6 내 참여 신청 현황
-    case applicantReview(projectId: Int) // 08-7 PM 지원자 검토
+    case applicantReview(projectId: String) // 08-7 PM 지원자 검토
     // 09 규칙
     case rules                           // 09-1 규칙 · 제도
     case ruleDetail(id: String)           // 09-2 문서 상세 · 규칙 (09-3 변경 내역 시트)

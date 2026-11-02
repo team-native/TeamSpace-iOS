@@ -6,11 +6,11 @@ import Observation
 @MainActor
 final class ProjectDetailViewModel {
     private(set) var state: ViewState<ProjectDetail> = .idle
-    let projectId: Int
+    let projectId: String
 
     private let fetchProjectDetailUseCase: FetchProjectDetailUseCase
 
-    init(projectId: Int, fetchProjectDetailUseCase: FetchProjectDetailUseCase) {
+    init(projectId: String, fetchProjectDetailUseCase: FetchProjectDetailUseCase) {
         self.projectId = projectId
         self.fetchProjectDetailUseCase = fetchProjectDetailUseCase
     }

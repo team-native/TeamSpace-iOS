@@ -3,7 +3,7 @@ import Foundation
 /// 08-3 ~ 08-7 모집 · 참여 응답의 `data`
 /// 명세서에는 `POST /projects/{id}/apply` 만 있어 나머지는 Figma 기준으로 정했습니다. (백엔드와 맞춰야 함)
 struct RecruitmentDTO: Codable {
-    let projectId: Int
+    let projectId: String
     let projectName: String
     let opening: ProjectOpeningDTO
     let headline: String
@@ -32,22 +32,9 @@ struct RecruitmentDTO: Codable {
     }
 }
 
-/// POST /projects/{id}/apply 요청 바디
-struct ApplyRequestDTO: Codable {
-    let openingId: Int
-    let availability: String
-    let message: String
-
-    init(_ draft: ApplicationDraft) {
-        openingId = draft.openingId
-        availability = draft.availability.rawValue
-        message = draft.message
-    }
-}
-
 struct ApplicationDTO: Codable {
     let id: Int
-    let projectId: Int
+    let projectId: String
     let projectName: String
     let role: String
     let department: String

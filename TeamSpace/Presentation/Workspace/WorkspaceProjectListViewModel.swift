@@ -82,6 +82,10 @@ extension ProjectSummary {
             return parts.joined(separator: " · ")
         }
         parts.append("\(memberCount)명")
+        guard let endDate else {
+            if let dueText { parts.append(dueText) }
+            return parts.joined(separator: " · ")
+        }
         switch status {
         case .completed:
             parts.append("\(TSFormat.monthDay(endDate)) 종료")

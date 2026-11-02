@@ -88,6 +88,6 @@ struct ProjectTimelineView: View {
 
 #Preview {
     NavigationStack {
-        ProjectTimelineView(viewModel: DIContainer.preview().makeProjectTimelineViewModel(projectId: 1), onNavigate: { _ in })
+        ProjectTimelineView(viewModel: DIContainer.preview().makeProjectTimelineViewModel(projectId: "book-on"), onNavigate: { _ in })
     }
 }

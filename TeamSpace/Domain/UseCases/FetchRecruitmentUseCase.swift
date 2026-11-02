@@ -8,7 +8,7 @@ struct FetchRecruitmentUseCase {
         self.projectRepository = projectRepository
     }
 
-    func execute(projectId: Int) async throws -> RecruitmentPost {
+    func execute(projectId: String) async throws -> RecruitmentPost {
         try await projectRepository.fetchRecruitment(projectId: projectId)
     }
 }

@@ -83,6 +83,6 @@ private struct ApplicantReviewAlerts: ViewModifier {
 
 #Preview {
     NavigationStack {
-        ApplicantReviewView(viewModel: DIContainer.preview().makeApplicantReviewViewModel(projectId: 1))
+        ApplicantReviewView(viewModel: DIContainer.preview().makeApplicantReviewViewModel(projectId: "book-on"))
     }
 }

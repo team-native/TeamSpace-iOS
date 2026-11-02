@@ -89,7 +89,7 @@ final class ProjectTests: XCTestCase {
         let oct22 = calendar.date(from: DateComponents(year: 2026, month: 10, day: 22))!
         func project(status: ProjectRunStatus, end: Date, pm: String = "이시우", openings: [ProjectOpening] = []) -> ProjectSummary {
             ProjectSummary(
-                id: 1, name: "학과 행사 웹페이지", summary: "", department: "NativeLab", pmName: pm, memberCount: 2,
+                id: "1", name: "학과 행사 웹페이지", summary: "", department: "NativeLab", pmName: pm, memberCount: 2,
                 status: status, startDate: now, endDate: end, progress: 60, openings: openings, resultNote: nil, updatedAt: now
             )
         }
@@ -112,14 +112,18 @@ final class ProjectTests: XCTestCase {
     // MARK: 08-2 프로젝트 상세
 
     func testProjectDetail() async {
-        let joined = makeContainer().makeProjectDetailViewModel(projectId: 1)
+        let joined = makeContainer().makeProjectDetailViewModel(projectId: "book-on")
         await joined.load()
         XCTAssertEqual(joined.detail?.members.count, 6)
         XCTAssertEqual(joined.detail?.members.first?.role, "PM")
-        XCTAssertEqual(joined.detail?.project.openings.first?.title, "iOS 개발")
+        XCTAssertEqual(joined.detail?.project.openings.first?.title, "iOS", "서버 모집 자리는 [직군, 설명] 이라 직군이 이름이에요")
+        XCTAssertEqual(joined.detail?.project.openings.first?.description.hasSuffix("위젯 기능 개발과 출시 전 QA를 함께해요."), true)
         XCTAssertFalse(joined.canApply, "이미 참여 중이면 신청 버튼 대신 일정 보기")
+        XCTAssertEqual(joined.detail?.project.summary, "독서 기록과 습관 만들기를 돕는 iOS 앱", "desc 끝의 기간은 따로 읽어요")
+        XCTAssertNotNil(joined.detail?.project.startDate)
+        XCTAssertEqual(joined.detail?.project.dueText?.hasSuffix("출시"), true)
 
-        let planned = makeContainer().makeProjectDetailViewModel(projectId: 4)
+        let planned = makeContainer().makeProjectDetailViewModel(projectId: "team-guide")
         await planned.load()
         XCTAssertTrue(planned.canApply)
         XCTAssertEqual(planned.detail?.project.status.badgeTitle, "예정")
@@ -128,7 +132,7 @@ final class ProjectTests: XCTestCase {
     // MARK: 08-8 일정과 변경 이력
 
     func testTimeline() async {
-        let viewModel = makeContainer().makeProjectTimelineViewModel(projectId: 1)
+        let viewModel = makeContainer().makeProjectTimelineViewModel(projectId: "book-on")
         await viewModel.load()
 
         XCTAssertEqual(viewModel.title, "Book-on의 다음 단계")
@@ -147,13 +151,13 @@ final class ProjectTests: XCTestCase {
 
     func testRecruitmentAndApply() async {
         let container = makeContainer()
-        let joined = container.makeRecruitmentViewModel(projectId: 1)
+        let joined = container.makeRecruitmentViewModel(projectId: "book-on")
         await joined.load()
         XCTAssertEqual(joined.post?.roleBadgeText, "iOS · 1명")
         XCTAssertEqual(joined.post?.canApply, false, "이미 참여 중인 프로젝트")
         XCTAssertEqual(joined.post?.applyButtonTitle, "이미 참여 중인 프로젝트예요")
 
-        let viewModel = container.makeRecruitmentViewModel(projectId: 4)
+        let viewModel = container.makeRecruitmentViewModel(projectId: "team-guide")
         await viewModel.load()
         XCTAssertEqual(viewModel.post?.canApply, true)
 
@@ -198,7 +202,7 @@ final class ProjectTests: XCTestCase {
     // MARK: 08-7 PM 지원자 검토
 
     func testApplicantReview() async {
-        let viewModel = makeContainer().makeApplicantReviewViewModel(projectId: 1)
+        let viewModel = makeContainer().makeApplicantReviewViewModel(projectId: "book-on")
         await viewModel.load()
 
         XCTAssertEqual(viewModel.board?.applicants.map(\.name), ["옥물결", "오잉", "잉오"], "검토 중 → 접수, 먼저 신청한 순")
@@ -213,5 +217,39 @@ final class ProjectTests: XCTestCase {
         XCTAssertEqual(viewModel.headcountText, "1명 · 확정 1명")
         XCTAssertNotNil(viewModel.doneMessage)
         XCTAssertNil(viewModel.selectedId)
+    }
+}
+
+/// 서버 `Project` 형식 읽기 (TeamSpace-backend `space.py`, 프런트 `PROJECTS`)
+final class ProjectServerDTOTests: XCTestCase {
+    func testFrontendShapeDecodes() throws {
+        let json = Data(#"""
+        {"id":"book-on","name":"Book-on","desc":"독서 기록 앱 · 그린랩 외주 · 2026.08 – 2026.11","role":"iOS 리드",
+         "progress":68,"status":"진행 중","tone":"blue","due":"11.20 납품","milestone":"베타 배포 · 11.05","pm":"박도윤",
+         "members":[["doyun","PM"],["junpyo","iOS 리드"]],
+         "openings":[["Web 프론트엔드","1명 · 관리자 페이지 · 주 6시간"],["QA","2명 · 베타 테스트 · 11.01 – 11.15"]]}
+        """#.utf8)
+
+        let project = try JSONCoder.makeDecoder().decode(ServerProjectDTO.self, from: json).toEntity()
+
+        XCTAssertEqual(project.id, "book-on")
+        XCTAssertEqual(project.summary, "독서 기록 앱 · 그린랩 외주")
+        XCTAssertEqual(project.status, .inProgress)
+        XCTAssertEqual(project.memberCount, 2)
+        XCTAssertEqual(project.dueText, "11.20 납품")
+        let calendar = Calendar.current
+        XCTAssertEqual(project.startDate.map { calendar.dateComponents([.year, .month], from: $0) }, DateComponents(year: 2026, month: 8))
+        XCTAssertEqual(project.endDate.map { calendar.dateComponents([.year, .month, .day], from: $0) }, DateComponents(year: 2026, month: 11, day: 20))
+        XCTAssertEqual(project.openings.map(\.role), ["Web 프론트엔드", "QA"])
+        XCTAssertEqual(project.openings.map(\.headcount), [1, 2])
+        XCTAssertEqual(project.openings[0].description, "관리자 페이지 · 주 6시간")
+        XCTAssertNil(project.openings[0].startDate)
+        XCTAssertNotNil(project.openings[1].startDate, "\"11.01 – 11.15\" 기간을 읽어요")
+    }
+
+    func testApplyRequestCarriesPosition() throws {
+        let body = ServerApplyRequestDTO(ApplicationDraft(openingId: 1, position: "iOS 개발", availability: .tenHours, message: "안녕하세요"))
+        let json = String(decoding: try JSONEncoder().encode(body), as: UTF8.self)
+        XCTAssertTrue(json.contains(#""position":"iOS 개발""#), "서버는 position 이 없으면 400")
     }
 }

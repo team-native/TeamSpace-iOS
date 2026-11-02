@@ -8,7 +8,7 @@ struct FetchProjectDetailUseCase {
         self.projectRepository = projectRepository
     }
 
-    func execute(id: Int) async throws -> ProjectDetail {
+    func execute(id: String) async throws -> ProjectDetail {
         try await projectRepository.fetchProjectDetail(id: id)
     }
 }

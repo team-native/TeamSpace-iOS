@@ -6,9 +6,14 @@ extension ProjectSummary {
         "\(department) · PM \(pmName) · \(memberCount)명"
     }
 
-    /// "2026.07.01 – 11.30"
+    /// "2026.07.01 – 11.30" — 서버가 기간을 주지 않으면 마감 글자("11.20 납품")
     var periodText: String {
-        "\(TSFormat.fullDate(startDate)) – \(TSFormat.shortDate(endDate))"
+        switch (startDate, endDate) {
+        case let (start?, end?): return "\(TSFormat.fullDate(start)) – \(TSFormat.shortDate(end))"
+        case let (start?, nil): return "\(TSFormat.fullDate(start)) –"
+        case let (nil, end?): return "– \(TSFormat.shortDate(end))"
+        case (nil, nil): return dueText ?? "-"
+        }
     }
 
     /// 목록 카드 설명 — "독서 기록과 … 앱. 2026.07.01–11.30 · iOS 1명 모집"
@@ -21,7 +26,8 @@ extension ProjectSummary {
         } else {
             tail = "모집 마감"
         }
-        return "\(summary). \(TSFormat.fullDate(startDate))–\(TSFormat.shortDate(endDate)) · \(tail)"
+        guard let start = startDate, let end = endDate else { return "\(summary) · \(tail)" }
+        return "\(summary). \(TSFormat.fullDate(start))–\(TSFormat.shortDate(end)) · \(tail)"
     }
 
     /// 카드 아래 링크
@@ -48,7 +54,10 @@ extension ProjectSummary {
 extension ProjectOpening {
     /// "iOS 개발 1명 · 11월 ~ 12월"
     var headline: String {
-        "\(title) \(headcount)명 · \(TSFormat.month(startDate)) ~ \(TSFormat.month(endDate))"
+        guard let start = startDate, let end = endDate else {
+            return description.isEmpty ? "\(title) \(headcount)명" : "\(title) \(headcount)명 · \(description)"
+        }
+        return "\(title) \(headcount)명 · \(TSFormat.month(start)) ~ \(TSFormat.month(end))"
     }
 }
 

@@ -28,7 +28,7 @@ enum Availability: String, UnknownCaseDecodable, Encodable, Hashable, CaseIterab
 
 /// 08-3 모집 공고
 struct RecruitmentPost: Equatable, Sendable {
-    let projectId: Int
+    let projectId: String
     let projectName: String
     let opening: ProjectOpening
     /// 큰 제목 (예: "Book-on의 다음 기능을\n함께 만들어요")
@@ -55,6 +55,8 @@ struct RecruitmentPost: Equatable, Sendable {
 /// 08-4 참여 신청서
 struct ApplicationDraft: Equatable, Sendable {
     let openingId: Int
+    /// 서버 필수값 `position` — 지원 자리 이름 (예: "iOS 개발")
+    var position: String = ""
     let availability: Availability
     let message: String
 }
@@ -62,7 +64,7 @@ struct ApplicationDraft: Equatable, Sendable {
 /// 08-6 내 참여 신청 한 건
 struct ProjectApplication: Equatable, Identifiable, Sendable {
     let id: Int
-    let projectId: Int
+    let projectId: String
     let projectName: String
     let role: String
     let department: String
