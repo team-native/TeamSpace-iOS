@@ -86,7 +86,7 @@ private struct ReceivedApprovalRow: View {
                     .tsFont(.footnoteBold)
                     .foregroundStyle(Color.tsInk)
                     .lineLimit(1)
-                Text("\(item.requesterName) · \(item.requesterDepartment) · \(TSFormat.relative(item.updatedAt))")
+                Text("\(item.requesterText) · \(TSFormat.relative(item.updatedAt))")
                     .tsFont(.caption2)
                     .foregroundStyle(Color.tsInk3)
             }

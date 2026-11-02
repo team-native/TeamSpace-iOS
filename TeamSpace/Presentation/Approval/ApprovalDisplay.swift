@@ -8,13 +8,14 @@ extension ApprovalStatus: BadgeRepresentable {
         case .reviewing: return "검토 중"
         case .approved: return "승인"
         case .rejected: return "반려"
+        case .cancelled: return "취소"
         case .unknown: return "확인 중"
         }
     }
 
     var badgeTone: BadgeTone {
         switch self {
-        case .draft, .unknown: return .neutral
+        case .draft, .cancelled, .unknown: return .neutral
         case .pending: return .amber
         case .reviewing: return .primary
         case .approved: return .positive
@@ -25,12 +26,19 @@ extension ApprovalStatus: BadgeRepresentable {
     /// 05-1 상단 요약 숫자 색
     var summaryColor: Color {
         switch self {
-        case .draft, .unknown: return .tsInk3
+        case .draft, .cancelled, .unknown: return .tsInk3
         case .pending: return .tsAmber
         case .reviewing: return .tsPrimary
         case .approved: return .tsPositive
         case .rejected: return .tsNegative
         }
+    }
+}
+
+extension ApprovalItem {
+    /// "이시우 · PMO" — 서버가 부서를 주지 않으면 이름만
+    var requesterText: String {
+        [requesterName, requesterDepartment].filter { !$0.isEmpty }.joined(separator: " · ")
     }
 }
 

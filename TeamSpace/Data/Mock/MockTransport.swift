@@ -156,45 +156,21 @@ struct MockTransport: HTTPTransport {
         return try respond(request, status: 200, json: #"{"code":200,"message":"읽음 처리 완료","data":{"success":true,"updatedId":\#(id)}}"#)
     }
 
-    /// 05 결재 — /approvals/~ · /documents/~
+    /// 05 결재 — /approvals/~ (서버 develop 형식) · /documents/~ (작성 · 제출, 다음 묶음에서 바꿔요)
     private func approvalRoute(_ request: URLRequest, path: String) throws -> (Data, HTTPURLResponse)? {
         guard let url = request.url else { return nil }
-        let components = url.pathComponents
+        let serverComponents = url.pathComponents.filter { $0 != "/" && $0 != MockTransport.baseURL.lastPathComponent }
+        if serverComponents.first == "approvals" {
+            return try serverApprovalRoute(request, components: serverComponents)
+        }
         let parent = url.deletingLastPathComponent().lastPathComponent
         let notFound = #"{"code":404,"message":"해당 문서를 찾을 수 없습니다."}"#
         switch (request.httpMethod ?? "", path) {
-        case ("GET", "mine") where components.contains("approvals"):
-            return try respond(request, status: 200, json: approvalStore.listJSON(mine: true))
-        case ("GET", "received") where components.contains("approvals"):
-            return try respond(request, status: 200, json: approvalStore.listJSON(mine: false))
-        case ("GET", _) where parent == "documents":
-            guard let id = Int(path), let json = approvalStore.detailJSON(id: id) else {
-                return try respond(request, status: 404, json: notFound)
-            }
-            return try respond(request, status: 200, json: json)
         case ("DELETE", _) where parent == "documents":
             guard let id = Int(path), approvalStore.deleteDraft(id: id) else {
                 return try respond(request, status: 404, json: notFound)
             }
             return try respond(request, status: 200, json: #"{"code":200,"message":"삭제 완료","data":{"documentId":\#(path)}}"#)
-        case ("POST", "decide"):
-            guard
-                let id = Int(parent),
-                let body = request.httpBody,
-                let dto = try? JSONDecoder().decode(ApprovalDecisionRequestDTO.self, from: body)
-            else { return try respond(request, status: 400, json: #"{"code":400,"message":"잘못된 요청입니다."}"#) }
-            guard let json = approvalStore.decideJSON(approvalId: id, decision: dto.decision, comment: dto.comment) else {
-                return try respond(request, status: 404, json: notFound)
-            }
-            return try respond(request, status: 200, json: json)
-        case ("POST", "comments") where components.contains("documents"):
-            guard
-                let id = Int(parent),
-                let body = request.httpBody,
-                let dto = try? JSONDecoder().decode(ApprovalCommentRequestDTO.self, from: body),
-                let json = approvalStore.commentJSON(documentId: id, body: dto.body)
-            else { return try respond(request, status: 404, json: notFound) }
-            return try respond(request, status: 201, json: json)
         case ("POST", "documents"):
             guard
                 let body = request.httpBody,
@@ -213,11 +189,6 @@ struct MockTransport: HTTPTransport {
                 return try respond(request, status: 404, json: notFound)
             }
             return try respond(request, status: 200, json: #"{"code":200,"message":"제출 완료","data":{"success":true}}"#)
-        case ("POST", "withdraw"):
-            guard let id = Int(parent), approvalStore.update(id: id, status: "DRAFT") else {
-                return try respond(request, status: 404, json: notFound)
-            }
-            return try respond(request, status: 200, json: #"{"code":200,"message":"요청 취소 완료","data":{"success":true}}"#)
         default:
             return nil
         }
@@ -443,6 +414,55 @@ struct MockTransport: HTTPTransport {
                 types.contains(dto.type), !dto.dept.isEmpty, !dto.title.isEmpty, !dto.body.isEmpty
             else { return try respond(request, status: 422, json: #"{"detail":"입력한 정보를 다시 확인해 주세요."}"#) }
             return try respond(request, status: 201, json: inquiryStore.submit(dto))
+        default:
+            return nil
+        }
+    }
+
+    /// 05 결재 — GET /approvals?box= · GET /approvals/{id} · POST approve · reject · cancel · comments
+    private func serverApprovalRoute(_ request: URLRequest, components: [String]) throws -> (Data, HTTPURLResponse)? {
+        let notFound = #"{"detail":"결재를 찾을 수 없습니다."}"#
+        switch (request.httpMethod ?? "", components.count) {
+        case ("GET", 1):
+            let query = Self.query(of: request)
+            let box = query["box"] ?? "mine"
+            guard ["mine", "received", "handled"].contains(box) else {
+                return try respond(request, status: 400, json: #"{"detail":"box는 mine, received, handled 중 하나여야 합니다."}"#)
+            }
+            let limit = query["limit"].flatMap(Int.init) ?? 20
+            return try respond(request, status: 200, json: approvalStore.serverListJSON(box: box, cursor: query["cursor"], limit: limit))
+        case ("GET", 2):
+            guard let id = Int(components[1]), let json = approvalStore.serverDetailJSON(id: id) else {
+                return try respond(request, status: 404, json: notFound)
+            }
+            return try respond(request, status: 200, json: json)
+        case ("POST", 3):
+            guard let id = Int(components[1]) else { return try respond(request, status: 404, json: notFound) }
+            let body = request.httpBody.flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] } ?? [:]
+            switch components[2] {
+            case "approve", "reject":
+                switch approvalStore.decide(id: id, approve: components[2] == "approve", reason: body["reason"] as? String) {
+                case .success(let json): return try respond(request, status: 200, json: json)
+                case .failure(.notFound): return try respond(request, status: 404, json: notFound)
+                case .failure(.notMyTurn): return try respond(request, status: 403, json: #"{"detail":"현재 결재 차례가 아닙니다."}"#)
+                case .failure(.invalidState): return try respond(request, status: 409, json: #"{"detail":"처리할 수 있는 결재 상태가 아닙니다."}"#)
+                case .failure(.missingReason): return try respond(request, status: 400, json: #"{"detail":"반려 사유를 입력해주세요."}"#)
+                }
+            case "cancel":
+                guard let json = approvalStore.cancel(id: id) else {
+                    return try respond(request, status: 403, json: #"{"detail":"취소할 수 없는 결재입니다."}"#)
+                }
+                return try respond(request, status: 200, json: json)
+            case "comments":
+                let text = (body["text"] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !text.isEmpty else { return try respond(request, status: 400, json: #"{"detail":"댓글 내용을 입력해주세요."}"#) }
+                guard let json = approvalStore.serverComment(id: id, text: text) else {
+                    return try respond(request, status: 404, json: notFound)
+                }
+                return try respond(request, status: 201, json: json)
+            default:
+                return nil
+            }
         default:
             return nil
         }

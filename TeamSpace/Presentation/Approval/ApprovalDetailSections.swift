@@ -38,7 +38,7 @@ struct ReviewApprovalContent: View {
         HStack(spacing: Spacing.md) {
             AvatarView(size: 40)
             VStack(alignment: .leading, spacing: Spacing.xxxs) {
-                Text("\(detail.item.requesterName) · \(detail.item.requesterDepartment)")
+                Text(detail.item.requesterText)
                     .tsFont(.calloutBold)
                     .foregroundStyle(Color.tsInk)
                 Text(meta)
@@ -80,7 +80,7 @@ struct ApprovalProgressCard: View {
 
     private var reachedIndex: Int {
         switch status {
-        case .draft, .unknown: return 0
+        case .draft, .cancelled, .unknown: return 0
         case .pending: return 1
         case .reviewing: return 2
         case .approved, .rejected: return 3

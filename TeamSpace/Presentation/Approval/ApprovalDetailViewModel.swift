@@ -77,11 +77,11 @@ final class ApprovalDetailViewModel {
     }
 
     private func decide(_ decision: ApprovalDecision, comment: String) async {
-        guard let approvalId = detail?.myApprovalId, !isProcessing else { return }
+        guard detail?.myApprovalId != nil, !isProcessing else { return }
         isProcessing = true
         defer { isProcessing = false }
         do {
-            _ = try await decideApprovalUseCase.execute(approvalId: approvalId, decision: decision, comment: comment)
+            _ = try await decideApprovalUseCase.execute(documentId: documentId, decision: decision, comment: comment)
             commentDraft = ""
             rejectReason = ""
             dialog = .completed(decision)

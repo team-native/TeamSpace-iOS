@@ -48,6 +48,8 @@ extension MyDocument {
             let decider = decidedBy.map { "\($0.name) · \($0.department)" }
             let when = decidedAt.map { "\(TSFormat.shortDate($0)) 반려 사유: \(rejectReason ?? "-")" }
             return [decider, when].compactMap { $0 }.joined(separator: " · ")
+        case .cancelled:
+            return "요청을 취소했어요 · 현재 결재자 없음"
         case .unknown:
             return "진행 상황을 확인하고 있어요."
         }
@@ -61,7 +63,7 @@ extension MyDocument {
         case .reviewing: return "진행 상황 확인"
         case .approved: return "승인 문서 보기"
         case .rejected: return "반려 사유 확인 · 수정 후 재상신"
-        case .unknown: return "문서 보기"
+        case .cancelled, .unknown: return "문서 보기"
         }
     }
 

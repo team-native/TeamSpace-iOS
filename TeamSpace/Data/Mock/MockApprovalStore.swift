@@ -1,6 +1,7 @@
 import Foundation
 
 /// 결재 Mock 서버 저장소 — Figma 05-1 · 05-2 예시 내용
+/// 목록 · 상세 · 승인 · 반려 · 의견 · 취소는 서버 develop `/approvals` 형식으로 내려줘요. (보는 사람 = 내 id 1)
 /// 승인 · 반려 · 제출을 하면 상태가 메모리에 기억돼요.
 final class MockApprovalStore: @unchecked Sendable {
     struct Item: Encodable {
@@ -29,6 +30,10 @@ final class MockApprovalStore: @unchecked Sendable {
     private var comments: [Int: [Comment]] = [:]
     private var nextCommentId = 1_000
     private var nextDocumentId = 100
+    /// 승인 · 반려 · 취소로 바뀐 결재선 (없으면 상태로 만들어요)
+    private var lines: [Int: [Step]] = [:]
+    private var rejectReasons: [Int: String] = [:]
+    static let viewerId = 1
     /// 새로 작성한 문서의 상세 항목 · 사유
     private var drafts: [Int: (fields: [(String, String)], reason: String)] = [:]
 
@@ -80,98 +85,177 @@ final class MockApprovalStore: @unchecked Sendable {
         guard let index = storage.firstIndex(where: { $0.id == id }) else { return false }
         storage[index].status = status
         storage[index].updatedAt = ISO8601DateFormatter().string(from: now)
+        lines[id] = nil
         return true
     }
 
-    func listJSON(mine: Bool) -> String {
-        struct Envelope: Encodable {
-            let code: Int
-            let message: String
-            let data: [String: [Item]]
-        }
-        let envelope = Envelope(code: 200, message: "조회 성공", data: ["list": items(mine: mine)])
-        let data = (try? JSONEncoder().encode(envelope)) ?? Data()
-        return String(decoding: data, as: UTF8.self)
-    }
+    // MARK: 서버 develop /approvals 형식
 
-    // MARK: 05-3 · 05-4 상세 · 결재
-
-    private struct Field: Encodable {
-        let title: String
-        let value: String
-    }
-
-    private struct ApproverItem: Encodable {
-        let approvalId: Int
-        let name: String
+    struct Step {
+        let who: String
+        let userId: Int
         let role: String
-        let status: String
-        let note: String
+        var state: String
+        var at: String
     }
 
-    private struct Attachment: Encodable {
-        let name: String
-        let sizeText: String
-    }
+    private static let kindNames = [
+        "EXPENSE": "비용 승인", "STAFFING": "인력 지원", "PROJECT_REQUEST": "프로젝트 요청",
+        "OPERATION_REQUEST": "운영 요청", "ETC": "기타 내부 문서"
+    ]
+    private static let statusNames = [
+        "DRAFT": "작성 중", "PENDING": "결재 대기", "IN_REVIEW": "검토 중",
+        "APPROVED": "승인", "REJECTED": "반려", "CANCELLED": "취소"
+    ]
 
-    private struct Detail: Encodable {
-        let document: Item
-        let fields: [Field]
-        let reason: String
-        let approvers: [ApproverItem]
-        let attachments: [Attachment]
-        let comments: [Comment]
-        let isMine: Bool
-        let myApprovalId: Int?
-    }
-
-    private struct Envelope<T: Encodable>: Encodable {
-        let code: Int
-        let message: String
-        let data: T
-    }
-
-    private func encode<T: Encodable>(_ data: T, message: String = "조회 성공") -> String {
-        let encoded = (try? JSONEncoder().encode(Envelope(code: 200, message: message, data: data))) ?? Data()
-        return String(decoding: encoded, as: UTF8.self)
-    }
-
-    /// 결재선 — 내가 올린 결재: 안율(OL) → 김민준(FA) → 이시우(Leader)
-    ///          받은 결재: 나(OL) → 김민준(FA) → 이시우(Leader)
-    private func approvers(for item: Item) -> [ApproverItem] {
-        let first = item.isMine ? ("안율", "OL") : ("홍길동", "OL")
-        let firstStatus: String
+    /// 결재선 — 내가 올린 결재: 나(기안) → 안율(검토) → 김민준(승인) → 이시우(승인)
+    ///          받은 결재: 요청자(기안) → 나(검토) → 김민준(승인) → 이시우(승인)
+    private func line(for item: Item) -> [Step] {
+        if let stored = lines[item.id] { return stored }
+        let drafter = Step(who: item.requesterName, userId: item.isMine ? Self.viewerId : 30 + item.id, role: "기안",
+                           state: "done", at: item.updatedAt)
+        guard item.status != "DRAFT" else { return [drafter] }
+        let first = item.isMine ? ("안율", 21) : ("홍길동", Self.viewerId)
+        var steps = [
+            Step(who: first.0, userId: first.1, role: "검토", state: "wait", at: "대기"),
+            Step(who: "김민준", userId: 22, role: "승인", state: "wait", at: "대기"),
+            Step(who: "이시우", userId: 23, role: "승인", state: "wait", at: "대기")
+        ]
         switch item.status {
-        case "APPROVED": firstStatus = "APPROVED"
-        case "REJECTED": firstStatus = "REJECTED"
-        case "PENDING", "IN_REVIEW": firstStatus = "REVIEWING"
-        default: firstStatus = "WAITING"
+        case "APPROVED":
+            for index in steps.indices { steps[index].state = "done"; steps[index].at = item.updatedAt }
+        case "REJECTED":
+            steps[0].state = "done"
+            steps[0].at = item.updatedAt
+        default:
+            steps[0].state = "now"
+            steps[0].at = "검토 중"
         }
-        return [
-            ApproverItem(approvalId: item.id * 10 + 1, name: first.0, role: first.1, status: firstStatus,
-                         note: firstStatus == "REVIEWING" ? "오늘 10:12 확인" : "처리 완료"),
-            ApproverItem(approvalId: item.id * 10 + 2, name: "김민준", role: "FA", status: "WAITING", note: "이전 단계 승인 후"),
-            ApproverItem(approvalId: item.id * 10 + 3, name: "이시우", role: "Leader", status: "WAITING", note: "이전 단계 승인 후")
-        ]
+        return [drafter] + steps
     }
 
-    private func fields(for item: Item) -> [Field] {
+    private func payload(for item: Item) -> [String: Any] {
+        var fields: [String: String] = item.kind == "STAFFING"
+            ? ["project": "Book-on", "type": "iOS 1명", "period": "2026.11 ~ 2026.12"]
+            : ["type": "물품 구매", "project": "Book-on", "useDate": "2026.10.20"]
+        var details: [String: Any] = [:]
         if let draft = drafts[item.id] {
-            return draft.fields.map { Field(title: $0.0, value: $0.1) }
+            let keys = ["비용 유형": "type", "프로젝트": "project", "사용 예정일": "useDate", "투입 기간": "period"]
+            fields = Dictionary(draft.fields.compactMap { title, value in keys[title].map { ($0, value) } }) { $1 }
+            details["fields"] = draft.fields.map { ["title": $0.0, "value": $0.1] }
         }
-        if item.kind == "STAFFING" {
-            return [
-                Field(title: "프로젝트", value: "Book-on"),
-                Field(title: "필요 직군", value: "iOS"),
-                Field(title: "인원", value: "1명"),
-                Field(title: "투입 기간", value: "2026.11 ~ 2026.12")
-            ]
-        }
-        return [
-            Field(title: "비용 유형", value: "물품 구매"),
-            Field(title: "프로젝트", value: "Book-on"),
-            Field(title: "사용 예정일", value: "2026.10.20")
+        let steps = line(for: item)
+        var result: [String: Any] = [
+            "id": String(item.id),
+            "kind": Self.kindNames[item.kind] ?? "기타 내부 문서",
+            "title": item.title,
+            "status": Self.statusNames[item.status] ?? item.status,
+            "amount": item.amount.map { "\($0)원" } ?? "",
+            "amountValue": item.amount ?? 0,
+            "reason": reason(for: item),
+            "author": item.requesterName,
+            "authorId": String(item.isMine ? Self.viewerId : 30 + item.id),
+            "date": item.updatedAt,
+            "line": steps.map { ["who": $0.who, "userId": $0.userId, "role": $0.role, "state": $0.state, "at": $0.at] },
+            "files": item.id == 1
+                ? [["id": "9", "url": "/uploads/9", "filename": "견적서_iPhone.pdf", "size": 1_200_000, "contentType": "application/pdf"]]
+                : [] as [[String: Any]],
+            "comments": (comments[item.id] ?? []).map {
+                ["id": String($0.id), "who": $0.authorName, "whoId": "", "meta": "", "text": $0.body, "createdAt": $0.createdAt]
+            },
+            "received": steps.contains { $0.userId == Self.viewerId && $0.role != "기안" && ($0.state == "now" || $0.state == "wait") }
         ]
+        if item.kind == "STAFFING" { result["amount"] = fields["period"] ?? "" }
+        if !details.isEmpty { result["details"] = details }
+        if let reason = rejectReasons[item.id] { result["rejectReason"] = reason }
+        for (key, value) in fields { result[key] = value }
+        return result
+    }
+
+    /// GET /approvals?box= — mine: 내가 올린 것, received: 내 차례 · 다음 차례, handled: 내가 처리한 것(서버처럼 내 기안 포함)
+    func serverListJSON(box: String, cursor: String?, limit: Int) -> String {
+        lock.lock()
+        defer { lock.unlock() }
+        let matched = storage.filter { item in
+            let steps = line(for: item)
+            switch box {
+            case "mine": return item.isMine
+            case "received": return steps.contains { $0.userId == Self.viewerId && ($0.state == "now" || $0.state == "wait") }
+            default: return steps.contains { $0.userId == Self.viewerId && $0.state == "done" }
+            }
+        }
+        .filter { item in cursor.flatMap(Int.init).map { item.id < $0 } ?? true }
+        .sorted { $0.id > $1.id }
+        let page = Array(matched.prefix(limit))
+        let next: Any = matched.count > limit ? page.last.map { String($0.id) } ?? NSNull() : NSNull()
+        return Self.json(["items": page.map(payload), "nextCursor": next])
+    }
+
+    func serverDetailJSON(id: Int) -> String? {
+        lock.lock()
+        defer { lock.unlock() }
+        guard let item = storage.first(where: { $0.id == id }) else { return nil }
+        let steps = line(for: item)
+        guard item.isMine || steps.contains(where: { $0.userId == Self.viewerId }) else { return nil }
+        return Self.json(payload(for: item))
+    }
+
+    enum DecideError: Error { case notFound, notMyTurn, invalidState, missingReason }
+
+    /// POST /approvals/{id}/approve · reject — 내 차례(now)인 단계만 처리해요.
+    func decide(id: Int, approve: Bool, reason: String?, now: Date = Date()) -> Result<String, DecideError> {
+        lock.lock()
+        defer { lock.unlock() }
+        guard let index = storage.firstIndex(where: { $0.id == id }) else { return .failure(.notFound) }
+        guard ["PENDING", "IN_REVIEW"].contains(storage[index].status) else { return .failure(.invalidState) }
+        var steps = line(for: storage[index])
+        guard let mine = steps.firstIndex(where: { $0.userId == Self.viewerId && $0.state == "now" }) else {
+            return .failure(.notMyTurn)
+        }
+        let stamp = ISO8601DateFormatter().string(from: now)
+        steps[mine].state = "done"
+        steps[mine].at = stamp
+        if approve {
+            if let next = steps.firstIndex(where: { $0.state == "wait" }) {
+                steps[next].state = "now"
+                steps[next].at = "검토 중"
+                storage[index].status = "IN_REVIEW"
+            } else {
+                storage[index].status = "APPROVED"
+            }
+        } else {
+            guard let reason, !reason.trimmingCharacters(in: .whitespaces).isEmpty else { return .failure(.missingReason) }
+            storage[index].status = "REJECTED"
+            rejectReasons[id] = reason
+        }
+        storage[index].updatedAt = stamp
+        lines[id] = steps
+        return .success(Self.json(["id": String(id), "status": Self.statusNames[storage[index].status] ?? ""]))
+    }
+
+    /// POST /approvals/{id}/cancel — 내가 올린 작성 중 · 대기 · 검토 중 결재만
+    func cancel(id: Int) -> String? {
+        lock.lock()
+        defer { lock.unlock() }
+        guard let index = storage.firstIndex(where: { $0.id == id && $0.isMine }),
+              ["DRAFT", "PENDING", "IN_REVIEW"].contains(storage[index].status) else { return nil }
+        lines[id] = line(for: storage[index])
+        storage[index].status = "CANCELLED"
+        return Self.json(["id": String(id), "status": "취소"])
+    }
+
+    /// POST /approvals/{id}/comments — `{id, who, whoId, meta, text, createdAt}`
+    func serverComment(id: Int, text: String, now: Date = Date()) -> String? {
+        lock.lock()
+        defer { lock.unlock() }
+        guard storage.contains(where: { $0.id == id }) else { return nil }
+        nextCommentId += 1
+        let comment = Comment(id: nextCommentId, authorName: "홍길동", body: text, createdAt: ISO8601DateFormatter().string(from: now))
+        comments[id, default: []].append(comment)
+        return Self.json([
+            "id": String(comment.id), "who": comment.authorName, "whoId": String(Self.viewerId),
+            "meta": "NativeOps", "text": text, "createdAt": comment.createdAt
+        ])
     }
 
     private func reason(for item: Item) -> String {
@@ -183,52 +267,21 @@ final class MockApprovalStore: @unchecked Sendable {
         }
     }
 
-    func detailJSON(id: Int) -> String? {
-        lock.lock()
-        defer { lock.unlock() }
-        guard let item = storage.first(where: { $0.id == id }) else { return nil }
-        let isWaiting = item.status == "PENDING" || item.status == "IN_REVIEW"
-        let detail = Detail(
-            document: item,
-            fields: fields(for: item),
-            reason: reason(for: item),
-            approvers: approvers(for: item),
-            attachments: item.id == 1 ? [Attachment(name: "견적서_iPhone.pdf", sizeText: "1.2MB")] : [],
-            comments: comments[id] ?? [],
-            isMine: item.isMine,
-            myApprovalId: !item.isMine && isWaiting ? item.id * 10 + 1 : nil
-        )
-        return encode(detail)
+    private struct Envelope<T: Encodable>: Encodable {
+        let code: Int
+        let message: String
+        let data: T
     }
 
-    /// POST /approvals/{approvalId}/decide — 결재 단계 ID 의 앞자리가 문서 ID
-    func decideJSON(approvalId: Int, decision: String, comment: String?, now: Date = Date()) -> String? {
-        let documentId = approvalId / 10
-        let status = decision == "REJECT" ? "REJECTED" : "APPROVED"
-        guard update(id: documentId, status: status, now: now) else { return nil }
-        if let comment, !comment.isEmpty {
-            _ = appendComment(documentId: documentId, body: comment, now: now)
-        }
-        struct Result: Encodable {
-            let status: String
-            let nextApproverName: String?
-        }
-        return encode(Result(status: status, nextApproverName: status == "APPROVED" ? "김민준" : nil), message: "처리 완료")
+    /// 아직 옛 형식인 /documents · /workspace/documents 응답
+    private func encode<T: Encodable>(_ data: T, message: String = "조회 성공") -> String {
+        let encoded = (try? JSONEncoder().encode(Envelope(code: 200, message: message, data: data))) ?? Data()
+        return String(decoding: encoded, as: UTF8.self)
     }
 
-    func commentJSON(documentId: Int, body: String, now: Date = Date()) -> String? {
-        guard let comment = appendComment(documentId: documentId, body: body, now: now) else { return nil }
-        return encode(comment, message: "등록 완료")
-    }
-
-    private func appendComment(documentId: Int, body: String, now: Date) -> Comment? {
-        lock.lock()
-        defer { lock.unlock() }
-        guard storage.contains(where: { $0.id == documentId }) else { return nil }
-        nextCommentId += 1
-        let comment = Comment(id: nextCommentId, authorName: "홍길동", body: body, createdAt: ISO8601DateFormatter().string(from: now))
-        comments[documentId, default: []].append(comment)
-        return comment
+    private static func json(_ object: [String: Any]) -> String {
+        guard let data = try? JSONSerialization.data(withJSONObject: object, options: [.sortedKeys]) else { return "{}" }
+        return String(decoding: data, as: UTF8.self)
     }
 
     // MARK: 05-5 · 05-6 작성 · 제출
