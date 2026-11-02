@@ -5,10 +5,10 @@ import Observation
 @MainActor
 final class TemplateDetailViewModel {
     private(set) var state: ViewState<LibraryTemplate> = .idle
-    private let templateId: Int
+    private let templateId: String
     private let fetchTemplateUseCase: FetchLibraryTemplateUseCase
 
-    init(templateId: Int, fetchTemplateUseCase: FetchLibraryTemplateUseCase) {
+    init(templateId: String, fetchTemplateUseCase: FetchLibraryTemplateUseCase) {
         self.templateId = templateId
         self.fetchTemplateUseCase = fetchTemplateUseCase
     }

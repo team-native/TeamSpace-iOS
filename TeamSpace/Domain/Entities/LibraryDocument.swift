@@ -13,7 +13,8 @@ enum LibraryCategory: String, UnknownCaseDecodable, Hashable, Sendable {
 
 /// 06-1 · 06-2 문서함 문서 한 건
 struct LibraryDocument: Equatable, Identifiable, Sendable {
-    let id: Int
+    /// 서버 slug (예: "project-principles")
+    let id: String
     let category: LibraryCategory
     let title: String
     let summary: String
@@ -24,7 +25,7 @@ struct LibraryDocument: Equatable, Identifiable, Sendable {
 
 /// 06-1 상단 배너 — 최근 개정된 규칙
 struct LibraryRevision: Equatable, Sendable {
-    let documentId: Int
+    let documentId: String
     let title: String
     let effectiveAt: Date
 }

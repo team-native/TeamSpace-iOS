@@ -9,11 +9,11 @@ final class RuleDetailViewModel {
     private(set) var isAcknowledging = false
     var errorMessage: String?
 
-    private let ruleId: Int
+    private let ruleId: String
     private let fetchRuleDetailUseCase: FetchRuleDetailUseCase
     private let acknowledgeRuleUseCase: AcknowledgeRuleUseCase
 
-    init(ruleId: Int, fetchRuleDetailUseCase: FetchRuleDetailUseCase, acknowledgeRuleUseCase: AcknowledgeRuleUseCase) {
+    init(ruleId: String, fetchRuleDetailUseCase: FetchRuleDetailUseCase, acknowledgeRuleUseCase: AcknowledgeRuleUseCase) {
         self.ruleId = ruleId
         self.fetchRuleDetailUseCase = fetchRuleDetailUseCase
         self.acknowledgeRuleUseCase = acknowledgeRuleUseCase

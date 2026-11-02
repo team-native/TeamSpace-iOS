@@ -23,7 +23,8 @@ enum RuleStatus: String, UnknownCaseDecodable, Encodable, Hashable, Sendable {
 
 /// 09-1 규칙 목록 한 건
 struct RuleSummary: Equatable, Identifiable, Sendable {
-    let id: Int
+    /// 문서함 slug 와 같아요.
+    let id: String
     let title: String
     let category: RuleCategory
     /// 담당 부서
@@ -39,7 +40,7 @@ struct RuleSummary: Equatable, Identifiable, Sendable {
     var isAcknowledged: Bool
     /// 이번 개정 요약 (예: "검토 기한 3주 → 2주")
     let changeSummary: String?
-    let revisionCount: Int
+    var revisionCount: Int
 
     /// 최근 30일 안에 개정됐는지
     func isRecentlyRevised(now: Date = Date()) -> Bool {

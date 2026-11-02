@@ -7,7 +7,7 @@ struct FetchLibraryTemplateUseCase {
         self.libraryRepository = libraryRepository
     }
 
-    func execute(id: Int) async throws -> LibraryTemplate {
+    func execute(id: String) async throws -> LibraryTemplate {
         try await libraryRepository.fetchTemplate(id: id)
     }
 }

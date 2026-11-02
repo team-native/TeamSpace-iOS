@@ -28,7 +28,7 @@ enum MockSearchFixture {
              extra: ["type": "PROJECT", "version": 2]),
         Item(category: "documents", id: "1", title: "프로젝트 운영 원칙 v1.3",
              snippet: "Book-on 등 프로젝트의 제안 검토 기한: 3주 → 2주", createdAt: "2026-10-11T09:00:00+00:00",
-             extra: ["type": "RULE", "version": "v1.3"]),
+             extra: ["type": "RULE", "version": "v1.3", "href": "/inhouse/documents/project-principles"]),
         Item(category: "projects", id: "1", title: "Book-on",
              snippet: "독서 기록과 습관 만들기를 돕는 iOS 앱", createdAt: "2026-07-01T00:00:00+00:00",
              extra: ["dept": "NativeLab", "pm": "이시우", "progress": 68]),

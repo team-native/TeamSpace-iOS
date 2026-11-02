@@ -8,7 +8,10 @@ struct ServerMeSummaryDTO: Decodable {
     }
 
     let unreadNotifications: Int
+    let submittedApprovals: Int
+    let myPosts: Int
     let myProposals: Int
+    let myInquiries: Int
     let receivedApprovals: Int
     let todos: Todos
 }

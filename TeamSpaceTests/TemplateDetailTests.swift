@@ -22,7 +22,9 @@ final class TemplateDetailTests: XCTestCase {
         library.filter = .template
         let templates = library.filteredDocuments
         XCTAssertEqual(templates.count, 3)
-        let expectedForms: [Int: ApprovalComposeKind] = [3: .expense, 7: .staffing, 10: .etcDocument]
+        let expectedForms: [String: ApprovalComposeKind] = [
+            "budget-request": .expense, "staffing-request": .staffing, "settlement-request": .etcDocument
+        ]
 
         for document in templates {
             XCTAssertEqual(document.route, .templateDetail(id: document.id))
@@ -39,15 +41,15 @@ final class TemplateDetailTests: XCTestCase {
         let search = makeContainer().makeLibrarySearchViewModel()
         search.query = "품의서"
         await search.search()
-        XCTAssertEqual(try XCTUnwrap(search.results.first).route, .templateDetail(id: 3))
+        XCTAssertEqual(try XCTUnwrap(search.results.first).route, .templateDetail(id: "budget-request"))
     }
 
     func testBudgetTemplateFieldsAndSubmissionReachApprovalDetail() async throws {
         let container = makeContainer()
-        let detail = container.makeTemplateDetailViewModel(templateId: 3)
+        let detail = container.makeTemplateDetailViewModel(templateId: "budget-request")
         await detail.load()
         let template = try XCTUnwrap(detail.state.value)
-        XCTAssertEqual(template.monthlyUsageCount, 12)
+        XCTAssertEqual(template.monthlyUsageCount, 0, "서버에 사용 수가 없어 숨겨요")
         XCTAssertEqual(template.fields.map(\.title), ["비용 유형", "요청 금액과 사용일", "요청 사유", "첨부"])
         XCTAssertTrue(template.description.contains("\n작성하면"))
 
@@ -73,7 +75,7 @@ final class TemplateDetailTests: XCTestCase {
     }
 
     func testMissingTemplateShowsRecoverableFailure() async {
-        let viewModel = makeContainer().makeTemplateDetailViewModel(templateId: 999)
+        let viewModel = makeContainer().makeTemplateDetailViewModel(templateId: "missing")
         await viewModel.load()
         guard case .failed(let error) = viewModel.state else { return XCTFail("없는 템플릿은 실패 상태") }
         XCTAssertEqual(error as? AppError, .notFound("템플릿을 찾을 수 없어요"))
@@ -81,7 +83,7 @@ final class TemplateDetailTests: XCTestCase {
 
     func testForbiddenTemplateDoesNotExposeContent() async {
         let viewModel = TemplateDetailViewModel(
-            templateId: 3,
+            templateId: "budget-request",
             fetchTemplateUseCase: FetchLibraryTemplateUseCase(libraryRepository: ForbiddenTemplateRepository())
         )
         await viewModel.load()
@@ -99,5 +101,5 @@ final class TemplateDetailTests: XCTestCase {
 private struct ForbiddenTemplateRepository: LibraryRepository {
     func fetchLibrary() async throws -> LibraryOverview { throw AppError.forbidden(nil) }
     func searchLibrary(keyword: String) async throws -> [LibraryDocument] { throw AppError.forbidden(nil) }
-    func fetchTemplate(id: Int) async throws -> LibraryTemplate { throw AppError.forbidden(nil) }
+    func fetchTemplate(id: String) async throws -> LibraryTemplate { throw AppError.forbidden(nil) }
 }

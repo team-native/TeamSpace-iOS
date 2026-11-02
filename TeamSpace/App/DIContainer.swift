@@ -76,7 +76,7 @@ final class DIContainer {
             apiClient = APIClient(baseURL: baseURL, transport: URLSessionTransport(), tokenStorage: tokenStorage)
         } else {
             apiClient = APIClient(baseURL: MockTransport.baseURL, transport: MockTransport(), tokenStorage: tokenStorage)
-            recentSearchSeed = MockLibraryFixture.recentKeywords
+            recentSearchSeed = MockDocStore.recentKeywords
             boardSearchSeed = MockBoardStore.recentKeywords
         }
         return DIContainer(
@@ -107,7 +107,7 @@ final class DIContainer {
             notificationPermissionRepository: MockNotificationPermissionRepository(status: permission),
             recentSearchRepository: UserDefaultsRecentSearchRepository(
                 defaults: UserDefaults(suiteName: "preview.library.search") ?? .standard,
-                seed: MockLibraryFixture.recentKeywords
+                seed: MockDocStore.recentKeywords
             ),
             boardRecentSearchRepository: UserDefaultsRecentSearchRepository(
                 defaults: UserDefaults(suiteName: "preview.board.search") ?? .standard,
@@ -598,7 +598,7 @@ extension DIContainer {
         LibrarySearchViewModel(searchLibraryUseCase: searchLibraryUseCase, recentSearchUseCase: recentSearchUseCase)
     }
 
-    func makeTemplateDetailViewModel(templateId: Int) -> TemplateDetailViewModel {
+    func makeTemplateDetailViewModel(templateId: String) -> TemplateDetailViewModel {
         TemplateDetailViewModel(
             templateId: templateId,
             fetchTemplateUseCase: FetchLibraryTemplateUseCase(libraryRepository: libraryRepository)
@@ -721,7 +721,7 @@ extension DIContainer {
         RuleListViewModel(fetchRulesUseCase: fetchRulesUseCase)
     }
 
-    func makeRuleDetailViewModel(ruleId: Int) -> RuleDetailViewModel {
+    func makeRuleDetailViewModel(ruleId: String) -> RuleDetailViewModel {
         RuleDetailViewModel(
             ruleId: ruleId,
             fetchRuleDetailUseCase: fetchRuleDetailUseCase,

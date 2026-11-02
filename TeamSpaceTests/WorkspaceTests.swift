@@ -393,7 +393,7 @@ final class WorkspaceTests: XCTestCase {
         await viewModel.load()
 
         XCTAssertEqual(viewModel.state.value?.unreadNotificationCount, 5, "알림 센터와 같은 안 읽은 알림 수")
-        XCTAssertEqual(viewModel.state.value?.submittedDocumentCount, 6, "임시 저장은 빼고 센 내 결재")
+        XCTAssertEqual(viewModel.state.value?.submittedDocumentCount, 7, "서버(/me/summary submittedApprovals)는 임시 저장도 세요")
         XCTAssertEqual(viewModel.state.value?.postCount, 3)
     }
 
@@ -410,6 +410,9 @@ final class WorkspaceTests: XCTestCase {
         XCTAssertEqual(viewModel.posts[2].statsText, "좋아요 5 · 댓글 2 · 첨부 1개")
         XCTAssertTrue(viewModel.posts[1].metaText(authorName: "옥물결").hasSuffix("나만 보는 익명 기록"))
         XCTAssertEqual(viewModel.comments.first?.quoteText, "“예약 기준이 정리되면 좋겠어요.”")
+        XCTAssertEqual(viewModel.comments.first?.postId, 22, "글 id 는 href 끝 숫자")
+        XCTAssertNil(viewModel.comments[2].postId, "href 가 없으면 이동하지 않아요")
+        XCTAssertFalse(viewModel.comments.first?.metaText.hasPrefix(" · ") ?? true, "글 제목이 없으면 날짜부터")
     }
 
     func testMyProposalsFilter() async {
