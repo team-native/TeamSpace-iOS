@@ -96,6 +96,8 @@ enum ProposalStatus: String, UnknownCaseDecodable, Encodable, Hashable, Sendable
     case answered = "ANSWERED"
     case adopted = "ADOPTED"
     case closed = "CLOSED"
+    /// 담당 부서가 반려함 (서버 "반려")
+    case rejected = "REJECTED"
     case unknown = "UNKNOWN"
 
     static let unknownCase: ProposalStatus = .unknown

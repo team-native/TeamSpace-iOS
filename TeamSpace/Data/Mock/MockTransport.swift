@@ -458,32 +458,39 @@ struct MockTransport: HTTPTransport {
         }
     }
 
-    /// 12 운영 제안 — /proposals · /proposals/{id} · recommend · comments
+    /// 12 운영 제안 — /proposals · /proposals/{id} · recommend · comments (서버 develop 형식)
     private func proposalRoute(_ request: URLRequest, components: [String]) throws -> (Data, HTTPURLResponse)? {
-        let notFound = #"{"code":404,"message":"해당 제안을 찾을 수 없습니다."}"#
+        let notFound = #"{"detail":"리소스를 찾을 수 없습니다."}"#
         let id = components.count > 1 ? Int(components[1]) : nil
+        let query = Self.query(of: request)
         switch (request.httpMethod ?? "", components.count) {
         case ("GET", 1):
-            return try respond(request, status: 200, json: proposalStore.listJSON())
+            let limit = query["limit"].flatMap(Int.init) ?? 20
+            guard (1...100).contains(limit) else { return try respond(request, status: 422, json: #"{"detail":"limit 범위가 아니에요."}"#) }
+            return try respond(request, status: 200, json: proposalStore.listJSON(cursor: query["cursor"], limit: limit))
         case ("GET", 2):
             guard let id = id, let json = proposalStore.detailJSON(id: id) else { return try respond(request, status: 404, json: notFound) }
             return try respond(request, status: 200, json: json)
         case ("POST", 1):
             guard
                 let body = request.httpBody,
-                let dto = try? JSONDecoder().decode(ProposalCreateRequestDTO.self, from: body)
-            else { return try respond(request, status: 400, json: #"{"code":400,"message":"잘못된 요청입니다."}"#) }
+                let dto = try? JSONDecoder().decode(ServerProposalCreateRequestDTO.self, from: body)
+            else { return try respond(request, status: 422, json: #"{"detail":"잘못된 요청입니다."}"#) }
+            guard !dto.body.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                return try respond(request, status: 422, json: #"{"detail":"제안 내용을 입력해주세요."}"#)
+            }
             return try respond(request, status: 201, json: proposalStore.create(dto))
         case ("POST", 3) where components[2] == "recommend":
             guard let id = id, let json = proposalStore.toggleRecommend(id: id) else { return try respond(request, status: 404, json: notFound) }
             return try respond(request, status: 200, json: json)
         case ("POST", 3) where components[2] == "comments":
-            guard
-                let id = id,
-                let body = request.httpBody,
-                let dto = try? JSONDecoder().decode(ProposalCommentRequestDTO.self, from: body),
-                let json = proposalStore.addComment(id: id, request: dto)
+            guard let id = id, let body = request.httpBody,
+                  let dto = try? JSONDecoder().decode(ServerProposalCommentRequestDTO.self, from: body)
             else { return try respond(request, status: 404, json: notFound) }
+            guard !dto.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                return try respond(request, status: 422, json: #"{"detail":"댓글 내용을 입력해주세요."}"#)
+            }
+            guard let json = proposalStore.addComment(id: id, request: dto) else { return try respond(request, status: 404, json: notFound) }
             return try respond(request, status: 201, json: json)
         default:
             return nil

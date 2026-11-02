@@ -44,7 +44,7 @@ final class ProposalListViewModel {
     /// "상태 전체" 메뉴 — 목록에 있는 상태
     var statuses: [ProposalStatus] {
         ProposalStatus.steps.filter { step in all.contains { $0.status == step } }
-            + [.answered, .adopted, .closed].filter { step in all.contains { $0.status == step } }
+            + [.answered, .adopted, .closed, .rejected].filter { step in all.contains { $0.status == step } }
     }
 
     var departmentTitle: String { department ?? "부서 전체" }

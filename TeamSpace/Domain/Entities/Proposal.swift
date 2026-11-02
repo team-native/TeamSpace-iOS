@@ -46,7 +46,8 @@ struct ProposalComment: Equatable, Identifiable, Sendable {
 struct ProposalDetail: Equatable, Sendable {
     var proposal: ProposalSummary
     let body: String
-    let viewCount: Int
+    /// 서버가 조회 수를 주지 않으면 nil
+    let viewCount: Int?
     /// 내가 추천했는지 (1인 1회)
     var isRecommended: Bool
     let steps: [ProposalStep]

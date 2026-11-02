@@ -9,7 +9,7 @@ extension ProposalStatus: BadgeRepresentable {
         case .reviewing: return .primary
         case .inProgress: return .violet
         case .completed, .answered, .adopted: return .positive
-        case .closed, .unknown: return .neutral
+        case .closed, .rejected, .unknown: return .neutral
         }
     }
 }
