@@ -297,4 +297,57 @@ final class MockApprovalStore: @unchecked Sendable {
         drafts[id] = (fields, reason)
         return .success(Self.json(["id": String(id), "status": isDraft ? "작성 중" : "검토 중"]))
     }
+
+    // MARK: 결재 수정
+
+    enum UpdateError: Error { case forbidden, invalid(String) }
+
+    /// PATCH /approvals/{id} — 서버처럼 작성 중 · 반려된 내 결재만, 모르는 항목(kind 등)은 422.
+    /// status 결재 대기면 결재선을 새로 만들어 '검토 중', 작성 중이면 기안만 남겨요. 응답은 상세 한 건.
+    func update(id: Int, body: [String: Any], now: Date = Date()) -> Result<String, UpdateError> {
+        let allowed: Set<String> = [
+            "title", "type", "amount", "status", "project", "useDate", "reason", "files", "staff",
+            "period", "details", "schedule", "budget", "personnel", "costType", "templateSlug"
+        ]
+        if let unknown = body.keys.first(where: { !allowed.contains($0) }) {
+            return .failure(.invalid("\(unknown): Extra inputs are not permitted"))
+        }
+        lock.lock()
+        guard let index = storage.firstIndex(where: { $0.id == id && $0.isMine }),
+              ["DRAFT", "REJECTED"].contains(storage[index].status) else {
+            lock.unlock()
+            return .failure(.forbidden)
+        }
+        let status = body["status"] as? String
+        guard status == nil || status == "작성 중" || status == "결재 대기" else {
+            lock.unlock()
+            return .failure(.invalid("결재 상태는 작성 중 또는 결재 제출만 설정할 수 있습니다."))
+        }
+        let title = (body["title"] as? String ?? storage[index].title).trimmingCharacters(in: .whitespaces)
+        let reason = body["reason"] as? String ?? reason(for: storage[index])
+        if status == "결재 대기" {
+            let kind = storage[index].kind
+            let failure: String? = title.isEmpty ? "결재 제목을 입력해주세요."
+                : kind == "STAFFING" && (body["staff"] as? [String: Any] ?? [:]).isEmpty ? "지원할 직군과 인원을 입력해주세요."
+                : ["PROJECT_REQUEST", "OPERATION_REQUEST", "ETC"].contains(kind) && reason.trimmingCharacters(in: .whitespaces).isEmpty ? "요청 사유를 입력해주세요."
+                : nil
+            if let failure {
+                lock.unlock()
+                return .failure(.invalid(failure))
+            }
+        }
+        storage[index].title = title
+        if let amount = body["amount"] as? Int { storage[index].amount = storage[index].kind == "STAFFING" || amount == 0 ? nil : amount }
+        let fields = ((body["details"] as? [String: Any])?["fields"] as? [[String: String]])?
+            .map { ($0["title"] ?? "", $0["value"] ?? "") } ?? drafts[id]?.fields ?? []
+        drafts[id] = (fields, reason)
+        storage[index].updatedAt = ISO8601DateFormatter().string(from: now)
+        if let status {
+            storage[index].status = status == "결재 대기" ? "IN_REVIEW" : "DRAFT"
+            lines[id] = nil
+            rejectReasons[id] = nil
+        }
+        lock.unlock()
+        return serverDetailJSON(id: id).map { .success($0) } ?? .failure(.forbidden)
+    }
 }

@@ -153,24 +153,29 @@ struct ApprovalInfoCard: View {
 }
 
 /// 하단 두 버튼 (반려 · 승인하기 / 요청 취소 · 수정하기)
+/// 하단 버튼 두 개 — 한쪽이 nil 이면 남은 버튼만 꽉 차게 보여줘요.
 struct DualButtonBar: View {
-    let leading: (title: String, action: () -> Void)
-    let trailing: (title: String, action: () -> Void)
+    let leading: (title: String, action: () -> Void)?
+    let trailing: (title: String, action: () -> Void)?
     let isLeadingDestructive: Bool
     let isDisabled: Bool
 
     var body: some View {
         HStack(spacing: Spacing.sm + Spacing.xxxs) {
-            Button(action: leading.action) {
-                Text(leading.title)
-                    .tsFont(.bodyBold)
-                    .foregroundStyle(isLeadingDestructive ? Color.tsNegative : Color.tsInk2)
-                    .frame(maxWidth: .infinity, minHeight: 52)
-                    .background(RoundedRectangle(cornerRadius: Radius.xl, style: .continuous).fill(Color.tsSurface2))
+            if let leading {
+                Button(action: leading.action) {
+                    Text(leading.title)
+                        .tsFont(.bodyBold)
+                        .foregroundStyle(isLeadingDestructive ? Color.tsNegative : Color.tsInk2)
+                        .frame(maxWidth: .infinity, minHeight: 52)
+                        .background(RoundedRectangle(cornerRadius: Radius.xl, style: .continuous).fill(Color.tsSurface2))
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
-            Button(trailing.title, action: trailing.action)
-                .buttonStyle(.tsPrimary)
+            if let trailing {
+                Button(trailing.title, action: trailing.action)
+                    .buttonStyle(.tsPrimary)
+            }
         }
         .disabled(isDisabled)
         .padding(.horizontal, Spacing.screen)

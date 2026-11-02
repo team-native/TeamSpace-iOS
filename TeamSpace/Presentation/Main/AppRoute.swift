@@ -21,7 +21,7 @@ enum AppRoute: Hashable {
     // 05 결재
     case approvalDetail(documentId: Int) // 05-3 내 결재 상세 · 05-4 받은 결재 검토
     case approvalCompose                 // 05-0 결재 올리기 · 종류 선택
-    case approvalResume(kind: ApprovalComposeKind, title: String) // 07-5 임시 저장 문서 이어서 작성
+    case approvalEdit(documentId: Int)   // 05-3 결재 수정 · 07-5 임시 저장 문서 이어서 작성 (작성 중 · 반려)
     // 06 문서함
     case librarySearch                   // 06-2 문서 검색
     case templateDetail(id: String)          // 06-3 템플릿 상세

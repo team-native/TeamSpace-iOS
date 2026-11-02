@@ -67,7 +67,7 @@ struct DraftDocumentsView: View {
             ForEach(drafts) { draft in
                 DraftDocumentCard(
                     document: draft,
-                    onResume: { onNavigate(.approvalResume(kind: draft.kind.composeKind, title: draft.title)) },
+                    onResume: { onNavigate(.approvalEdit(documentId: draft.id)) },
                     onDelete: { viewModel.pendingDelete = draft }
                 )
             }

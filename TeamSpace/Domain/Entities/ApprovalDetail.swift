@@ -60,9 +60,21 @@ struct ApprovalDetail: Equatable, Sendable {
         myApprovalId != nil && item.status.isWaiting
     }
 
-    /// 05-3 에서 요청 취소 · 수정하기를 보여줄지
+    /// 05-3 수정하기 — 서버는 작성 중 · 반려된 내 결재만 고칠 수 있어요. (PATCH /approvals/{id})
     var canEdit: Bool {
+        isMine && (item.status == .draft || item.status == .rejected)
+    }
+
+    /// 05-3 요청 취소 — 작성 중 · 대기 · 검토 중인 내 결재 (POST /approvals/{id}/cancel)
+    var canWithdraw: Bool {
         isMine && (item.status == .draft || item.status.isWaiting)
+    }
+
+    /// 상세 항목 값 — 여러 이름 중 처음 맞는 것. 비어 있거나 "-" 면 nil
+    func fieldValue(_ titles: String...) -> String? {
+        guard let value = fields.first(where: { titles.contains($0.title) })?.value,
+              !value.isEmpty, value != "-" else { return nil }
+        return value
     }
 
     /// 지금 검토 중인 결재선 순서 (1부터)

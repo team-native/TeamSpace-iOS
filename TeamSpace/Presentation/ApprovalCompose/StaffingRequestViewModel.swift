@@ -18,6 +18,8 @@ final class StaffingRequestViewModel {
     var isPeriodPickerPresented = false
     private(set) var isSubmitting = false
     var errorMessage: String?
+    /// 고치는 중인 결재 (작성 중 · 반려). nil 이면 새로 올려요.
+    private(set) var documentId: Int?
 
     private let submitDocumentUseCase: SubmitDocumentUseCase
 
@@ -27,6 +29,19 @@ final class StaffingRequestViewModel {
         let thisMonth = calendar.startOfMonth(for: now)
         self.startMonth = calendar.date(byAdding: .month, value: 1, to: thisMonth) ?? thisMonth
         self.endMonth = calendar.date(byAdding: .month, value: 2, to: thisMonth) ?? thisMonth
+    }
+
+    /// 작성 중 · 반려된 결재를 고칠 때 기존 내용을 채워요. "2026.11 ~ 2026.12" 처럼 보낸 기간을 다시 읽어요.
+    func prefill(from detail: ApprovalDetail) {
+        documentId = detail.item.id
+        if let value = detail.fieldValue("프로젝트") { project = value }
+        if let value = detail.fieldValue("필요 직군").flatMap(StaffingRole.init(rawValue:)) { role = value }
+        if let count = detail.fieldValue("인원").flatMap({ Int($0.filter(\.isNumber)) }) {
+            headcount = min(max(count, Self.headcountRange.lowerBound), Self.headcountRange.upperBound)
+        }
+        let months = (detail.fieldValue("투입 기간") ?? "").components(separatedBy: "~").compactMap(Self.parseMonth)
+        if months.count == 2 { setPeriod(start: months[0], end: months[1]) }
+        reason = detail.reason
     }
 
     /// "11월 ~ 12월"
@@ -70,13 +85,20 @@ final class StaffingRequestViewModel {
         isSubmitting = true
         defer { isSubmitting = false }
         do {
-            let id = try await submitDocumentUseCase.submit(draft)
+            let id = try await submitDocumentUseCase.submit(draft, documentId: documentId)
             return SubmittedDocument(documentId: id, firstApproverName: ApprovalLinePreview.defaultLine.first?.name ?? "")
         } catch {
             AppLog.record(error, context: "approval.staffing")
             errorMessage = error.userMessage
             return nil
         }
+    }
+
+    /// "2026.11" → 그달 1일
+    private static func parseMonth(_ text: String) -> Date? {
+        let numbers = text.trimmingCharacters(in: .whitespaces).split(separator: ".").compactMap { Int($0) }
+        guard numbers.count == 2 else { return nil }
+        return Calendar.current.date(from: DateComponents(year: numbers[0], month: numbers[1], day: 1))
     }
 
     /// "2026.11"

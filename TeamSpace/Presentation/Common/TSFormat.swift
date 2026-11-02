@@ -112,6 +112,11 @@ enum TSFormat {
         fullDateFormatter.string(from: date)
     }
 
+    /// "2026.10.20" → 날짜 (fullDate 의 반대, 결재 수정 때 기존 값을 채워요)
+    static func parseFullDate(_ text: String) -> Date? {
+        fullDateFormatter.date(from: text.trimmingCharacters(in: .whitespaces))
+    }
+
     /// 2026년 10월 16일
     static func longDate(_ date: Date) -> String {
         longDateFormatter.string(from: date)

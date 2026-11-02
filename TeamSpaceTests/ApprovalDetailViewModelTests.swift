@@ -23,7 +23,8 @@ final class ApprovalDetailViewModelTests: XCTestCase {
 
         let detail = try XCTUnwrap(viewModel.detail)
         XCTAssertTrue(detail.isMine)
-        XCTAssertTrue(detail.canEdit, "검토 중이면 요청 취소 · 수정하기")
+        XCTAssertFalse(detail.canEdit, "검토 중이면 서버가 수정을 막아요")
+        XCTAssertTrue(detail.canWithdraw, "검토 중이면 요청 취소만")
         XCTAssertFalse(detail.canDecide)
         XCTAssertEqual(detail.fields.map(\.title), ["비용 유형", "프로젝트", "사용 예정일"])
         XCTAssertEqual(detail.approvers.map(\.name), ["안율", "김민준", "이시우"])

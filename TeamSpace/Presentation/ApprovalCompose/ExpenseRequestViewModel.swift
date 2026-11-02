@@ -17,12 +17,26 @@ final class ExpenseRequestViewModel {
     var isFileImporterPresented = false
     private(set) var isSubmitting = false
     var errorMessage: String?
+    /// 고치는 중인 결재 (작성 중 · 반려). nil 이면 새로 올려요.
+    private(set) var documentId: Int?
 
     private let submitDocumentUseCase: SubmitDocumentUseCase
 
     init(submitDocumentUseCase: SubmitDocumentUseCase, now: Date = Date()) {
         self.submitDocumentUseCase = submitDocumentUseCase
         self.useDate = now
+    }
+
+    /// 작성 중 · 반려된 결재를 고칠 때 기존 내용을 채워요.
+    func prefill(from detail: ApprovalDetail) {
+        documentId = detail.item.id
+        expenseType = detail.fieldValue("비용 유형").flatMap(ExpenseType.init(rawValue:))
+        project = detail.fieldValue("프로젝트") ?? ""
+        content = detail.item.title
+        amountText = detail.item.amount.map(String.init) ?? ""
+        if let date = detail.fieldValue("사용 예정일").flatMap(TSFormat.parseFullDate) { useDate = date }
+        reason = detail.reason
+        attachmentNames = detail.attachments.map(\.name)
     }
 
     var amount: Int {
@@ -69,12 +83,12 @@ final class ExpenseRequestViewModel {
 
     /// 결재 요청 제출 → 05-7
     func submit() async -> SubmittedDocument? {
-        await run { try await self.submitDocumentUseCase.submit(self.draft) }
+        await run { try await self.submitDocumentUseCase.submit(self.draft, documentId: self.documentId) }
     }
 
     /// 임시 저장 → 내가 올린 결재의 '작성 중'
     func saveDraft() async -> Bool {
-        await run { try await self.submitDocumentUseCase.saveDraft(self.draft) } != nil
+        await run { try await self.submitDocumentUseCase.saveDraft(self.draft, documentId: self.documentId) } != nil
     }
 
     private func run(_ work: () async throws -> Int) async -> SubmittedDocument? {
