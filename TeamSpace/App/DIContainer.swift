@@ -406,6 +406,10 @@ final class DIContainer {
         FetchInquiryDetailUseCase(inquiryRepository: inquiryRepository)
     }
 
+    var resolveInquiryUseCase: ResolveInquiryUseCase {
+        ResolveInquiryUseCase(inquiryRepository: inquiryRepository)
+    }
+
     var submitInquiryUseCase: SubmitInquiryUseCase {
         SubmitInquiryUseCase(inquiryRepository: inquiryRepository)
     }
@@ -801,7 +805,11 @@ extension DIContainer {
     }
 
     func makeInquiryDetailViewModel(inquiryId: Int) -> InquiryDetailViewModel {
-        InquiryDetailViewModel(inquiryId: inquiryId, fetchInquiryDetailUseCase: fetchInquiryDetailUseCase)
+        InquiryDetailViewModel(
+            inquiryId: inquiryId,
+            fetchInquiryDetailUseCase: fetchInquiryDetailUseCase,
+            resolveInquiryUseCase: resolveInquiryUseCase
+        )
     }
 
     func makeInquiryComposeViewModel(context: InquiryComposeContext) -> InquiryComposeViewModel {

@@ -28,6 +28,8 @@ struct ServerInquiryDTO: Decodable {
     let reference: InquiryReferenceDTO?
     /// 추가 메시지 `[{text, at, who}]`
     let replies: [Reply]
+    /// 작성자가 해결됨으로 바꾼 시각 (status "해결됨")
+    let resolvedAt: Date?
 
     struct Reply: Decodable {
         let text: String
@@ -61,10 +63,14 @@ struct ServerInquiryDTO: Decodable {
         assignee = try? container.decodeIfPresent(String.self, forKey: .assignee)
         reference = try? container.decodeIfPresent(InquiryReferenceDTO.self, forKey: .reference)
         replies = (try? container.decodeIfPresent([Reply].self, forKey: .replies)) ?? []
+        let resolvedText = try? container.decodeIfPresent(String.self, forKey: .resolvedAt)
+        let resolvedDate = resolvedText.flatMap { $0 }.flatMap(ServerDate.parse)
+        let isResolvedStatus = status.trimmingCharacters(in: .whitespaces) == "해결됨"
+        resolvedAt = resolvedDate ?? (isResolvedStatus ? (steps.last.flatMap { $0 } ?? createdAt ?? Date()) : nil)
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, type, dept, title, body, anonymous, status, steps, answer, createdAt, author, assignee, reference, replies
+        case id, type, dept, title, body, anonymous, status, steps, answer, createdAt, author, assignee, reference, replies, resolvedAt
     }
 
     var departmentValue: InquiryDepartment { department }
@@ -113,7 +119,8 @@ struct ServerInquiryDTO: Decodable {
             reference: reference?.toEntity(),
             followUps: replies.filter { !$0.text.isEmpty }.map {
                 InquiryFollowUp(text: $0.text, author: $0.who ?? "익명", sentAt: $0.at ?? receivedAt)
-            }
+            },
+            resolvedAt: resolvedAt
         )
     }
 

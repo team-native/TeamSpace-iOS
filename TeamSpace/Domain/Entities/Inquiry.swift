@@ -71,6 +71,10 @@ struct InquiryDetail: Equatable, Sendable {
     let reference: InquiryReference?
     /// 답변 뒤에 이어서 보낸 추가 메시지 (오래된 순)
     var followUps: [InquiryFollowUp] = []
+    /// 작성자가 "해결됐어요"를 누른 시각 (POST /inquiries/{id}/resolve)
+    var resolvedAt: Date?
+
+    var isResolved: Bool { resolvedAt != nil }
 }
 
 /// 11-4 추가 메시지 — 서버 `replies` 한 건 (익명 문의 작성자는 "익명")
