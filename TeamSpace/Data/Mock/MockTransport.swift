@@ -231,8 +231,8 @@ struct MockTransport: HTTPTransport {
             return try proposalRoute(request, components: components)
         }
         guard components.first == "projects" else { return nil }
-        let notFound = #"{"code":404,"message":"해당 프로젝트를 찾을 수 없습니다."}"#
-        let projectId = components.count > 1 ? Int(components[1]) : nil
+        let notFound = #"{"detail":"프로젝트를 찾을 수 없습니다."}"#
+        let projectId = components.count > 1 ? components[1] : nil
         switch (request.httpMethod ?? "", components.count) {
         case ("GET", 1):
             return try respond(request, status: 200, json: projectStore.listJSON())
@@ -259,12 +259,12 @@ struct MockTransport: HTTPTransport {
         case ("POST", 3) where path == "apply":
             guard
                 let id = projectId,
-                let body = request.httpBody,
-                let dto = try? JSONCoder.makeDecoder().decode(ApplyRequestDTO.self, from: body)
+                let data = request.httpBody,
+                let body = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
             else {
-                return try respond(request, status: 400, json: #"{"code":400,"message":"잘못된 요청입니다."}"#)
+                return try respond(request, status: 400, json: #"{"detail":"잘못된 요청입니다."}"#)
             }
-            let result = projectStore.apply(projectId: id, request: dto)
+            let result = projectStore.apply(projectId: id, body: body)
             return try respond(request, status: result.0, json: result.1)
         case ("POST", 5) where path == "decision":
             guard

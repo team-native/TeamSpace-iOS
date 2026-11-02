@@ -8,7 +8,7 @@ struct DecideApplicantUseCase {
         self.projectRepository = projectRepository
     }
 
-    func execute(projectId: Int, applicant: Applicant, decision: ApplicantDecision, reason: String) async throws -> Applicant {
+    func execute(projectId: String, applicant: Applicant, decision: ApplicantDecision, reason: String) async throws -> Applicant {
         let trimmed = reason.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { throw AppError.invalidInput("결과 안내 사유를 적어 주세요.") }
         guard applicant.status.isCancelable else { throw AppError.invalidInput("이미 결과를 등록한 지원자예요.") }

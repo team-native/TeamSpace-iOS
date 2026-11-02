@@ -112,6 +112,6 @@ private struct RecruitmentSheets: ViewModifier {
 
 #Preview {
     NavigationStack {
-        RecruitmentView(viewModel: DIContainer.preview().makeRecruitmentViewModel(projectId: 4), onNavigate: { _ in })
+        RecruitmentView(viewModel: DIContainer.preview().makeRecruitmentViewModel(projectId: "team-guide"), onNavigate: { _ in })
     }
 }

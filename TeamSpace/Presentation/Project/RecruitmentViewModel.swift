@@ -14,11 +14,11 @@ final class RecruitmentViewModel {
     var isSubmittedAlertPresented = false
     var errorMessage: String?
 
-    private let projectId: Int
+    private let projectId: String
     private let fetchRecruitmentUseCase: FetchRecruitmentUseCase
     private let applyProjectUseCase: ApplyProjectUseCase
 
-    init(projectId: Int, fetchRecruitmentUseCase: FetchRecruitmentUseCase, applyProjectUseCase: ApplyProjectUseCase) {
+    init(projectId: String, fetchRecruitmentUseCase: FetchRecruitmentUseCase, applyProjectUseCase: ApplyProjectUseCase) {
         self.projectId = projectId
         self.fetchRecruitmentUseCase = fetchRecruitmentUseCase
         self.applyProjectUseCase = applyProjectUseCase
@@ -54,7 +54,7 @@ final class RecruitmentViewModel {
         do {
             _ = try await applyProjectUseCase.execute(
                 projectId: projectId,
-                draft: ApplicationDraft(openingId: post.opening.id, availability: availability, message: message)
+                draft: ApplicationDraft(openingId: post.opening.id, position: post.opening.title, availability: availability, message: message)
             )
             isApplySheetPresented = false
             isSubmittedAlertPresented = true

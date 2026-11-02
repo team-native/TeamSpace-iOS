@@ -41,9 +41,15 @@ struct ProjectProgressCard: View {
             }
             TSProgressBar(percent: project.progress)
             HStack {
-                Text("\(TSFormat.shortDate(project.startDate)) 시작")
+                if let start = project.startDate {
+                    Text("\(TSFormat.shortDate(start)) 시작")
+                }
                 Spacer()
-                Text("\(TSFormat.shortDate(project.endDate)) \(project.status == .completed ? "완료" : "출시 예정")")
+                if let end = project.endDate {
+                    Text("\(TSFormat.shortDate(end)) \(project.status == .completed ? "완료" : "출시 예정")")
+                } else if let due = project.dueText {
+                    Text(due)
+                }
             }
             .tsFont(.caption2)
             .foregroundStyle(Color.tsInk3)

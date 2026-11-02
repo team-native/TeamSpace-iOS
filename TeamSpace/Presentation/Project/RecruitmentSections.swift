@@ -132,7 +132,7 @@ struct ApplySheet: View {
                     CircleIconButton(icon: .close, accessibilityLabel: "닫기", size: 28, background: .tsSurface2) { dismiss() }
                 }
                 ApplySheetLabel(title: "지원 자리")
-                Text(viewModel.post.map { "\($0.opening.title) · \(TSFormat.month($0.opening.startDate)) ~ \(TSFormat.month($0.opening.endDate))" } ?? "")
+                Text(viewModel.post?.opening.headline ?? "")
                     .tsFont(.callout)
                     .foregroundStyle(Color.tsInk)
                     .padding(.horizontal, Spacing.lg)

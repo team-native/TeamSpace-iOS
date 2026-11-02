@@ -8,14 +8,16 @@ struct ProjectOpening: Equatable, Identifiable, Sendable {
     /// 자리 이름 (예: "iOS 개발")
     let title: String
     let headcount: Int
-    let startDate: Date
-    let endDate: Date
+    /// 서버가 기간을 글자로만 줄 때는 nil
+    let startDate: Date?
+    let endDate: Date?
     let description: String
 }
 
 /// 08-1 프로젝트 목록 한 건
 struct ProjectSummary: Equatable, Identifiable, Sendable {
-    let id: Int
+    /// 서버 slug (예: "book-on") 또는 숫자 문자열
+    let id: String
     let name: String
     let summary: String
     /// 담당 부서 (예: NativeLab)
@@ -23,21 +25,25 @@ struct ProjectSummary: Equatable, Identifiable, Sendable {
     let pmName: String
     let memberCount: Int
     let status: ProjectRunStatus
-    let startDate: Date
-    let endDate: Date
+    /// desc 의 "2026.08 – 2026.11" 에서 읽어요. 없으면 nil
+    let startDate: Date?
+    /// due("11.20 납품")나 기간 끝 달에서 읽어요. 없으면 nil
+    let endDate: Date?
     /// 0~100
     let progress: Int
     let openings: [ProjectOpening]
     /// 완료된 프로젝트의 결과 안내 (예: "회고 문서 공개")
     let resultNote: String?
     let updatedAt: Date
+    /// 서버 표시용 마감 (예: "11.20 납품")
+    var dueText: String? = nil
 
     var isRecruiting: Bool { !openings.isEmpty }
 }
 
 /// 함께하는 사람
 struct ProjectMember: Equatable, Identifiable, Sendable {
-    let id: Int
+    let id: String
     let name: String
     /// 예) PM · Design · iOS
     let role: String

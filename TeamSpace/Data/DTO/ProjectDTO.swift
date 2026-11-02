@@ -1,11 +1,7 @@
 import Foundation
 
-/// GET /projects · /projects/{id} · /projects/{id}/schedule 응답의 `data`
-/// 명세서에 응답 예시가 없어 Figma 08 기준으로 정했습니다. (백엔드와 맞춰야 함)
-struct ProjectListResponseDTO: Codable {
-    let list: [ProjectSummaryDTO]
-}
-
+/// Mock 프로젝트 데이터 · GET /projects/{id}/schedule 응답 — 서버에 일정 API 가 없어 Figma 08 기준이에요. (백엔드와 맞춰야 함)
+/// 목록 · 상세는 `ProjectServerDTO` 를 써요.
 struct ProjectOpeningDTO: Codable {
     let id: Int
     let role: String
@@ -21,7 +17,7 @@ struct ProjectOpeningDTO: Codable {
 }
 
 struct ProjectSummaryDTO: Codable {
-    let id: Int
+    let id: String
     let name: String
     let summary: String
     let department: String
@@ -41,37 +37,6 @@ struct ProjectSummaryDTO: Codable {
             memberCount: memberCount, status: ProjectRunStatus(rawValue: status) ?? .unknown,
             startDate: startDate, endDate: endDate, progress: progress,
             openings: openings.map { $0.toEntity() }, resultNote: resultNote, updatedAt: updatedAt
-        )
-    }
-}
-
-struct ProjectDetailDTO: Codable {
-    let project: ProjectSummaryDTO
-    let members: [MemberDTO]
-    let relatedItems: [RelatedItemDTO]
-    let isJoined: Bool
-
-    struct MemberDTO: Codable {
-        let id: Int
-        let name: String
-        let role: String
-    }
-
-    struct RelatedItemDTO: Codable {
-        let id: Int
-        let kind: String
-        let title: String
-        let date: Date?
-    }
-
-    func toEntity() -> ProjectDetail {
-        ProjectDetail(
-            project: project.toEntity(),
-            members: members.map { ProjectMember(id: $0.id, name: $0.name, role: $0.role) },
-            relatedItems: relatedItems.map {
-                ProjectRelatedItem(id: $0.id, kind: .init(rawValue: $0.kind) ?? .unknown, title: $0.title, date: $0.date)
-            },
-            isJoined: isJoined
         )
     }
 }

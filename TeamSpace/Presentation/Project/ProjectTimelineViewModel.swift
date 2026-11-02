@@ -24,10 +24,10 @@ final class ProjectTimelineViewModel {
     /// 펼쳐 본 지난 변경
     var expandedChangeIds: Set<Int> = []
 
-    private let projectId: Int
+    private let projectId: String
     private let fetchProjectTimelineUseCase: FetchProjectTimelineUseCase
 
-    init(projectId: Int, fetchProjectTimelineUseCase: FetchProjectTimelineUseCase) {
+    init(projectId: String, fetchProjectTimelineUseCase: FetchProjectTimelineUseCase) {
         self.projectId = projectId
         self.fetchProjectTimelineUseCase = fetchProjectTimelineUseCase
     }

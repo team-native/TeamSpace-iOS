@@ -686,15 +686,15 @@ extension DIContainer {
         ProjectListViewModel(fetchProjectsUseCase: fetchProjectsUseCase, fetchProfileUseCase: fetchProfileUseCase)
     }
 
-    func makeProjectDetailViewModel(projectId: Int) -> ProjectDetailViewModel {
+    func makeProjectDetailViewModel(projectId: String) -> ProjectDetailViewModel {
         ProjectDetailViewModel(projectId: projectId, fetchProjectDetailUseCase: fetchProjectDetailUseCase)
     }
 
-    func makeProjectTimelineViewModel(projectId: Int) -> ProjectTimelineViewModel {
+    func makeProjectTimelineViewModel(projectId: String) -> ProjectTimelineViewModel {
         ProjectTimelineViewModel(projectId: projectId, fetchProjectTimelineUseCase: fetchProjectTimelineUseCase)
     }
 
-    func makeRecruitmentViewModel(projectId: Int) -> RecruitmentViewModel {
+    func makeRecruitmentViewModel(projectId: String) -> RecruitmentViewModel {
         RecruitmentViewModel(
             projectId: projectId,
             fetchRecruitmentUseCase: fetchRecruitmentUseCase,
@@ -709,7 +709,7 @@ extension DIContainer {
         )
     }
 
-    func makeApplicantReviewViewModel(projectId: Int) -> ApplicantReviewViewModel {
+    func makeApplicantReviewViewModel(projectId: String) -> ApplicantReviewViewModel {
         ApplicantReviewViewModel(
             projectId: projectId,
             fetchApplicantsUseCase: fetchApplicantsUseCase,

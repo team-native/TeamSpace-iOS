@@ -7,25 +7,47 @@ final class ProjectRepositoryImpl: ProjectRepository, @unchecked Sendable {
         self.client = client
     }
 
+    /// 100건씩, 최대 5페이지
     func fetchProjects() async throws -> [ProjectSummary] {
-        try await request(Endpoint(method: .get, path: "projects"), as: ProjectListResponseDTO.self).list.map { $0.toEntity() }
+        var projects: [ProjectSummary] = []
+        var cursor: String?
+        for _ in 0..<5 {
+            var query = [URLQueryItem(name: "limit", value: "100")]
+            if let cursor { query.append(URLQueryItem(name: "cursor", value: cursor)) }
+            let page = try await request(Endpoint(method: .get, path: "projects", queryItems: query), as: ServerProjectPageDTO.self)
+            projects += page.items.map { $0.toEntity() }
+            guard let next = page.nextCursor else { break }
+            cursor = next
+        }
+        return projects
     }
 
-    func fetchProjectDetail(id: Int) async throws -> ProjectDetail {
-        try await request(Endpoint(method: .get, path: "projects/\(id)"), as: ProjectDetailDTO.self).toEntity()
+    /// 참여 여부는 서버 상세에 없어 /me/projects 와 비교해요. (실패하면 미참여)
+    func fetchProjectDetail(id: String) async throws -> ProjectDetail {
+        async let detailRequest = request(Endpoint(method: .get, path: "projects/\(id)"), as: ServerProjectDTO.self)
+        async let mineRequest = request(Endpoint(method: .get, path: "me/projects"), as: CursorPageDTO<ServerMyProjectRefDTO>.self)
+        let project = try await detailRequest
+        let mine = (try? await mineRequest)?.items ?? []
+        return project.toDetail(isJoined: mine.contains { $0.matches(project) })
     }
 
-    func fetchTimeline(projectId: Int) async throws -> ProjectTimeline {
+    func fetchTimeline(projectId: String) async throws -> ProjectTimeline {
         try await request(Endpoint(method: .get, path: "projects/\(projectId)/schedule"), as: ProjectTimelineDTO.self).toEntity()
     }
 
-    func fetchRecruitment(projectId: Int) async throws -> RecruitmentPost {
+    func fetchRecruitment(projectId: String) async throws -> RecruitmentPost {
         try await request(Endpoint(method: .get, path: "projects/\(projectId)/recruitment"), as: RecruitmentDTO.self).toEntity()
     }
 
-    func apply(projectId: Int, draft: ApplicationDraft) async throws -> ProjectApplication {
-        let endpoint = Endpoint(method: .post, path: "projects/\(projectId)/apply", body: ApplyRequestDTO(draft))
-        return try await request(endpoint, as: ApplicationDTO.self).toEntity()
+    /// 서버는 신청 번호만 돌려줘서 보낸 내용으로 신청을 만들어요.
+    func apply(projectId: String, draft: ApplicationDraft) async throws -> ProjectApplication {
+        let endpoint = Endpoint(method: .post, path: "projects/\(projectId)/apply", body: ServerApplyRequestDTO(draft))
+        let result = try await request(endpoint, as: ServerApplyResultDTO.self)
+        return ProjectApplication(
+            id: result.applicationId, projectId: projectId, projectName: "", role: draft.position, department: "",
+            status: .submitted, appliedAt: Date(), headcount: 1, pmName: "", message: draft.message, portfolioUrl: nil,
+            reviewedAt: nil, resultDueDate: nil, decidedAt: nil, resultReason: nil
+        )
     }
 
     func fetchMyApplications() async throws -> [ProjectApplication] {
@@ -43,11 +65,11 @@ final class ProjectRepositoryImpl: ProjectRepository, @unchecked Sendable {
         }
     }
 
-    func fetchApplicants(projectId: Int) async throws -> ApplicantBoard {
+    func fetchApplicants(projectId: String) async throws -> ApplicantBoard {
         try await request(Endpoint(method: .get, path: "projects/\(projectId)/applicants"), as: ApplicantBoardDTO.self).toEntity()
     }
 
-    func decide(projectId: Int, applicantId: Int, decision: ApplicantDecision, reason: String) async throws -> Applicant {
+    func decide(projectId: String, applicantId: Int, decision: ApplicantDecision, reason: String) async throws -> Applicant {
         let endpoint = Endpoint(
             method: .post,
             path: "projects/\(projectId)/applicants/\(applicantId)/decision",

@@ -8,7 +8,7 @@ struct FetchApplicantsUseCase {
         self.projectRepository = projectRepository
     }
 
-    func execute(projectId: Int) async throws -> ApplicantBoard {
+    func execute(projectId: String) async throws -> ApplicantBoard {
         var board = try await projectRepository.fetchApplicants(projectId: projectId)
         let order: [ApplicationStatus] = [.reviewing, .submitted, .accepted, .declined, .canceled, .unknown]
         board.applicants.sort {

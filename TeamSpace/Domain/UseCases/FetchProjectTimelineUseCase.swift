@@ -8,7 +8,7 @@ struct FetchProjectTimelineUseCase {
         self.projectRepository = projectRepository
     }
 
-    func execute(projectId: Int) async throws -> ProjectTimeline {
+    func execute(projectId: String) async throws -> ProjectTimeline {
         let timeline = try await projectRepository.fetchTimeline(projectId: projectId)
         return ProjectTimeline(
             projectName: timeline.projectName,

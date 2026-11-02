@@ -90,6 +90,6 @@ struct ProjectDetailView: View {
 
 #Preview {
     NavigationStack {
-        ProjectDetailView(viewModel: DIContainer.preview().makeProjectDetailViewModel(projectId: 1), onNavigate: { _ in })
+        ProjectDetailView(viewModel: DIContainer.preview().makeProjectDetailViewModel(projectId: "book-on"), onNavigate: { _ in })
     }
 }
