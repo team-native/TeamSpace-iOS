@@ -16,7 +16,7 @@ import Foundation
 /// - GET /docs · /docs/{slug} · /docs/{slug}/history · POST /docs/{slug}/read: Figma 06 문서함 · 09 규칙 (MockDocStore, 서버 develop 형식)
 /// - GET /me/summary · /me/projects: Figma 07 내 공간 예시 (서버 develop 형식, 홈은 여러 API 를 조합)
 /// - GET · POST /todos · PATCH /todos/{id}: Figma 07-2 (MockTodoStore, 서버 develop 형식, 메모리에 기억)
-/// - GET /events · POST /events/{id}/rsvp: Figma 07-7 ~ 07-9 (MockScheduleStore, 서버 develop 형식, 참석 응답 기억)
+/// - GET /events · /events/{id} · POST /events/{id}/rsvp · GET · PATCH /events/{id}/reminders: Figma 07-7 ~ 07-9 (MockScheduleStore, 서버 develop 형식, 응답 · 리마인더 기억)
 /// - GET /me/activity: Figma 07-10 댓글 (MockActivityFixture, 서버 develop 형식) · 내 글 · 제안은 /posts · /proposals 의 mine
 /// - GET · PATCH /me: Figma 07-13 (MockProfileStore, 서버 develop 형식, 저장 내용 기억)
 /// - /projects/~ · /applications/~: Figma 08 (MockProjectStore, 신청 · 결과 등록 기억)
@@ -505,7 +505,7 @@ struct MockTransport: HTTPTransport {
         }
     }
 
-    /// 07-7 · 07-8 일정 — GET /events?month= · POST /events/{id}/rsvp (서버 develop 형식)
+    /// 07-7 · 07-8 일정 — GET /events?month= · /events/{id} · POST rsvp · GET · PATCH reminders (서버 develop 형식)
     private func eventRoute(_ request: URLRequest, components: [String]) throws -> (Data, HTTPURLResponse)? {
         switch (request.httpMethod ?? "", components.count) {
         case ("GET", 1):
@@ -513,6 +513,19 @@ struct MockTransport: HTTPTransport {
             let limit = query["limit"].flatMap(Int.init) ?? 100
             guard (1...200).contains(limit) else { return try respond(request, status: 422, json: #"{"detail":"limit 범위가 아니에요."}"#) }
             return try respond(request, status: 200, json: scheduleStore.listJSON(month: query["month"], cursor: query["cursor"], limit: limit))
+        case ("GET", 2):
+            guard let id = Int(components[1]), let json = scheduleStore.detailJSON(id: id) else {
+                return try respond(request, status: 404, json: #"{"detail":"일정을 찾을 수 없습니다."}"#)
+            }
+            return try respond(request, status: 200, json: json)
+        case ("GET", 3) where components[2] == "reminders", ("PATCH", 3) where components[2] == "reminders":
+            let patch = request.httpMethod == "PATCH"
+                ? (request.httpBody.flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Bool] } ?? [:])
+                : nil
+            guard let id = Int(components[1]), let json = scheduleStore.remindersJSON(id: id, patch: patch) else {
+                return try respond(request, status: 404, json: #"{"detail":"일정을 찾을 수 없습니다."}"#)
+            }
+            return try respond(request, status: 200, json: json)
         case ("POST", 3) where components[2] == "rsvp":
             guard let id = Int(components[1]), let body = request.httpBody,
                   let dto = try? JSONDecoder().decode(ServerRsvpRequestDTO.self, from: body),

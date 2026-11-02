@@ -2,14 +2,9 @@ import Foundation
 
 final class WorkspaceRepositoryImpl: WorkspaceRepository, @unchecked Sendable {
     private let client: APIClient
-    private let reminderStore: ScheduleReminderStore
-    /// 일정 상세 · 참석 응답은 서버에 단건 경로가 없어 마지막으로 불러온 월별 일정에서 찾아요.
-    private let lock = NSLock()
-    private var eventCache: [Int: ServerEventDTO] = [:]
 
-    init(client: APIClient, reminderStore: ScheduleReminderStore = ScheduleReminderStore()) {
+    init(client: APIClient) {
         self.client = client
-        self.reminderStore = reminderStore
     }
 
     /// 07-1 — 서버에 홈 전용 응답이 없어 여러 API 를 함께 불러요.
@@ -157,15 +152,17 @@ final class WorkspaceRepositoryImpl: WorkspaceRepository, @unchecked Sendable {
         try await fetchEvents(month: month).compactMap { $0.toEntity() }
     }
 
-    /// 서버에 일정 상세 경로가 없어 이번 달 ± 2달 안에서 찾아요.
+    /// GET /events/{id} + GET /events/{id}/reminders — 리마인더를 못 불러오면 꺼진 것으로 보여줘요.
     func fetchScheduleDetail(id: Int) async throws -> ScheduleEventDetail {
-        guard let event = try await findEvent(id: id), let detail = event.toDetail(reminders: reminderStore.reminders(for: id)) else {
+        async let remindersTask = fetchReminders(eventId: id)
+        let event = try await fetchEvent(id: id)
+        guard let detail = event.toDetail(reminders: await remindersTask) else {
             throw AppError.notFound("일정을 찾을 수 없어요.")
         }
         return detail
     }
 
-    /// POST /events/{id}/rsvp — 응답은 `{eventId, rsvp}` 뿐이라 불러온 일정에 응답을 붙여 돌려줘요.
+    /// POST /events/{id}/rsvp — 응답은 `{eventId, rsvp}` 뿐이라 GET /events/{id} 로 다시 읽어요.
     func respond(scheduleId: Int, response: ScheduleResponse) async throws -> ScheduleEvent {
         let endpoint = Endpoint(
             method: .post,
@@ -173,43 +170,40 @@ final class WorkspaceRepositoryImpl: WorkspaceRepository, @unchecked Sendable {
             body: ServerRsvpRequestDTO(rsvp: response.serverValue)
         )
         _ = try await request(endpoint, as: IgnoredJSONValue.self)
-        guard var event = try await findEvent(id: scheduleId)?.toEntity() else {
+        guard var event = try await fetchEvent(id: scheduleId).toEntity() else {
             throw AppError.notFound("일정을 찾을 수 없어요.")
         }
         event.myResponse = response
-        event.respondedAt = Date()
+        event.respondedAt = event.respondedAt ?? Date()
         return event
     }
 
-    /// 서버에 리마인더가 없어 기기에 저장해요.
+    /// PATCH /events/{id}/reminders — 세 시점을 모두 보내요.
     func updateReminders(scheduleId: Int, reminders: [ReminderTiming]) async throws -> [ReminderTiming] {
-        reminderStore.save(reminders, for: scheduleId)
-        return reminderStore.reminders(for: scheduleId)
+        let endpoint = Endpoint(
+            method: .patch,
+            path: "events/\(scheduleId)/reminders",
+            body: ServerEventRemindersDTO(reminders)
+        )
+        return try await request(endpoint, as: ServerEventRemindersDTO.self).reminders
     }
 
     private func fetchEvents(month: Date) async throws -> [ServerEventDTO] {
         let query = [URLQueryItem(name: "month", value: FinanceMonthParameter.string(from: month)), URLQueryItem(name: "limit", value: "200")]
-        let items = try await request(Endpoint(method: .get, path: "events", queryItems: query), as: CursorPageDTO<ServerEventDTO>.self).items
-        lock.lock()
-        for item in items { eventCache[item.id] = item }
-        lock.unlock()
-        return items
+        return try await request(Endpoint(method: .get, path: "events", queryItems: query), as: CursorPageDTO<ServerEventDTO>.self).items
     }
 
-    /// 캐시에 있으면 그 달을 다시 불러 최신 응답을 읽고, 없으면 이번 달부터 앞뒤로 찾아요.
-    private func findEvent(id: Int) async throws -> ServerEventDTO? {
-        lock.lock()
-        let cached = eventCache[id]
-        lock.unlock()
-        let calendar = Calendar(identifier: .gregorian)
-        var months: [Date] = []
-        if let day = cached.flatMap({ ServerTodoDTO.date(fromDay: $0.date) }) { months.append(day) }
-        let now = Date()
-        months += [0, -1, 1, -2, 2].compactMap { calendar.date(byAdding: .month, value: $0, to: now) }
-        for month in months {
-            if let found = try await fetchEvents(month: month).first(where: { $0.id == id }) { return found }
+    private func fetchEvent(id: Int) async throws -> ServerEventDTO {
+        try await request(Endpoint(method: .get, path: "events/\(id)"), as: ServerEventDTO.self)
+    }
+
+    private func fetchReminders(eventId: Int) async -> [ReminderTiming] {
+        do {
+            return try await request(Endpoint(method: .get, path: "events/\(eventId)/reminders"), as: ServerEventRemindersDTO.self).reminders
+        } catch {
+            AppLog.record(error, context: "schedule.reminders")
+            return []
         }
-        return nil
     }
 
     /// GET /me/summary

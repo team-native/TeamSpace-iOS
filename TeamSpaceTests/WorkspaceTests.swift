@@ -327,9 +327,8 @@ final class WorkspaceTests: XCTestCase {
     }
 
     func testScheduleDetailAndReminders() async {
-        // 리마인더는 서버에 없어 기기에 저장해요 — 이전 실행 값이 남지 않게 먼저 심어요.
-        ScheduleReminderStore().save([.dayBefore, .hourBefore], for: 2)
-        let viewModel = makeContainer().makeScheduleDetailViewModel(scheduleId: 2)
+        let container = makeContainer()
+        let viewModel = container.makeScheduleDetailViewModel(scheduleId: 2)
 
         await viewModel.load()
 
@@ -339,17 +338,26 @@ final class WorkspaceTests: XCTestCase {
         XCTAssertEqual(viewModel.detail?.summary, "팀의 진행 상황을 나누고 다음 달에 함께할 일을 정해요.")
         XCTAssertEqual(viewModel.detail?.agendaNote, "프로젝트별 공유 자료는 회의 전날까지 남겨주세요.")
         XCTAssertEqual(viewModel.detail?.history, [], "서버에 변경 이력이 없어요")
-        XCTAssertEqual(viewModel.savedResponseText, "내 응답 저장됨", "서버는 응답 시각을 주지 않아요")
-        XCTAssertEqual(ReminderTiming.summary(viewModel.detail?.reminders ?? []), "하루 전 · 1시간 전")
+        XCTAssertEqual(viewModel.detail?.audience, "전체 구성원", "서버 audience \"전체\"")
+        XCTAssertEqual(viewModel.detail?.reminders, [], "서버 리마인더는 처음엔 모두 꺼져 있어요")
 
         viewModel.openReminderEditor()
-        viewModel.toggleReminder(.hourBefore)
         viewModel.toggleReminder(.tenMinutesBefore)
+        viewModel.toggleReminder(.dayBefore)
         await viewModel.saveReminders()
 
         XCTAssertEqual(viewModel.detail?.reminders, [.dayBefore, .tenMinutesBefore], "이른 순으로 저장")
         XCTAssertFalse(viewModel.isReminderEditorPresented)
-        XCTAssertEqual(ScheduleReminderStore().reminders(for: 2), [.dayBefore, .tenMinutesBefore], "기기에 남아요")
+
+        let reopened = container.makeScheduleDetailViewModel(scheduleId: 2)
+        await reopened.load()
+        XCTAssertEqual(reopened.detail?.reminders, [.dayBefore, .tenMinutesBefore], "PATCH /events/{id}/reminders 로 서버에 남아요")
+    }
+
+    func testReminderBody() throws {
+        let data = try JSONEncoder().encode(ServerEventRemindersDTO([.tenMinutesBefore, .dayBefore]))
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Bool])
+        XCTAssertEqual(json, ["oneDayBefore": true, "oneHourBefore": false, "tenMinutesBefore": true])
     }
 
     func testServerEventDecoding() throws {
