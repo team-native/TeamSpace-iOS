@@ -18,7 +18,7 @@ import Foundation
 /// - GET · POST /todos · PATCH /todos/{id}: Figma 07-2 (MockTodoStore, 서버 develop 형식, 메모리에 기억)
 /// - GET /events · POST /events/{id}/rsvp: Figma 07-7 ~ 07-9 (MockScheduleStore, 서버 develop 형식, 참석 응답 기억)
 /// - GET /workspace/activity · posts · proposals: Figma 07-10 ~ 07-12 (MockActivityFixture)
-/// - GET · PATCH /workspace/profile: Figma 07-13 (MockProfileStore, 저장 내용 기억)
+/// - GET · PATCH /me: Figma 07-13 (MockProfileStore, 서버 develop 형식, 저장 내용 기억)
 /// - /projects/~ · /applications/~: Figma 08 (MockProjectStore, 신청 · 결과 등록 기억)
 /// - GET /rules · /rules/{id} · POST /rules/{id}/acknowledge: Figma 09 (MockRuleStore, 읽음 확인 기억)
 /// - /proposals/~: Figma 12 운영 제안 (MockProposalStore, 제안 · 추천 · 댓글 기억)
@@ -227,6 +227,9 @@ struct MockTransport: HTTPTransport {
     private func projectRoute(_ request: URLRequest, path: String) throws -> (Data, HTTPURLResponse)? {
         guard let url = request.url else { return nil }
         let components = url.pathComponents.filter { $0 != "/" && $0 != MockTransport.baseURL.lastPathComponent }
+        if components == ["me"] {
+            return try profileRoute(request)
+        }
         if components == ["search"], request.httpMethod == "GET" {
             let queryItems = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
             let value = { (name: String) in queryItems.first { $0.name == name }?.value }
@@ -442,6 +445,27 @@ struct MockTransport: HTTPTransport {
         }
     }
 
+    /// 07-13 내 프로필 — GET · PATCH /me (서버 develop 형식)
+    private func profileRoute(_ request: URLRequest) throws -> (Data, HTTPURLResponse)? {
+        switch request.httpMethod ?? "" {
+        case "GET":
+            return try respond(request, status: 200, json: profileStore.json())
+        case "PATCH":
+            guard let body = request.httpBody,
+                  let dto = try? JSONDecoder().decode(ServerProfilePatchRequestDTO.self, from: body)
+            else { return try respond(request, status: 422, json: #"{"detail":"입력한 정보를 다시 확인해 주세요."}"#) }
+            guard dto.interests.count <= 5 else {
+                return try respond(request, status: 422, json: #"{"detail":"관심사는 최대 5개까지 등록할 수 있습니다."}"#)
+            }
+            guard dto.bio.count <= 60 else {
+                return try respond(request, status: 422, json: #"{"detail":"입력한 정보를 다시 확인해 주세요."}"#)
+            }
+            return try respond(request, status: 200, json: profileStore.update(dto))
+        default:
+            return nil
+        }
+    }
+
     /// 07-7 · 07-8 일정 — GET /events?month= · POST /events/{id}/rsvp (서버 develop 형식)
     private func eventRoute(_ request: URLRequest, components: [String]) throws -> (Data, HTTPURLResponse)? {
         switch (request.httpMethod ?? "", components.count) {
@@ -586,16 +610,6 @@ struct MockTransport: HTTPTransport {
                 todayTodoTitles: summary.today,
                 completedTodoCount: summary.completed
             ))
-        case ("GET", "profile"):
-            return try respond(request, status: 200, json: profileStore.json())
-        case ("PATCH", "profile"):
-            guard
-                let body = request.httpBody,
-                let dto = try? JSONCoder.makeDecoder().decode(ProfileUpdateRequestDTO.self, from: body)
-            else {
-                return try respond(request, status: 400, json: #"{"code":400,"message":"잘못된 요청입니다."}"#)
-            }
-            return try respond(request, status: 200, json: profileStore.update(dto))
         case ("GET", "activity"):
             let unread = notificationStore.items().filter { !$0.isRead }.count
             let submitted = approvalStore.items(mine: true).filter { $0.status != "DRAFT" }.count

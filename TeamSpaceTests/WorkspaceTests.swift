@@ -420,6 +420,22 @@ final class WorkspaceTests: XCTestCase {
         XCTAssertEqual(reloaded.interests.count, 3)
     }
 
+    func testServerProfileDecoding() throws {
+        let json = Data(#"{"id":"3","name":"양지우","email":"a@gsm.hs.kr","dept":"","bio":"","interests":["iOS"],"roles":["Member"],"lead":false}"#.utf8)
+        let profile = try JSONCoder.makeDecoder().decode(ServerProfileDTO.self, from: json).toEntity()
+
+        XCTAssertEqual(profile.name, "양지우")
+        XCTAssertEqual(profile.affiliation, "Native", "소속(dept)이 비어 있으면 Native 만")
+        XCTAssertEqual(profile.intro, "")
+        XCTAssertEqual(profile.interests, ["iOS"])
+        XCTAssertEqual(profile.avatarBackground, .gray, "배경색은 서버에 없으면 회색")
+
+        let body = try JSONEncoder().encode(ServerProfilePatchRequestDTO(ProfileUpdate(intro: "안녕", interests: ["UI"], avatarBackground: .pink)))
+        let object = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
+        XCTAssertEqual(object["bio"] as? String, "안녕", "한 줄 소개는 bio 로 보내요")
+        XCTAssertEqual(object["avatarBackground"] as? String, "PINK")
+    }
+
     func testProfileValidation() {
         XCTAssertThrowsError(try UpdateProfileUseCase.normalizedInterest("열한글자가넘는관심사입니다", existing: []))
         XCTAssertThrowsError(try UpdateProfileUseCase.normalizedInterest("새것", existing: ["a", "b", "c", "d", "e"]))

@@ -109,12 +109,12 @@ final class WorkspaceRepositoryImpl: WorkspaceRepository, @unchecked Sendable {
     }
 
     func fetchProfile() async throws -> MyProfile {
-        try await request(Endpoint(method: .get, path: "workspace/profile"), as: MyProfileDTO.self).toEntity()
+        try await request(Endpoint(method: .get, path: "me"), as: ServerProfileDTO.self).toEntity()
     }
 
     func updateProfile(_ update: ProfileUpdate) async throws -> MyProfile {
-        let endpoint = Endpoint(method: .patch, path: "workspace/profile", body: ProfileUpdateRequestDTO(update))
-        return try await request(endpoint, as: MyProfileDTO.self).toEntity()
+        let endpoint = Endpoint(method: .patch, path: "me", body: ServerProfilePatchRequestDTO(update))
+        return try await request(endpoint, as: ServerProfileDTO.self).toEntity()
     }
 
     /// GET /todos — 오프셋 커서로 끝까지 (100건씩, 최대 5페이지)

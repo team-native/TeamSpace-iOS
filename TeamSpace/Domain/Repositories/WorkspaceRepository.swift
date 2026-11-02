@@ -25,9 +25,9 @@ protocol WorkspaceRepository: Sendable {
     func fetchMyPosts() async throws -> MyPosts
     /// GET /workspace/proposals — 07-11 내가 작성한 운영 제안 (명세서에 없음)
     func fetchMyProposals() async throws -> [MyProposal]
-    /// GET /workspace/profile — 07-13 내 프로필 (명세서에 없음)
+    /// GET /me — 07-13 내 프로필
     func fetchProfile() async throws -> MyProfile
-    /// PATCH /workspace/profile — 한 줄 소개 · 관심사 · 배경색 저장 (명세서에 없음)
+    /// PATCH /me — 한 줄 소개(bio) · 관심사 · 배경색 저장 (배경색은 서버에 아직 없음)
     func updateProfile(_ update: ProfileUpdate) async throws -> MyProfile
     /// GET /todos — 사용자 할 일 목록 (받은 결재 할 일 포함)
     func fetchTodos() async throws -> [TodoItem]
