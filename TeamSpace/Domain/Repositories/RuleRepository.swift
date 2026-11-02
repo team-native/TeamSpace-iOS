@@ -1,12 +1,11 @@
 import Foundation
 
-/// 규칙 · 제도 저장소
-/// 명세서 경로를 쓰지만 응답 예시가 없어 필드는 Figma 09 기준으로 정했습니다. (백엔드와 맞춰야 함)
+/// 규칙 · 제도 저장소 — 서버는 규칙을 문서함 문서(`/docs`, type RULE · FINANCE)로 줘요.
 protocol RuleRepository: Sendable {
-    /// GET /rules — 규정 목록 및 분류 (명세서)
+    /// GET /docs — 운영 규칙 · 재무 문서
     func fetchRules() async throws -> [RuleSummary]
-    /// GET /rules/{ruleId} — 규정 본문 상세 및 개정 이력 (명세서). 09-4 비교용 이전 본문도 여기에 담아요.
-    func fetchRuleDetail(id: Int) async throws -> RuleDetail
-    /// POST /rules/{ruleId}/acknowledge — 읽음 확인 (명세서에 없음). 확인한 시각을 돌려줘요.
-    func acknowledge(ruleId: Int) async throws -> Date
+    /// GET /docs/{slug} + /docs/{slug}/history — 본문 조항과 개정 이력
+    func fetchRuleDetail(id: String) async throws -> RuleDetail
+    /// POST /docs/{slug}/read — 읽음 확인. 확인한 시각을 돌려줘요.
+    func acknowledge(ruleId: String) async throws -> Date
 }

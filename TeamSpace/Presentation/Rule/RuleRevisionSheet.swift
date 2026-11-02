@@ -62,7 +62,7 @@ private struct RuleRevisionRow: View {
                 Text(revision.summary)
                     .tsFont(.footnoteBold)
                     .foregroundStyle(Color.tsInk)
-                Text("\(revision.department) · \(revision.author)")
+                Text([revision.department, revision.author].filter { !$0.isEmpty }.joined(separator: " · "))
                     .tsFont(.caption2)
                     .foregroundStyle(Color.tsInk3)
             }

@@ -13,14 +13,24 @@ final class RuleTests: XCTestCase {
         return DIContainer(apiClient: client, tokenStorage: tokenStorage)
     }
 
+    /// 읽음 확인은 기기에 저장돼서 테스트마다 지워요.
+    override func setUp() {
+        super.setUp()
+        MockDocStore.docs.forEach { RuleAcknowledgementStore().clear($0.slug) }
+    }
+
     // MARK: 09-1 규칙 · 제도
 
     func testRuleListPutsUrgentRuleFirst() async {
         let viewModel = makeContainer().makeRuleListViewModel()
         await viewModel.load()
 
-        XCTAssertEqual(viewModel.urgentRule?.id, 1, "읽음 확인 안 한 중요 개정")
-        XCTAssertEqual(viewModel.rules.map(\.id), [1, 5, 13, 8, 12], "중요 개정 → 시행 예정 → 최근 개정순")
+        XCTAssertEqual(viewModel.urgentRule?.id, "project-principles", "읽음 확인 안 한 중요 개정")
+        XCTAssertEqual(
+            viewModel.rules.map(\.id),
+            ["project-principles", "meeting-principles", "outsourcing-pool", "operating-expenses", "onboarding", "card-receipts", "security-accounts"],
+            "중요 개정 → 시행 예정 → 최근 개정순 (규칙 · 재무 문서)"
+        )
         XCTAssertEqual(viewModel.urgentRule?.status, .scheduled)
     }
 
@@ -29,25 +39,25 @@ final class RuleTests: XCTestCase {
         await viewModel.load()
 
         viewModel.category = .operation
-        XCTAssertEqual(viewModel.rules.map(\.id), [5, 12])
+        XCTAssertEqual(viewModel.rules.map(\.id), ["project-principles", "meeting-principles", "security-accounts"])
 
         viewModel.category = nil
         viewModel.statusFilter = .scheduled
-        XCTAssertEqual(viewModel.rules.map(\.id), [1])
+        XCTAssertEqual(viewModel.rules.map(\.id), ["project-principles"])
 
         viewModel.statusFilter = .recentlyRevised
-        XCTAssertEqual(viewModel.rules.map(\.id), [1, 5, 13])
+        XCTAssertEqual(viewModel.rules.map(\.id), ["project-principles", "meeting-principles", "outsourcing-pool", "operating-expenses"])
 
         viewModel.statusFilter = .all
         viewModel.query = "보안"
-        XCTAssertEqual(viewModel.rules.map(\.id), [12])
+        XCTAssertEqual(viewModel.rules.map(\.id), ["security-accounts"])
     }
 
     // MARK: 09-2 문서 상세 · 규칙
 
     func testRuleDetailAcknowledgeClearsUrgentRule() async throws {
         let container = makeContainer()
-        let detail = container.makeRuleDetailViewModel(ruleId: 1)
+        let detail = container.makeRuleDetailViewModel(ruleId: "project-principles")
         await detail.load()
 
         let loaded = try XCTUnwrap(detail.detail)
@@ -64,13 +74,13 @@ final class RuleTests: XCTestCase {
         let list = container.makeRuleListViewModel()
         await list.load()
         XCTAssertNil(list.urgentRule)
-        XCTAssertEqual(list.rules.first?.id, 1, "읽은 뒤에도 시행 예정이라 맨 위")
+        XCTAssertEqual(list.rules.first?.id, "project-principles", "읽은 뒤에도 시행 예정이라 맨 위")
     }
 
     // MARK: 09-3 변경 내역 · 09-4 개정 비교
 
     func testRuleRevisionsAndComparison() async throws {
-        let viewModel = makeContainer().makeRuleDetailViewModel(ruleId: 1)
+        let viewModel = makeContainer().makeRuleDetailViewModel(ruleId: "project-principles")
         await viewModel.load()
         let detail = try XCTUnwrap(viewModel.detail)
 
@@ -90,7 +100,7 @@ final class RuleTests: XCTestCase {
     }
 
     func testRuleWithoutRevisionHasNothingToCompare() async throws {
-        let viewModel = makeContainer().makeRuleDetailViewModel(ruleId: 8)
+        let viewModel = makeContainer().makeRuleDetailViewModel(ruleId: "onboarding")
         await viewModel.load()
         let detail = try XCTUnwrap(viewModel.detail)
 
@@ -102,7 +112,11 @@ final class RuleTests: XCTestCase {
     // MARK: 연결
 
     func testRuleEntryRoutes() {
-        XCTAssertEqual(NotificationType.rule.targetRoute(deepLink: "/rules/1"), .ruleDetail(id: 1), "02-2 규칙 알림 → 09-2")
+        XCTAssertEqual(
+            NotificationType.rule.targetRoute(deepLink: "/docs/project-principles"),
+            .ruleDetail(id: "project-principles"),
+            "02-2 규칙 알림 → 09-2 (문서 slug)"
+        )
         XCTAssertEqual(NotificationType.rule.targetRoute(deepLink: "/rules"), .rules)
         XCTAssertEqual(NotificationType.rule.targetRoute(deepLink: nil), .rules)
         XCTAssertEqual(NotificationType.schedule.targetRoute(deepLink: nil), .workspaceSchedules)

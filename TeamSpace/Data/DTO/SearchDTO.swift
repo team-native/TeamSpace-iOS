@@ -36,9 +36,11 @@ struct SearchItemDTO: Decodable {
     let dept: String?
     let pm: String?
     let progress: Int?
+    /// 문서는 "/inhouse/documents/{slug}" — 화면 이동에 slug 를 써요.
+    let href: String?
 
     fileprivate enum CodingKeys: String, CodingKey {
-        case category, id, title, snippet, createdAt, type, version, author, comments, status, likes, dept, pm, progress
+        case category, id, title, snippet, createdAt, type, version, author, comments, status, likes, dept, pm, progress, href
     }
 
     /// 백엔드가 자유 형식(payload)이라 숫자 · 문자열이 섞여 와도 읽을 수 있게 느슨하게 풀어요.
@@ -58,6 +60,7 @@ struct SearchItemDTO: Decodable {
         dept = try? container.decodeIfPresent(String.self, forKey: .dept)
         pm = try? container.decodeIfPresent(String.self, forKey: .pm)
         progress = container.decodeLossyInt(forKey: .progress)
+        href = try? container.decodeIfPresent(String.self, forKey: .href)
     }
 
     /// "2026-10-15T09:00:00+00:00" · 소수점 초 포함 모두 읽어요.
@@ -86,7 +89,8 @@ struct SearchItemDTO: Decodable {
             likeCount: likes,
             department: dept,
             pmName: pm,
-            progress: progress
+            progress: progress,
+            documentSlug: category == .documents ? href.map { URL(fileURLWithPath: $0).lastPathComponent } : nil
         )
     }
 }

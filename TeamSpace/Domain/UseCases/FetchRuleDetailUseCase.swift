@@ -8,7 +8,7 @@ struct FetchRuleDetailUseCase {
         self.ruleRepository = ruleRepository
     }
 
-    func execute(id: Int) async throws -> RuleDetail {
+    func execute(id: String) async throws -> RuleDetail {
         let detail = try await ruleRepository.fetchRuleDetail(id: id)
         return RuleDetail(
             rule: detail.rule,

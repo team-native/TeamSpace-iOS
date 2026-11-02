@@ -44,9 +44,29 @@ struct InquiryHistoryDTO: Codable {
 
 struct InquiryReferenceDTO: Codable {
     let kind: InquiryReference.Kind
-    let id: Int?
+    /// 규칙은 문서 slug, 공지는 숫자 id — 숫자로 와도 문자열로 읽어요.
+    let id: String?
     let title: String
     let summary: String
+
+    init(kind: InquiryReference.Kind, id: String?, title: String, summary: String) {
+        self.kind = kind
+        self.id = id
+        self.title = title
+        self.summary = summary
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        kind = try container.decode(InquiryReference.Kind.self, forKey: .kind)
+        if let number = try? container.decodeIfPresent(Int.self, forKey: .id) {
+            id = String(number)
+        } else {
+            id = try? container.decodeIfPresent(String.self, forKey: .id)
+        }
+        title = try container.decode(String.self, forKey: .title)
+        summary = try container.decode(String.self, forKey: .summary)
+    }
 
     func toEntity() -> InquiryReference {
         InquiryReference(kind: kind, id: id, title: title, summary: summary)

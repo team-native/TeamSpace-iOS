@@ -24,7 +24,7 @@ enum AppRoute: Hashable {
     case approvalResume(kind: ApprovalComposeKind, title: String) // 07-5 임시 저장 문서 이어서 작성
     // 06 문서함
     case librarySearch                   // 06-2 문서 검색
-    case templateDetail(id: Int)          // 06-3 템플릿 상세
+    case templateDetail(id: String)          // 06-3 템플릿 상세
     case templateCompose(kind: TemplateFormKind, title: String)
     // 07 내 공간
     case workspaceDashboard              // 07-1 내 공간 대시보드
@@ -50,8 +50,8 @@ enum AppRoute: Hashable {
     case applicantReview(projectId: Int) // 08-7 PM 지원자 검토
     // 09 규칙
     case rules                           // 09-1 규칙 · 제도
-    case ruleDetail(id: Int)             // 09-2 문서 상세 · 규칙 (09-3 변경 내역 시트)
-    case ruleComparison(id: Int)         // 09-4 규칙 개정 비교
+    case ruleDetail(id: String)           // 09-2 문서 상세 · 규칙 (09-3 변경 내역 시트)
+    case ruleComparison(id: String)         // 09-4 규칙 개정 비교
     // 10 게시판 · 공지
     case board                           // 10-1 팀 게시판
     case boardSearch                     // 10-12 게시글 검색

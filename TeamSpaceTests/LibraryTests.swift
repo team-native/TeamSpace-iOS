@@ -23,7 +23,8 @@ final class LibraryTests: XCTestCase {
         XCTAssertEqual(LibraryFilter.allCases.map { viewModel.count(of: $0) }, [12, 4, 3, 3])
         XCTAssertEqual(viewModel.countText, "12개의 문서")
         XCTAssertEqual(viewModel.filteredDocuments.first?.title, "Native 프로젝트 운영 원칙", "최근 수정한 문서가 위로")
-        XCTAssertEqual(viewModel.latestRevision?.title, "프로젝트 운영 원칙")
+        XCTAssertEqual(viewModel.latestRevision?.title, "Native 프로젝트 운영 원칙")
+        XCTAssertEqual(viewModel.latestRevision?.documentId, "project-principles")
     }
 
     func testFilterByCategory() async {
@@ -37,13 +38,12 @@ final class LibraryTests: XCTestCase {
     }
 
     func testUnknownCategoryDecodesSafely() throws {
-        let json = Data(#"{"id":1,"category":"POLICY","title":"t","summary":"s","excerpt":null,"updatedAt":"2026-10-20T00:00:00Z"}"#.utf8)
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
+        let json = Data(#"{"slug":"memo","category":"메모","type":"MEMO","title":"t","copy":"s","date":"2026.10.20"}"#.utf8)
 
-        let dto = try decoder.decode(LibraryDocumentDTO.self, from: json)
+        let dto = try JSONCoder.makeDecoder().decode(ServerDocDTO.self, from: json)
 
-        XCTAssertEqual(dto.toEntity().category, .unknown)
+        XCTAssertEqual(dto.toLibraryDocument().category, .unknown)
+        XCTAssertEqual(dto.toLibraryDocument().updatedAt, ServerTodoDTO.date(fromDay: "2026-10-20"), "\"2026.10.20\" 도 날짜로 읽어요")
         XCTAssertEqual(LibraryCategory.unknown.badgeTitle, "DOC")
     }
 
@@ -54,7 +54,7 @@ final class LibraryTests: XCTestCase {
         components.day = 20
         let date = Calendar.current.date(from: components) ?? Date()
 
-        let revision = LibraryRevision(documentId: 1, title: "프로젝트 운영 원칙", effectiveAt: date)
+        let revision = LibraryRevision(documentId: "project-principles", title: "프로젝트 운영 원칙", effectiveAt: date)
 
         XCTAssertEqual(revision.bannerText, "프로젝트 운영 원칙 · 10월 20일 시행")
     }
@@ -75,7 +75,7 @@ final class LibraryTests: XCTestCase {
             tokenStorage: tokenStorage,
             recentSearchRepository: UserDefaultsRecentSearchRepository(
                 defaults: defaults,
-                seed: MockLibraryFixture.recentKeywords
+                seed: MockDocStore.recentKeywords
             )
         )
         return container.makeLibrarySearchViewModel()
@@ -88,7 +88,11 @@ final class LibraryTests: XCTestCase {
         await viewModel.search()
 
         XCTAssertEqual(viewModel.results.map(\.title), ["외주 수금 및 풀 배분 기준", "외주 프로젝트 진행 가이드", "정산 요청서"])
-        XCTAssertEqual(viewModel.results.map(\.excerpt), ["…배분과 정산 방식을 정리해요", "…납품 후 정산 요청 순서", "프로젝트 종료 후 정산을 요청하는 양식"])
+        XCTAssertEqual(
+            viewModel.results.map(\.excerpt),
+            ["운영풀 · 적립풀 · 배당풀 배분과 정산 방식을 정리해요", "문의 접수부터 납품 후 정산 요청 순서", "프로젝트 종료 후 정산을 요청하는 양식"],
+            "서버 검색은 요약(copy)을 그대로 보여줘요"
+        )
         XCTAssertEqual(viewModel.resultTitle, "검색 결과 3")
     }
 

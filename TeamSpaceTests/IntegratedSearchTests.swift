@@ -41,7 +41,7 @@ final class IntegratedSearchTests: XCTestCase {
         let rule = hits.first { $0.title.hasPrefix("프로젝트 운영 원칙") }
         XCTAssertEqual(rule?.badgeTitle, "운영 규정")
         XCTAssertEqual(rule?.linkTitle, "규정 본문 보기")
-        XCTAssertEqual(rule?.route, .ruleDetail(id: 1))
+        XCTAssertEqual(rule?.route, .ruleDetail(id: "project-principles"), "문서는 href 의 slug 로 열어요")
 
         let document = hits.first { $0.title == "Book-on QA 체크리스트" }
         XCTAssertEqual(document?.version, "2", "숫자 버전도 읽어요")

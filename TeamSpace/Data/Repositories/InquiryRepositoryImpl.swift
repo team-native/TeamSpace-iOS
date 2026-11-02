@@ -98,7 +98,7 @@ final class InquiryRepositoryImpl: InquiryRepository, @unchecked Sendable {
     func reply(inquiryId: Int, draft: InquiryReplyDraft) async throws -> InquiryInboxItem {
         switch draft.kind {
         case .answer:
-            let body = ServerInquiryAnswerRequestDTO(text: draft.body, referenceRuleId: draft.referenceRuleId.map(String.init))
+            let body = ServerInquiryAnswerRequestDTO(text: draft.body, referenceRuleId: draft.referenceRuleId)
             _ = try await request(Endpoint(method: .post, path: "admin/inquiries/\(inquiryId)/answer", body: body), as: IgnoredJSONValue.self)
         case .reject:
             let body = ServerInquiryPatchRequestDTO(status: InquiryStatus.rejected.serverValue, answer: draft.body)
