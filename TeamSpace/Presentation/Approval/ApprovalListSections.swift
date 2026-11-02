@@ -130,7 +130,7 @@ private struct WaitingApprovalCard: View {
             HStack(spacing: Spacing.sm + Spacing.xxxs) {
                 AvatarView(size: 36)
                 VStack(alignment: .leading, spacing: 1) {
-                    Text("\(item.requesterName) · \(item.requesterDepartment)")
+                    Text(item.requesterText)
                         .tsFont(.footnoteBold)
                         .foregroundStyle(Color.tsInk)
                     Text("\(item.kind.title) · \(TSFormat.relative(item.updatedAt))")

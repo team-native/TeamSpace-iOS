@@ -7,6 +7,7 @@ enum ApprovalStatus: String, UnknownCaseDecodable, Hashable, CaseIterable, Senda
     case reviewing = "IN_REVIEW"   // 검토 중
     case approved = "APPROVED"     // 승인
     case rejected = "REJECTED"     // 반려
+    case cancelled = "CANCELLED"   // 취소 (요청 취소)
     case unknown = "UNKNOWN"
 
     static let unknownCase: ApprovalStatus = .unknown
