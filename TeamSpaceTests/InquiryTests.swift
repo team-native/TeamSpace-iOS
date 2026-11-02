@@ -44,7 +44,7 @@ final class InquiryTests: XCTestCase {
         XCTAssertEqual(detail.history.map(\.status), [.received, .reviewing, .answered])
         XCTAssertTrue(detail.history.first?.detailText.hasSuffix("NativeOps에 전달") == true)
         XCTAssertTrue(detail.inquiry.reply?.body.hasPrefix("좋은 의견 감사합니다.") == true)
-        XCTAssertNil(detail.reference, "서버는 함께 볼 규칙 · 공지를 주지 않아요")
+        XCTAssertEqual(detail.reference?.route, .ruleDetail(id: 5), "payload 에 reference 가 있으면 읽어요 (백엔드 협의안)")
         XCTAssertEqual(detail.history.last?.actor, "양지우", "답변한 사람은 answer.who")
         XCTAssertEqual(viewModel.followUpTitle, "이 답변에 후속 문의하기")
     }
@@ -149,7 +149,7 @@ final class InquiryTests: XCTestCase {
         XCTAssertEqual(unassigned.actionTitle, "문의 확인 · 담당 배정")
         XCTAssertEqual(unassigned.authorText, "익명 · 신원 표시 안 함")
         XCTAssertEqual(viewModel.items.first?.authorText, "실명 · 이시우")
-        XCTAssertTrue(viewModel.items.first { $0.id == 51 }?.assigneeText.hasSuffix("자료 검토 시작") == true)
+        XCTAssertTrue(viewModel.items.first { $0.id == 51 }?.assigneeText.hasSuffix("검토 시작") == true, "서버는 단계 메모가 없어 단계 이름으로 채워요")
 
         XCTAssertEqual(viewModel.recentLogs.first?.title, "신규 구성원 안내 자료를 제안해요")
         XCTAssertTrue(viewModel.recentLogs.first?.detailText.hasSuffix("양지우 · 접수 → 검토 중") == true)
@@ -163,11 +163,11 @@ final class InquiryTests: XCTestCase {
     func testAssignThenAnswerWithRule() async throws {
         let viewModel = makeContainer().makeInquiryReviewViewModel(inquiryId: 52, user: manager)
         await viewModel.load()
-        XCTAssertEqual(viewModel.assignees, ["양지우", "이시우", "안율"])
+        XCTAssertEqual(viewModel.assignees, ["양지우"], "서버가 담당자 목록을 주지 않아 나에게만 배정해요")
         XCTAssertFalse(viewModel.rules.isEmpty)
 
-        await viewModel.assign("안율")
-        XCTAssertEqual(viewModel.item?.assignee, "안율")
+        await viewModel.assign("양지우")
+        XCTAssertEqual(viewModel.item?.assignee, "양지우")
         XCTAssertEqual(viewModel.item?.inquiry.status, .reviewing, "배정하면 검토 중")
         XCTAssertEqual(viewModel.statusChangeText, "검토 중 → 답변 완료")
 
@@ -178,7 +178,7 @@ final class InquiryTests: XCTestCase {
 
         XCTAssertEqual(viewModel.item?.inquiry.status, .answered)
         XCTAssertEqual(viewModel.item?.reference?.title, "신규 멤버 온보딩 규칙")
-        XCTAssertEqual(viewModel.item?.history.last?.actor, "안율")
+        XCTAssertEqual(viewModel.item?.history.last?.actor, "양지우")
         XCTAssertFalse(viewModel.isEditable)
         XCTAssertEqual(viewModel.toastMessage, "공식 답변을 등록했어요")
     }
@@ -207,6 +207,15 @@ final class InquiryTests: XCTestCase {
         let answered = container.makeInquiryReviewViewModel(inquiryId: 42, user: manager)
         await answered.load()
         XCTAssertFalse(answered.isEditable, "답변이 끝난 문의는 고칠 수 없어요")
+    }
+
+    func testAdminRequestsUseServerShape() throws {
+        let reject = ServerInquiryPatchRequestDTO(status: InquiryStatus.rejected.serverValue, answer: "어려워요")
+        let rejectJSON = try XCTUnwrap(String(data: JSONCoder.makeEncoder().encode(reject), encoding: .utf8))
+        XCTAssertTrue(rejectJSON.contains(#""status":"반려""#))
+        let answer = ServerInquiryAnswerRequestDTO(text: "답변", referenceRuleId: "8")
+        let answerJSON = try XCTUnwrap(String(data: JSONCoder.makeEncoder().encode(answer), encoding: .utf8))
+        XCTAssertTrue(answerJSON.contains(#""referenceRuleId":"8""#), "서버 answer 는 dict[str, str] 이라 문자열로 보내요")
     }
 
     // MARK: 연결

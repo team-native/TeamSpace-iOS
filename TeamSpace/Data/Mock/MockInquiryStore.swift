@@ -16,7 +16,6 @@ final class MockInquiryStore: @unchecked Sendable {
 
     /// 11-5 · 11-6 — Mock 담당자는 NativeOps 소속이에요.
     static let managerDepartment: InquiryDepartment = .nativeOps
-    static let assignees = ["양지우", "이시우", "안율"]
     /// 11-6 관련 규칙 제목 (09 규칙과 같은 ID)
     private static let ruleTitles: [Int: (title: String, summary: String)] = [
         1: ("프로젝트 운영 원칙", "아이디어 제안부터 출시까지의 기준"),
@@ -182,6 +181,12 @@ final class MockInquiryStore: @unchecked Sendable {
         fields["steps"] = [stepAt([.received]), stepAt([.reviewing]), stepAt([.answered, .rejected])]
         fields["replies"] = [Any]()
         fields["author"] = summary.isAnonymous ? "익명" : record.authorName ?? "알 수 없음"
+        if let assignee = record.assignee { fields["assignee"] = assignee }
+        if let reference = record.reference {
+            var item: [String: Any] = ["kind": reference.kind.rawValue, "title": reference.title, "summary": reference.summary]
+            if let id = reference.id { item["id"] = id }
+            fields["reference"] = item
+        }
         if let reply = summary.reply {
             let actor = record.history.last { $0.status == summary.status }?.actor
             fields["answer"] = ["who": actor ?? departmentName(reply.department), "at": MockBoardStore.pythonISO(reply.repliedAt), "text": reply.body]
@@ -196,72 +201,54 @@ final class MockInquiryStore: @unchecked Sendable {
         return String(decoding: data, as: UTF8.self)
     }
 
-    /// GET /inquiries/inbox — 담당 부서 문의만
-    func inboxJSON() -> String {
+    /// GET /admin/inquiries — 담당 부서(NativeOps) 문의, id 큰 순, 커서는 마지막 항목 id
+    func adminJSON(status: String? = nil, cursor: String? = nil, limit: Int = 30) -> String {
         lock.lock()
         defer { lock.unlock() }
-        let items = records.filter { $0.summary.department == Self.managerDepartment }.map(Self.inboxItem)
-        return envelope(InquiryInboxResponseDTO(department: Self.managerDepartment, list: items, assignees: Self.assignees))
+        var list = records.filter { $0.summary.department == Self.managerDepartment }.sorted { $0.summary.id > $1.summary.id }
+        if let status { list = list.filter { $0.summary.status.serverValue == status } }
+        if let cursor = cursor.flatMap(Int.init) { list = list.filter { $0.summary.id < cursor } }
+        let page = Array(list.prefix(limit))
+        let next: Any = list.count > limit ? String(page.last?.summary.id ?? 0) : NSNull()
+        return json(["items": page.map(Self.serverFields), "nextCursor": next])
     }
 
-    /// GET /inquiries/inbox/{id}
-    func inboxItemJSON(id: Int) -> String? {
-        lock.lock()
-        defer { lock.unlock() }
-        guard let record = inboxRecord(id: id) else { return nil }
-        return envelope(Self.inboxItem(record))
-    }
-
-    /// PATCH /inquiries/{id}/assignee — 접수면 검토 중으로 바꿔요.
-    func assign(id: Int, assignee: String) -> String? {
+    /// PATCH /admin/inquiries/{id} — `{status, assignee?, answer?}`
+    /// 서버(develop)는 status 만 저장하고 반려가 없어요. 목 서버는 백엔드 협의안(담당자 · 반려 사유 저장)대로 흉내 내요.
+    func patch(id: Int, request: ServerInquiryPatchRequestDTO, now: Date = Date()) -> String? {
         lock.lock()
         defer { lock.unlock() }
         guard let index = inboxIndex(id: id) else { return nil }
-        records[index].assignee = assignee
-        if records[index].summary.status == .received {
-            records[index].summary.status = .reviewing
-            records[index].history.append(InquiryHistoryDTO(status: .reviewing, occurredAt: Date(), note: "담당 배정 · 검토 시작", actor: assignee))
+        let status = InquiryStatus(serverValue: request.status)
+        if let assignee = request.assignee { records[index].assignee = assignee }
+        let actor = records[index].assignee ?? "담당자"
+        if status != records[index].summary.status {
+            records[index].summary.status = status
+            records[index].history.append(InquiryHistoryDTO(status: status, occurredAt: now, note: "", actor: actor))
         }
-        return envelope(Self.inboxItem(records[index]))
+        if status == .rejected, let reason = request.answer {
+            records[index].summary.reply = InquiryReplyDTO(department: Self.managerDepartment, body: reason, repliedAt: now)
+        }
+        return json(["id": String(id), "status": status.serverValue])
     }
 
-    /// POST /inquiries/{id}/reply — 답변 완료 · 반려로 바꾸고 작성자 문의에도 보여요.
-    func reply(id: Int, request: InquiryReplyRequestDTO) -> String? {
+    /// POST /admin/inquiries/{id}/answer — 답변 완료로 바꾸고 작성자 문의에도 보여요.
+    func answer(id: Int, request: ServerInquiryAnswerRequestDTO, now: Date = Date()) -> String? {
         lock.lock()
         defer { lock.unlock() }
-        guard let index = inboxIndex(id: id), records[index].summary.status == .received || records[index].summary.status == .reviewing else {
-            return nil
-        }
-        let isReject = request.kind == "REJECT"
-        let status: InquiryStatus = isReject ? .rejected : .answered
-        let now = Date()
-        records[index].summary.status = status
-        records[index].summary.reply = InquiryReplyDTO(department: Self.managerDepartment, body: request.body, repliedAt: now)
-        records[index].history.append(InquiryHistoryDTO(
-            status: status, occurredAt: now, note: isReject ? "반려 사유 등록" : "공식 답변 등록", actor: records[index].assignee ?? "담당자"
-        ))
-        if let ruleId = request.referenceRuleId, let rule = Self.ruleTitles[ruleId] {
+        guard let index = inboxIndex(id: id) else { return nil }
+        let actor = records[index].assignee ?? "담당자"
+        records[index].summary.status = .answered
+        records[index].summary.reply = InquiryReplyDTO(department: Self.managerDepartment, body: request.text, repliedAt: now)
+        records[index].history.append(InquiryHistoryDTO(status: .answered, occurredAt: now, note: "", actor: actor))
+        if let ruleId = request.referenceRuleId.flatMap(Int.init), let rule = Self.ruleTitles[ruleId] {
             records[index].reference = InquiryReferenceDTO(kind: .rule, id: ruleId, title: rule.title, summary: rule.summary)
         }
-        return envelope(Self.inboxItem(records[index]))
+        return json(["id": String(id), "status": "답변 완료", "answer": ["who": actor, "at": MockBoardStore.pythonISO(now), "text": request.text]])
     }
 
     private func inboxIndex(id: Int) -> Int? {
         records.firstIndex { $0.summary.id == id && $0.summary.department == Self.managerDepartment }
-    }
-
-    private func inboxRecord(id: Int) -> Record? {
-        inboxIndex(id: id).map { records[$0] }
-    }
-
-    private static func inboxItem(_ record: Record) -> InquiryInboxItemDTO {
-        InquiryInboxItemDTO(
-            inquiry: record.summary,
-            authorName: record.summary.isAnonymous ? nil : record.authorName,
-            assignee: record.assignee,
-            history: record.history,
-            reference: record.reference
-        )
     }
 
     static func departmentName(_ department: InquiryDepartment) -> String {
@@ -272,10 +259,5 @@ final class MockInquiryStore: @unchecked Sendable {
         case .fa: return "FA"
         case .unknown: return "담당 부서"
         }
-    }
-
-    private func envelope<T: Encodable>(_ value: T) -> String {
-        let data = (try? JSONCoder.makeEncoder().encode(value)).map { String(decoding: $0, as: UTF8.self) } ?? "null"
-        return #"{"code":200,"message":"성공","data":\#(data)}"#
     }
 }

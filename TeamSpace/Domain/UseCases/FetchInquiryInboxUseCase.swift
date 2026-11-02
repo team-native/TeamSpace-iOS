@@ -14,7 +14,8 @@ struct FetchInquiryInboxUseCase {
         return InquiryInbox(
             department: inbox.department,
             items: inbox.items.sorted { $0.inquiry.createdAt > $1.inquiry.createdAt },
-            assignees: inbox.assignees
+            // 서버가 담당자 목록을 주지 않으면 나에게만 배정할 수 있어요.
+            assignees: inbox.assignees.isEmpty ? [user.name] : inbox.assignees
         )
     }
 }

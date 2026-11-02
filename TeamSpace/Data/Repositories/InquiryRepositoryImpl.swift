@@ -45,13 +45,17 @@ final class InquiryRepositoryImpl: InquiryRepository, @unchecked Sendable {
     private static let maxPages = 5
 
     private func fetchAllMine() async throws -> [ServerInquiryDTO] {
+        try await fetchAll(path: "inquiries")
+    }
+
+    private func fetchAll(path: String) async throws -> [ServerInquiryDTO] {
         var items: [ServerInquiryDTO] = []
         var cursor: String?
         for _ in 0..<Self.maxPages {
             var query = [URLQueryItem(name: "limit", value: String(Self.pageSize))]
             if let cursor { query.append(URLQueryItem(name: "cursor", value: cursor)) }
             let page = try await request(
-                Endpoint(method: .get, path: "inquiries", queryItems: query),
+                Endpoint(method: .get, path: path, queryItems: query),
                 as: CursorPageDTO<ServerInquiryDTO>.self
             )
             items += page.items.filter { item in !items.contains { $0.id == item.id } }
@@ -61,30 +65,46 @@ final class InquiryRepositoryImpl: InquiryRepository, @unchecked Sendable {
         return items
     }
 
+    /// GET /admin/inquiries — 담당 부서 문의 (Admin 은 전체). 서버는 담당자 목록을 주지 않아요.
     func fetchInbox() async throws -> InquiryInbox {
-        try await request(Endpoint(method: .get, path: "inquiries/inbox"), as: InquiryInboxResponseDTO.self).toEntity()
+        let items = try await fetchAll(path: "admin/inquiries")
+        let departments = items.map(\.departmentValue).filter { $0 != .unknown }
+        let counts = Dictionary(departments.map { ($0, 1) }, uniquingKeysWith: +)
+        let department = counts.max { $0.value < $1.value }?.key ?? .unknown
+        return InquiryInbox(department: department, items: items.map { $0.toInboxItem() }, assignees: [])
     }
 
+    /// 서버에 담당자용 상세 경로가 없어 받은함에서 찾아요.
     func fetchInboxItem(id: Int) async throws -> InquiryInboxItem {
-        try await request(Endpoint(method: .get, path: "inquiries/inbox/\(id)"), as: InquiryInboxItemDTO.self).toEntity()
+        guard let item = try await fetchAll(path: "admin/inquiries").first(where: { $0.id == id }) else {
+            throw AppError.notFound("문의를 찾을 수 없어요.")
+        }
+        return item.toInboxItem()
     }
 
+    /// PATCH /admin/inquiries/{id} — 검토 중으로 바꿔요. 서버가 담당자를 저장하지 않으면 화면에만 배정해요.
     func assign(inquiryId: Int, assignee: String) async throws -> InquiryInboxItem {
-        let endpoint = Endpoint(
-            method: .patch,
-            path: "inquiries/\(inquiryId)/assignee",
-            body: InquiryAssignRequestDTO(assignee: assignee)
+        let body = ServerInquiryPatchRequestDTO(status: InquiryStatus.reviewing.serverValue, assignee: assignee)
+        _ = try await request(Endpoint(method: .patch, path: "admin/inquiries/\(inquiryId)", body: body), as: IgnoredJSONValue.self)
+        let item = try await fetchInboxItem(id: inquiryId)
+        guard item.assignee == nil else { return item }
+        return InquiryInboxItem(
+            inquiry: item.inquiry, authorName: item.authorName, assignee: assignee,
+            history: item.history, reference: item.reference
         )
-        return try await request(endpoint, as: InquiryInboxItemDTO.self).toEntity()
     }
 
+    /// 답변은 POST /admin/inquiries/{id}/answer, 반려는 PATCH /admin/inquiries/{id} `{status: "반려", answer}`
     func reply(inquiryId: Int, draft: InquiryReplyDraft) async throws -> InquiryInboxItem {
-        let endpoint = Endpoint(
-            method: .post,
-            path: "inquiries/\(inquiryId)/reply",
-            body: InquiryReplyRequestDTO(kind: draft.kind.rawValue, body: draft.body, referenceRuleId: draft.referenceRuleId)
-        )
-        return try await request(endpoint, as: InquiryInboxItemDTO.self).toEntity()
+        switch draft.kind {
+        case .answer:
+            let body = ServerInquiryAnswerRequestDTO(text: draft.body, referenceRuleId: draft.referenceRuleId.map(String.init))
+            _ = try await request(Endpoint(method: .post, path: "admin/inquiries/\(inquiryId)/answer", body: body), as: IgnoredJSONValue.self)
+        case .reject:
+            let body = ServerInquiryPatchRequestDTO(status: InquiryStatus.rejected.serverValue, answer: draft.body)
+            _ = try await request(Endpoint(method: .patch, path: "admin/inquiries/\(inquiryId)", body: body), as: IgnoredJSONValue.self)
+        }
+        return try await fetchInboxItem(id: inquiryId)
     }
 
     private func request<Response: Decodable>(_ endpoint: Endpoint, as type: Response.Type) async throws -> Response {
