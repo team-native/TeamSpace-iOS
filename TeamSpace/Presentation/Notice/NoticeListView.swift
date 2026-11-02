@@ -74,6 +74,9 @@ struct NoticeListView: View {
             ForEach(viewModel.notices) { notice in
                 NoticeCard(notice: notice) { onNavigate(.noticeDetail(id: notice.id)) }
             }
+            LoadMoreFooter(paging: viewModel.paging, failureHint: "위의 공지는 그대로 볼 수 있어요.") {
+                Task { await viewModel.loadMore() }
+            }
         }
     }
 }

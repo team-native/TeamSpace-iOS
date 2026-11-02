@@ -8,10 +8,12 @@ struct AcknowledgeNoticeUseCase {
         self.noticeRepository = noticeRepository
     }
 
-    func execute(_ detail: NoticeDetail) async throws -> NoticeDetail {
-        guard detail.acknowledgedAt == nil else { return detail }
+    func execute(_ detail: NoticeDetail, now: Date = Date()) async throws -> NoticeDetail {
+        guard !detail.isAcknowledged else { return detail }
+        try await noticeRepository.acknowledge(noticeId: detail.notice.id)
         var updated = detail
-        updated.acknowledgedAt = try await noticeRepository.acknowledge(noticeId: detail.notice.id)
+        updated.isAcknowledged = true
+        updated.acknowledgedAt = now
         return updated
     }
 }

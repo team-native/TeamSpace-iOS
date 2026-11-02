@@ -77,25 +77,34 @@ struct ServerNoticeItemDTO: Decodable {
     let kind: String?
     let title: String
     let body: String?
+    let author: String?
     let createdAt: Date?
     let updatedAt: Date?
     let pinned: Bool
     let mustRead: Bool
+    /// 확인한 사람 수 · 전체 인원
+    let confirmed: Int
+    let total: Int
+    let confirmedByMe: Bool
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decodeIntOrString(forKey: .id)
-        kind = try container.decodeIfPresent(String.self, forKey: .kind)
-        title = try container.decodeIfPresent(String.self, forKey: .title) ?? ""
-        body = try container.decodeIfPresent(String.self, forKey: .body)
+        kind = try? container.decodeIfPresent(String.self, forKey: .kind)
+        title = (try? container.decodeIfPresent(String.self, forKey: .title)) ?? ""
+        body = try? container.decodeIfPresent(String.self, forKey: .body)
+        author = try? container.decodeIfPresent(String.self, forKey: .author)
         createdAt = try? container.decodeIfPresent(Date.self, forKey: .createdAt)
         updatedAt = try? container.decodeIfPresent(Date.self, forKey: .updatedAt)
-        pinned = try container.decodeIfPresent(Bool.self, forKey: .pinned) ?? false
-        mustRead = try container.decodeIfPresent(Bool.self, forKey: .mustRead) ?? false
+        pinned = (try? container.decodeIfPresent(Bool.self, forKey: .pinned)) ?? false
+        mustRead = (try? container.decodeIfPresent(Bool.self, forKey: .mustRead)) ?? false
+        confirmed = (try? container.decodeIfPresent(Int.self, forKey: .confirmed)) ?? 0
+        total = (try? container.decodeIfPresent(Int.self, forKey: .total)) ?? 0
+        confirmedByMe = (try? container.decodeIfPresent(Bool.self, forKey: .confirmedByMe)) ?? false
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, kind, title, body, createdAt, updatedAt, pinned, mustRead
+        case id, kind, title, body, author, createdAt, updatedAt, pinned, mustRead, confirmed, total, confirmedByMe
     }
 
     func toEntity() -> NoticeSummary {
@@ -107,6 +116,20 @@ struct ServerNoticeItemDTO: Decodable {
             updatedAt: updatedAt ?? createdAt ?? Date(),
             isPinned: pinned,
             isImportant: mustRead
+        )
+    }
+
+    /// GET /notices/{id} — 서버는 작성자 역할 · 조회 수 · 연결 문서 · 확인 시각을 주지 않아요.
+    func toDetail() -> NoticeDetail {
+        NoticeDetail(
+            notice: toEntity(),
+            authorName: author ?? "운영진",
+            authorRole: nil,
+            body: body ?? "",
+            viewCount: nil,
+            linkedDocument: nil,
+            isAcknowledged: confirmedByMe,
+            acknowledgedAt: nil
         )
     }
 }

@@ -35,6 +35,26 @@ final class NoticeTests: XCTestCase {
         XCTAssertEqual(viewModel.notices.map(\.id), [42])
     }
 
+    func testNoticeListLoadsMorePages() async throws {
+        let store = MockNoticeStore()
+        let first = try JSONCoder.makeDecoder().decode(
+            CursorPageDTO<ServerNoticeItemDTO>.self, from: Data(store.serverItemsJSON(limit: 2).utf8)
+        )
+        XCTAssertEqual(first.items.map(\.id), [1, 41])
+        XCTAssertEqual(first.nextCursor, "o:2")
+        let last = try JSONCoder.makeDecoder().decode(
+            CursorPageDTO<ServerNoticeItemDTO>.self, from: Data(store.serverItemsJSON(cursor: "o:4", limit: 2).utf8)
+        )
+        XCTAssertEqual(last.items.map(\.id), [5])
+        XCTAssertNil(last.nextCursor)
+
+        let viewModel = makeContainer().makeNoticeListViewModel(user: member)
+        await viewModel.load()
+        XCTAssertFalse(viewModel.paging.hasMore, "5건이면 한 페이지에 다 와요")
+        await viewModel.loadMore()
+        XCTAssertEqual(viewModel.notices.count, 5, "더 없으면 그대로")
+    }
+
     // MARK: 10-6 공지 상세
 
     func testNoticeDetailAndAcknowledge() async throws {
@@ -43,25 +63,40 @@ final class NoticeTests: XCTestCase {
         await viewModel.load()
         let detail = try XCTUnwrap(viewModel.detail)
 
-        XCTAssertEqual(detail.authorText, "김민준 · FA")
-        XCTAssertTrue(detail.metaText.hasSuffix("조회 53"), "볼 때마다 조회 수 +1")
+        XCTAssertEqual(detail.authorText, "김민준", "서버는 작성자 이름만 줘요")
+        XCTAssertFalse(detail.metaText.contains("조회"), "서버는 조회 수를 주지 않아요")
         XCTAssertTrue(detail.notice.isImportant, "필독")
-        XCTAssertEqual(detail.linkedDocument?.caption, "문서함 · FINANCE")
+        XCTAssertEqual(detail.notice.category, .finance)
+        XCTAssertNil(detail.linkedDocument)
         XCTAssertEqual(detail.acknowledgeTitle, "확인했어요")
 
         await viewModel.acknowledge()
         XCTAssertTrue(viewModel.didAcknowledge)
         XCTAssertTrue(viewModel.isAcknowledged)
+        XCTAssertTrue(viewModel.detail?.acknowledgeTitle.hasSuffix(" 확인 완료") == true, "방금 확인하면 날짜도 보여요")
 
         let again = container.makeNoticeDetailViewModel(noticeId: 41)
         await again.load()
-        XCTAssertTrue(again.detail?.acknowledgeTitle.hasSuffix("확인 완료") == true)
+        XCTAssertEqual(again.detail?.acknowledgeTitle, "확인 완료", "다시 열면 서버 confirmedByMe 로 확인 상태만 알아요")
     }
 
-    func testLinkedRuleOpensRuleDetail() async throws {
-        let viewModel = makeContainer().makeNoticeDetailViewModel(noticeId: 42)
-        await viewModel.load()
-        XCTAssertEqual(viewModel.detail?.linkedDocument?.route, .ruleDetail(id: 1))
+    func testServerNoticeDetailDecoding() throws {
+        let json = #"{"id":"7","kind":"재무","title":"정산 안내","body":"본문","author":"김민준","createdAt":"2026-10-20T09:30:00.123456","pinned":true,"mustRead":true,"confirmed":3,"total":24,"confirmedByMe":true,"audience":"NATIVE"}"#
+        let dto = try JSONCoder.makeDecoder().decode(ServerNoticeItemDTO.self, from: Data(json.utf8))
+        let detail = dto.toDetail()
+
+        XCTAssertEqual(detail.notice.id, 7, "문자열 id")
+        XCTAssertEqual(detail.notice.category, .finance)
+        XCTAssertTrue(detail.notice.isPinned)
+        XCTAssertTrue(detail.isAcknowledged)
+        XCTAssertEqual(detail.acknowledgeTitle, "확인 완료")
+        XCTAssertEqual(dto.confirmed, 3)
+        XCTAssertEqual(dto.total, 24)
+        XCTAssertEqual(detail.notice.updatedAt, ServerDate.parse("2026-10-20T09:30:00.123Z"), "시간대 없으면 UTC")
+    }
+
+    func testLinkedDocumentRoutes() {
+        XCTAssertEqual(NoticeLinkedDocument(id: 1, title: "프로젝트 운영 원칙", category: .rule).route, .ruleDetail(id: 1))
     }
 
     // MARK: 10-7 전체 공지 작성

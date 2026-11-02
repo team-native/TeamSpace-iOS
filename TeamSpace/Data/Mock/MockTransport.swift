@@ -374,20 +374,19 @@ struct MockTransport: HTTPTransport {
         }
     }
 
-    /// 10-5 ~ 10-7 공지 — /notices · /notices/{id} · acknowledge
+    /// 10-5 ~ 10-7 공지 — /notices · /notices/{id} · confirm (서버 develop 형식, 게시만 예전 형식)
     private func noticeRoute(_ request: URLRequest, components: [String]) throws -> (Data, HTTPURLResponse)? {
         let store = boardStore.noticeStore
-        let notFound = #"{"code":404,"message":"해당 공지를 찾을 수 없습니다."}"#
+        let notFound = #"{"detail":"리소스를 찾을 수 없습니다."}"#
         let id = components.count > 1 ? Int(components[1]) : nil
         let query = Self.query(of: request)
         switch (request.httpMethod ?? "", components.count) {
-        // 게시판 고정 공지 · 검색은 서버(develop) 형식, 10-5 공지 목록은 아직 예전 형식 (다음 API 맞추기 묶음)
         case ("GET", 1) where query["pinned"] == "true":
             return try respond(request, status: 200, json: boardStore.pinnedNoticesJSON())
-        case ("GET", 1) where query["q"] != nil:
-            return try respond(request, status: 200, json: store.serverItemsJSON(keyword: query["q"]))
         case ("GET", 1):
-            return try respond(request, status: 200, json: store.listJSON())
+            let limit = query["limit"].flatMap(Int.init) ?? 20
+            guard (1...100).contains(limit) else { return try respond(request, status: 422, json: #"{"detail":"limit 범위가 아니에요."}"#) }
+            return try respond(request, status: 200, json: store.serverItemsJSON(keyword: query["q"], cursor: query["cursor"], limit: limit))
         case ("GET", 2):
             guard let id = id, let json = store.detailJSON(id: id) else { return try respond(request, status: 404, json: notFound) }
             return try respond(request, status: 200, json: json)
@@ -397,8 +396,8 @@ struct MockTransport: HTTPTransport {
                 let dto = try? JSONCoder.makeDecoder().decode(NoticePublishRequestDTO.self, from: body)
             else { return try respond(request, status: 400, json: #"{"code":400,"message":"잘못된 요청입니다."}"#) }
             return try respond(request, status: 201, json: store.publish(dto))
-        case ("POST", 3) where components[2] == "acknowledge":
-            guard let id = id, let json = store.acknowledge(id: id) else { return try respond(request, status: 404, json: notFound) }
+        case ("POST", 3) where components[2] == "confirm":
+            guard let id = id, let json = store.confirm(id: id) else { return try respond(request, status: 404, json: notFound) }
             return try respond(request, status: 200, json: json)
         default:
             return nil
