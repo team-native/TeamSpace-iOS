@@ -40,6 +40,9 @@ struct ServerCommentDTO: Decodable {
     let createdAt: Date
     let author: String?
     let mine: Bool
+    let likes: Int
+    /// 서버가 아직 주지 않아요. 생기면 처음부터 빨간 하트로 보여요.
+    let liked: Bool
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -49,10 +52,12 @@ struct ServerCommentDTO: Decodable {
         createdAt = try container.decode(Date.self, forKey: .createdAt)
         author = try container.decodeIfPresent(String.self, forKey: .author)
         mine = try container.decodeIfPresent(Bool.self, forKey: .mine) ?? false
+        likes = container.money(.likes)
+        liked = (try? container.decodeIfPresent(Bool.self, forKey: .liked)) ?? false
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, anonymous, text, createdAt, author, mine
+        case id, anonymous, text, createdAt, author, mine, likes, liked
     }
 
     /// 서버는 익명 번호를 주지 않아 "익명"으로만 보여요.
@@ -67,7 +72,9 @@ struct ServerCommentDTO: Decodable {
             isPostAuthor: isAnonymousPostAuthor || (postAuthor != nil && author == postAuthor),
             isMine: mine,
             body: text,
-            createdAt: createdAt
+            createdAt: createdAt,
+            likeCount: likes,
+            isLiked: liked
         )
     }
 }

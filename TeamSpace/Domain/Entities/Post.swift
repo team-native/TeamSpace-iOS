@@ -53,6 +53,9 @@ struct PostComment: Equatable, Identifiable, Sendable {
     let isMine: Bool
     let body: String
     let createdAt: Date
+    /// 댓글 공감 수 · 내가 공감했는지 (POST /posts/{id}/comments/{cid}/like)
+    var likeCount: Int = 0
+    var isLiked: Bool = false
 }
 
 /// 10-3 게시글 상세

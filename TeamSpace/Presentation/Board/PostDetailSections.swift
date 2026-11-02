@@ -106,6 +106,8 @@ struct PostReactionBar: View {
 /// 10-3 댓글 — 운영 방식 안내 · 댓글 목록
 struct PostCommentSection: View {
     let detail: PostDetail
+    var likingCommentIds: Set<Int> = []
+    var onLikeComment: (Int) -> Void = { _ in }
 
     var body: some View {
         WorkspaceCard {
@@ -126,7 +128,11 @@ struct PostCommentSection: View {
             }
             ForEach(detail.comments) { comment in
                 TSDivider()
-                PostCommentRow(comment: comment)
+                PostCommentRow(
+                    comment: comment,
+                    isLiking: likingCommentIds.contains(comment.id),
+                    onLike: { onLikeComment(comment.id) }
+                )
             }
         }
     }
@@ -134,6 +140,8 @@ struct PostCommentSection: View {
 
 private struct PostCommentRow: View {
     let comment: PostComment
+    let isLiking: Bool
+    let onLike: () -> Void
 
     var body: some View {
         HStack(alignment: .top, spacing: Spacing.sm) {
@@ -151,9 +159,25 @@ private struct PostCommentRow: View {
                     .tsFont(.footnote)
                     .foregroundStyle(Color.tsInk)
                     .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityElement(children: .combine)
+                // Figma 10-3b — 공감 전 회색 빈 하트, 공감하면 빨간 하트 · 숫자
+                Button(action: onLike) {
+                    HStack(spacing: Spacing.xxs) {
+                        Image(systemName: comment.isLiked ? "heart.fill" : "heart")
+                            .tsIconSize(.xs)
+                        Text("공감 \(comment.likeCount)")
+                            .tsFont(.caption2)
+                    }
+                    .foregroundStyle(comment.isLiked ? Color.tsNegative : Color.tsInk3)
+                    .frame(minHeight: 24)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .disabled(isLiking)
+                .accessibilityLabel("댓글 공감 \(comment.likeCount)")
+                .accessibilityAddTraits(comment.isLiked ? .isSelected : [])
             }
             Spacer(minLength: 0)
         }
-        .accessibilityElement(children: .combine)
     }
 }

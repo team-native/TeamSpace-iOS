@@ -64,7 +64,11 @@ struct PostDetailView: View {
                 onLike: { Task { await viewModel.toggleLike() } },
                 onCopyLink: copyLink
             )
-            PostCommentSection(detail: detail)
+            PostCommentSection(
+                detail: detail,
+                likingCommentIds: viewModel.likingCommentIds,
+                onLikeComment: { id in Task { await viewModel.toggleCommentLike(id) } }
+            )
         }
     }
 

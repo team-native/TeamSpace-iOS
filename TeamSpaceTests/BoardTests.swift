@@ -212,6 +212,51 @@ final class BoardTests: XCTestCase {
         XCTAssertEqual(viewModel.toastMessage, "링크를 복사했어요")
     }
 
+    /// 10-3b 댓글 공감 — 누르면 빨간 하트 · +1, 다시 누르면 원래대로. 다시 불러와도 수가 남아요.
+    func testCommentLikeToggles() async throws {
+        let container = makeContainer()
+        let viewModel = container.makePostDetailViewModel(postId: 41)
+        await viewModel.load()
+        let comment = try XCTUnwrap(viewModel.detail?.comments.first)
+        XCTAssertEqual(comment.likeCount, 0)
+        XCTAssertFalse(comment.isLiked)
+
+        await viewModel.toggleCommentLike(comment.id)
+        let liked = try XCTUnwrap(viewModel.detail?.comments.first)
+        XCTAssertTrue(liked.isLiked)
+        XCTAssertEqual(liked.likeCount, 1)
+        XCTAssertEqual(viewModel.detail?.comments.last?.likeCount, 0, "다른 댓글은 그대로")
+        XCTAssertTrue(viewModel.likingCommentIds.isEmpty)
+
+        await viewModel.load()
+        XCTAssertEqual(viewModel.detail?.comments.first?.likeCount, 1, "서버 likes 를 읽어요")
+
+        await viewModel.toggleCommentLike(comment.id)
+        XCTAssertEqual(viewModel.detail?.comments.first?.isLiked, false)
+        XCTAssertEqual(viewModel.detail?.comments.first?.likeCount, 0)
+        XCTAssertNil(viewModel.errorMessage)
+    }
+
+    func testCommentLikeUnknownCommentShowsError() async throws {
+        let viewModel = makeContainer().makePostDetailViewModel(postId: 41)
+        await viewModel.load()
+
+        await viewModel.toggleCommentLike(999_999)
+
+        XCTAssertNotNil(viewModel.errorMessage)
+        XCTAssertTrue(viewModel.detail?.comments.allSatisfy { !$0.isLiked } ?? false)
+    }
+
+    func testServerCommentLikesDecoding() throws {
+        let json = Data(#"""
+        {"id":"7","postId":"41","anonymous":true,"text":"hi","createdAt":"2026-11-02T09:00:00.123456+09:00","likes":4,"mine":false}
+        """#.utf8)
+        let decoder = JSONCoder.makeDecoder()
+        let comment = try decoder.decode(ServerCommentDTO.self, from: json).toEntity(postAuthor: nil)
+        XCTAssertEqual(comment.likeCount, 4)
+        XCTAssertFalse(comment.isLiked, "서버가 liked 를 안 주면 빈 하트")
+    }
+
     func testRealNamePostComments() async throws {
         let viewModel = makeContainer().makePostDetailViewModel(postId: 40)
         await viewModel.load()

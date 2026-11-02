@@ -14,6 +14,8 @@ protocol BoardRepository: Sendable {
     func fetchPost(id: Int) async throws -> PostDetail
     /// POST /posts/{postId}/like — 공감 켜기 · 끄기
     func toggleLike(postId: Int) async throws -> PostLike
+    /// POST /posts/{id}/comments/{commentId}/like — 댓글 공감 토글
+    func toggleCommentLike(postId: Int, commentId: Int) async throws -> PostLike
     /// POST /posts/{postId}/reports — 10-10 신고
     func report(postId: Int, reason: PostReportReason) async throws
     /// DELETE /posts/{postId} — 10-8 내 글 삭제

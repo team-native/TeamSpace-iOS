@@ -14,6 +14,9 @@ final class MockBoardStore: @unchecked Sendable {
     /// 10-1 고정 공지로 보여줄 공지
     private static let pinnedNoticeIds = [41, 42]
     private var likedIds: Set<Int> = []
+    /// 댓글 공감 — 댓글 id → 수, 내가 누른 댓글
+    private var commentLikes: [Int: Int] = [:]
+    private var likedCommentIds: Set<Int> = []
     private var comments: [Int: [PostCommentDTO]] = [:]
     /// 새로 쓴 글의 본문 · 댓글 정책
     private var bodies: [Int: String] = [:]
@@ -195,7 +198,7 @@ final class MockBoardStore: @unchecked Sendable {
         fields["text"] = comment.body
         fields["createdAt"] = Self.pythonISO(comment.createdAt)
         fields["when"] = Self.pythonISO(comment.createdAt)
-        fields["likes"] = 0
+        fields["likes"] = commentLikes[comment.id] ?? 0
         fields["replyTo"] = NSNull()
         fields["mine"] = comment.isMine
         if postAnonymous && comment.isPostAuthor {
@@ -286,6 +289,18 @@ final class MockBoardStore: @unchecked Sendable {
         if isLiked { likedIds.insert(id) } else { likedIds.remove(id) }
         posts[index].likeCount += isLiked ? 1 : -1
         return #"{"liked":\#(isLiked),"likes":\#(posts[index].likeCount)}"#
+    }
+
+    /// POST /posts/{id}/comments/{commentId}/like — 서버처럼 `{liked, likes}`, 그 글의 댓글이 아니면 nil (404)
+    func toggleCommentLike(postId: Int, commentId: Int) -> String? {
+        lock.lock()
+        defer { lock.unlock() }
+        guard comments[postId]?.contains(where: { $0.id == commentId }) == true else { return nil }
+        let isLiked = !likedCommentIds.contains(commentId)
+        if isLiked { likedCommentIds.insert(commentId) } else { likedCommentIds.remove(commentId) }
+        let count = max(0, (commentLikes[commentId] ?? 0) + (isLiked ? 1 : -1))
+        commentLikes[commentId] = count
+        return #"{"liked":\#(isLiked),"likes":\#(count)}"#
     }
 
     /// POST /posts/{id}/report — 내 글이면 false (403)
