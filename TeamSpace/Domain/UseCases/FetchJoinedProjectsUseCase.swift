@@ -1,6 +1,6 @@
 import Foundation
 
-/// 07-6 참여 프로젝트 — 진행 중인 것이 먼저, 그다음 끝나는 날이 가까운 순
+/// 07-6 참여 프로젝트 — 진행 중인 것이 먼저, 그다음은 서버 순서(최근 등록 순) 그대로
 struct FetchJoinedProjectsUseCase {
     private let workspaceRepository: WorkspaceRepository
 
@@ -9,10 +9,7 @@ struct FetchJoinedProjectsUseCase {
     }
 
     func execute() async throws -> [JoinedProject] {
-        try await workspaceRepository.fetchJoinedProjects().sorted {
-            let left = $0.status == .inProgress ? 0 : 1
-            let right = $1.status == .inProgress ? 0 : 1
-            return left == right ? $0.endDate < $1.endDate : left < right
-        }
+        let projects = try await workspaceRepository.fetchJoinedProjects()
+        return projects.filter { $0.status == .inProgress } + projects.filter { $0.status != .inProgress }
     }
 }

@@ -149,8 +149,8 @@ extension JoinedProject {
         name.first.map { String($0).uppercased() } ?? "·"
     }
 
-    /// "독서 기록 앱 · 07.01 – 11.30"
+    /// "독서 기록 앱 · 2026.08 – 2026.11"
     var periodText: String {
-        "\(summary) · \(TSFormat.shortDate(startDate)) – \(TSFormat.shortDate(endDate))"
+        [summary, period ?? ""].filter { !$0.isEmpty }.joined(separator: " · ")
     }
 }

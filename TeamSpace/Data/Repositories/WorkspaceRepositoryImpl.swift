@@ -16,9 +16,10 @@ final class WorkspaceRepositoryImpl: WorkspaceRepository, @unchecked Sendable {
         try await request(Endpoint(method: .get, path: "workspace/home"), as: WorkspaceHomeResponseDTO.self).toEntity()
     }
 
+    /// GET /me/projects — 서버가 한 번에 다 줘요 (`nextCursor` 는 항상 null)
     func fetchJoinedProjects() async throws -> [JoinedProject] {
-        try await request(Endpoint(method: .get, path: "workspace/projects"), as: JoinedProjectListResponseDTO.self)
-            .list.map { $0.toEntity() }
+        try await request(Endpoint(method: .get, path: "me/projects"), as: CursorPageDTO<ServerJoinedProjectDTO>.self)
+            .items.map { $0.toEntity() }
     }
 
     func fetchMyDocuments() async throws -> [MyDocument] {
