@@ -134,39 +134,66 @@ final class MockInquiryStore: @unchecked Sendable {
         ]
     }
 
-    /// GET /inquiries/mine
-    func mineJSON() -> String {
+    /// GET /inquiries — 서버 형식 `{items, nextCursor}`, id 큰 순, 커서는 마지막 항목 id
+    func mineJSON(cursor: String? = nil, limit: Int = 20) -> String {
         lock.lock()
         defer { lock.unlock() }
-        return envelope(InquiryListResponseDTO(list: records.filter(\.isMine).map(\.summary)))
+        var mine = records.filter(\.isMine).sorted { $0.summary.id > $1.summary.id }
+        if let cursor = cursor.flatMap(Int.init) { mine = mine.filter { $0.summary.id < cursor } }
+        let page = Array(mine.prefix(limit))
+        let next: Any = mine.count > limit ? String(page.last?.summary.id ?? 0) : NSNull()
+        return json(["items": page.map(Self.serverFields), "nextCursor": next])
     }
 
-    /// GET /inquiries/{id}
-    func detailJSON(id: Int) -> String? {
-        lock.lock()
-        defer { lock.unlock() }
-        guard let record = records.first(where: { $0.summary.id == id && $0.isMine }) else { return nil }
-        return envelope(InquiryDetailDTO(inquiry: record.summary, history: record.history, reference: record.reference))
-    }
-
-    /// POST /inquiries — 접수 상태로 추가해요.
-    func submit(_ request: InquirySubmitRequestDTO) -> String {
+    /// POST /inquiries — 접수 상태로 추가하고 `{id, status}` 를 돌려줘요.
+    func submit(_ request: ServerInquiryCreateRequestDTO) -> String {
         lock.lock()
         defer { lock.unlock() }
         let id = (records.map(\.summary.id).max() ?? 0) + 1
         let now = Date()
+        let department = InquiryDepartment(serverValue: request.dept)
         let summary = InquirySummaryDTO(
-            id: id, department: request.department, title: request.title, body: request.body,
-            isAnonymous: request.isAnonymous, createdAt: now, status: .received, reply: nil
+            id: id, department: department, title: request.title, body: request.body,
+            isAnonymous: request.anonymous, createdAt: now, status: .received, reply: nil
         )
-        let note = "\(Self.departmentName(request.department))에 전달"
         records.append(Record(
             summary: summary,
-            history: [InquiryHistoryDTO(status: .received, occurredAt: now, note: note)],
+            history: [InquiryHistoryDTO(status: .received, occurredAt: now, note: "\(Self.departmentName(department))에 전달")],
             reference: nil,
-            authorName: request.isAnonymous ? nil : "옥물결"
+            authorName: request.anonymous ? nil : "옥물결"
         ))
-        return envelope(summary)
+        return json(["id": String(id), "status": "접수"])
+    }
+
+    /// 서버가 저장하는 문의 payload 모양 — steps 는 [접수, 검토, 답변] 시각 (안 된 단계는 "")
+    private static func serverFields(_ record: Record) -> [String: Any] {
+        let summary = record.summary
+        func stepAt(_ statuses: [InquiryStatus]) -> String {
+            record.history.first { statuses.contains($0.status) }.map { MockBoardStore.pythonISO($0.occurredAt) } ?? ""
+        }
+        var fields: [String: Any] = [:]
+        fields["id"] = String(summary.id)
+        fields["type"] = "문의"
+        fields["dept"] = summary.department.serverValue
+        fields["title"] = summary.title
+        fields["body"] = summary.body
+        fields["anonymous"] = summary.isAnonymous
+        fields["status"] = summary.status.serverValue
+        fields["steps"] = [stepAt([.received]), stepAt([.reviewing]), stepAt([.answered, .rejected])]
+        fields["replies"] = [Any]()
+        fields["author"] = summary.isAnonymous ? "익명" : record.authorName ?? "알 수 없음"
+        if let reply = summary.reply {
+            let actor = record.history.last { $0.status == summary.status }?.actor
+            fields["answer"] = ["who": actor ?? departmentName(reply.department), "at": MockBoardStore.pythonISO(reply.repliedAt), "text": reply.body]
+        } else {
+            fields["answer"] = NSNull()
+        }
+        return fields
+    }
+
+    private func json(_ object: [String: Any]) -> String {
+        let data = (try? JSONSerialization.data(withJSONObject: object, options: [.sortedKeys])) ?? Data()
+        return String(decoding: data, as: UTF8.self)
     }
 
     /// GET /inquiries/inbox — 담당 부서 문의만

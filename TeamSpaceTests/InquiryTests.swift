@@ -44,7 +44,8 @@ final class InquiryTests: XCTestCase {
         XCTAssertEqual(detail.history.map(\.status), [.received, .reviewing, .answered])
         XCTAssertTrue(detail.history.first?.detailText.hasSuffix("NativeOps에 전달") == true)
         XCTAssertTrue(detail.inquiry.reply?.body.hasPrefix("좋은 의견 감사합니다.") == true)
-        XCTAssertEqual(detail.reference?.route, .ruleDetail(id: 5))
+        XCTAssertNil(detail.reference, "서버는 함께 볼 규칙 · 공지를 주지 않아요")
+        XCTAssertEqual(detail.history.last?.actor, "양지우", "답변한 사람은 answer.who")
         XCTAssertEqual(viewModel.followUpTitle, "이 답변에 후속 문의하기")
     }
 
@@ -53,13 +54,31 @@ final class InquiryTests: XCTestCase {
         let rejected = container.makeInquiryDetailViewModel(inquiryId: 41)
         await rejected.load()
         XCTAssertEqual(rejected.detail?.inquiry.status, .rejected)
-        XCTAssertEqual(rejected.detail?.reference?.route, .notices)
-        XCTAssertEqual(rejected.detail?.reference?.linkTitle, "공지 보기")
+        XCTAssertEqual(rejected.detail?.history.map(\.status), [.received, .reviewing, .rejected])
         XCTAssertEqual(rejected.followUpTitle, "다시 문의하기")
 
         let reviewing = container.makeInquiryDetailViewModel(inquiryId: 43)
         await reviewing.load()
         XCTAssertNil(reviewing.followUpTitle, "처리 중에는 후속 문의 버튼이 없어요")
+    }
+
+    func testServerInquiryDecoding() throws {
+        let json = #"{"items":[{"id":"9","type":"문의","dept":"FA","title":"정산","body":"언제 되나요","anonymous":true,"author":"익명","status":"해결됨","steps":["2026-10-20T09:30:00.123456+09:00","2026-10-21T10:00:00+09:00","2026-10-22T11:00:00+09:00"],"answer":{"who":"김민준","whoId":"2","at":"2026-10-22T11:00:00+09:00","text":"이번 주에 돼요."},"replies":[]},{"id":"8","type":"건의","dept":"NativeOps","title":"공간","body":"주말","anonymous":false,"author":"옥물결","status":"접수","steps":["2026-10-19T09:00:00","",""],"answer":null,"replies":[]}],"nextCursor":"8"}"#
+        let page = try JSONCoder.makeDecoder().decode(CursorPageDTO<ServerInquiryDTO>.self, from: Data(json.utf8))
+        XCTAssertEqual(page.nextCursor, "8", "id 커서")
+
+        let solved = page.items[0].toDetail()
+        XCTAssertEqual(solved.inquiry.id, 9)
+        XCTAssertEqual(solved.inquiry.department, .fa)
+        XCTAssertEqual(solved.inquiry.status, .answered, "해결됨은 답변 완료로 봐요")
+        XCTAssertEqual(solved.inquiry.reply?.body, "이번 주에 돼요.")
+        XCTAssertEqual(solved.history.map(\.status), [.received, .reviewing, .answered])
+        XCTAssertEqual(solved.history.first?.note, "FA에 전달")
+
+        let received = page.items[1].toDetail()
+        XCTAssertEqual(received.inquiry.department, .nativeOps)
+        XCTAssertEqual(received.history.map(\.status), [.received], "빈 단계는 건너뛰어요")
+        XCTAssertNil(received.inquiry.reply)
     }
 
     // MARK: 11-2 문의 작성 · 11-3 접수

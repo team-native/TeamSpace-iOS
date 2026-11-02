@@ -7,24 +7,58 @@ final class InquiryRepositoryImpl: InquiryRepository, @unchecked Sendable {
         self.client = client
     }
 
+    /// GET /inquiries — 내 문의 (최신순, id 커서). 상태 칩 숫자를 세려고 끝까지 모아 와요. (100건씩, 최대 5페이지)
     func fetchMyInquiries() async throws -> [InquirySummary] {
-        try await request(Endpoint(method: .get, path: "inquiries/mine"), as: InquiryListResponseDTO.self)
-            .list.map { $0.toEntity() }
+        try await fetchAllMine().map { $0.toEntity() }
     }
 
+    /// 서버에 문의 상세 경로가 없어 내 문의 목록에서 찾아요.
     func fetchInquiry(id: Int) async throws -> InquiryDetail {
-        try await request(Endpoint(method: .get, path: "inquiries/\(id)"), as: InquiryDetailDTO.self).toEntity()
+        guard let item = try await fetchAllMine().first(where: { $0.id == id }) else {
+            throw AppError.notFound("문의를 찾을 수 없어요.")
+        }
+        return item.toDetail()
     }
 
     func submit(_ draft: InquiryDraft) async throws -> InquirySummary {
-        let body = InquirySubmitRequestDTO(
+        let body = ServerInquiryCreateRequestDTO(
+            type: ServerInquiryCreateRequestDTO.defaultType,
+            dept: draft.department.serverValue,
+            title: draft.title,
+            body: draft.body,
+            anonymous: draft.isAnonymous
+        )
+        let created = try await request(Endpoint(method: .post, path: "inquiries", body: body), as: ServerInquiryCreatedDTO.self)
+        return InquirySummary(
+            id: created.id,
             department: draft.department,
             title: draft.title,
             body: draft.body,
             isAnonymous: draft.isAnonymous,
-            followUpOf: draft.followUpOf
+            createdAt: Date(),
+            status: InquiryStatus(serverValue: created.status ?? "접수"),
+            reply: nil
         )
-        return try await request(Endpoint(method: .post, path: "inquiries", body: body), as: InquirySummaryDTO.self).toEntity()
+    }
+
+    private static let pageSize = 100
+    private static let maxPages = 5
+
+    private func fetchAllMine() async throws -> [ServerInquiryDTO] {
+        var items: [ServerInquiryDTO] = []
+        var cursor: String?
+        for _ in 0..<Self.maxPages {
+            var query = [URLQueryItem(name: "limit", value: String(Self.pageSize))]
+            if let cursor { query.append(URLQueryItem(name: "cursor", value: cursor)) }
+            let page = try await request(
+                Endpoint(method: .get, path: "inquiries", queryItems: query),
+                as: CursorPageDTO<ServerInquiryDTO>.self
+            )
+            items += page.items.filter { item in !items.contains { $0.id == item.id } }
+            guard let next = page.nextCursor else { break }
+            cursor = next
+        }
+        return items
     }
 
     func fetchInbox() async throws -> InquiryInbox {
