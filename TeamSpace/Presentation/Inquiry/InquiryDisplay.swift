@@ -106,7 +106,7 @@ extension InquiryReference {
         switch (kind, id) {
         case (.rule, .some(let id)): return .ruleDetail(id: id)
         case (.rule, .none): return .rules
-        case (.notice, .some(let id)): return .noticeDetail(id: id)
+        case (.notice, .some(let id)): return Int(id).map { .noticeDetail(id: $0) } ?? .notices
         default: return .notices
         }
     }

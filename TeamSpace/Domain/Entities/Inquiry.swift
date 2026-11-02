@@ -57,8 +57,8 @@ struct InquiryReference: Equatable, Sendable {
     }
 
     let kind: Kind
-    /// 없으면 목록으로 가요.
-    let id: Int?
+    /// 규칙은 문서 slug, 공지는 숫자 id. 없으면 목록으로 가요.
+    let id: String?
     let title: String
     /// 예) "우선순위, 진행 방법 등"
     let summary: String
@@ -116,5 +116,6 @@ struct InquiryReplyDraft: Equatable, Sendable {
     var kind: Kind = .answer
     var body = ""
     /// 함께 보여줄 규칙
-    var referenceRuleId: Int?
+    /// 규칙 문서 slug
+    var referenceRuleId: String?
 }

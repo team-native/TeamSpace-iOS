@@ -62,7 +62,7 @@ struct RuleComparisonView: View {
         }
     }
 
-    private func actions(ruleId: Int) -> some View {
+    private func actions(ruleId: String) -> some View {
         VStack(spacing: Spacing.sm) {
             Button("전체 본문 보기") { onNavigate(.ruleDetail(id: ruleId)) }
                 .buttonStyle(.tsSecondary)
@@ -78,6 +78,6 @@ struct RuleComparisonView: View {
 
 #Preview {
     NavigationStack {
-        RuleComparisonView(viewModel: DIContainer.preview().makeRuleDetailViewModel(ruleId: 1), onNavigate: { _ in })
+        RuleComparisonView(viewModel: DIContainer.preview().makeRuleDetailViewModel(ruleId: "project-principles"), onNavigate: { _ in })
     }
 }

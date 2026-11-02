@@ -17,12 +17,11 @@ final class MockInquiryStore: @unchecked Sendable {
     /// 11-5 · 11-6 — Mock 담당자는 NativeOps 소속이에요.
     static let managerDepartment: InquiryDepartment = .nativeOps
     /// 11-6 관련 규칙 제목 (09 규칙과 같은 ID)
-    private static let ruleTitles: [Int: (title: String, summary: String)] = [
-        1: ("프로젝트 운영 원칙", "아이디어 제안부터 출시까지의 기준"),
-        5: ("회의와 의사결정 원칙", "우선순위, 진행 방법 등"),
-        8: ("신규 멤버 온보딩 규칙", "합류 첫 2주 동안 하는 일"),
-        12: ("보안 · 계정 관리 규칙", "공용 계정과 권한 관리 방법"),
-        13: ("예산 신청·증빙 가이드", "예산 신청과 증빙 제출 방법")
+    private static let ruleTitles: [String: (title: String, summary: String)] = [
+        "project-principles": ("Native 프로젝트 운영 원칙", "아이디어 제안부터 출시까지의 기준"),
+        "meeting-principles": ("회의와 의사결정 원칙", "짧게 논의하고 명확하게 기록하기"),
+        "onboarding": ("신규 멤버 온보딩 규칙", "합류 첫 2주 동안 하는 일"),
+        "security-accounts": ("보안 · 계정 관리 규칙", "공용 계정과 권한 관리 방법")
     ]
 
     private let lock = NSLock()
@@ -50,7 +49,7 @@ final class MockInquiryStore: @unchecked Sendable {
                     InquiryHistoryDTO(status: .reviewing, occurredAt: at(12, 10.33), note: "예약 현황과 운영 기준 확인", actor: "양지우"),
                     InquiryHistoryDTO(status: .answered, occurredAt: at(10, 14), note: "공식 답변 등록", actor: "양지우")
                 ],
-                reference: InquiryReferenceDTO(kind: .rule, id: 5, title: "회의와 의사결정 원칙", summary: "우선순위, 진행 방법 등"),
+                reference: InquiryReferenceDTO(kind: .rule, id: "meeting-principles", title: "회의와 의사결정 원칙", summary: "우선순위, 진행 방법 등"),
                 assignee: "양지우"
             ),
             Record(
@@ -241,7 +240,7 @@ final class MockInquiryStore: @unchecked Sendable {
         records[index].summary.status = .answered
         records[index].summary.reply = InquiryReplyDTO(department: Self.managerDepartment, body: request.text, repliedAt: now)
         records[index].history.append(InquiryHistoryDTO(status: .answered, occurredAt: now, note: "", actor: actor))
-        if let ruleId = request.referenceRuleId.flatMap(Int.init), let rule = Self.ruleTitles[ruleId] {
+        if let ruleId = request.referenceRuleId, let rule = Self.ruleTitles[ruleId] {
             records[index].reference = InquiryReferenceDTO(kind: .rule, id: ruleId, title: rule.title, summary: rule.summary)
         }
         return json(["id": String(id), "status": "답변 완료", "answer": ["who": actor, "at": MockBoardStore.pythonISO(now), "text": request.text]])

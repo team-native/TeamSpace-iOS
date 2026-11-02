@@ -56,8 +56,8 @@ extension NoticeLinkedDocument {
     /// 규칙은 09-2, 템플릿은 06-3, 나머지는 준비 중 화면
     var route: AppRoute {
         switch category {
-        case .rule: return .ruleDetail(id: id)
-        case .template: return .templateDetail(id: id)
+        case .rule: return .ruleDetail(id: String(id))
+        case .template: return .templateDetail(id: String(id))
         default: return .comingSoon(title: title)
         }
     }

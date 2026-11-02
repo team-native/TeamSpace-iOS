@@ -83,6 +83,6 @@ struct RuleDetailView: View {
 
 #Preview {
     NavigationStack {
-        RuleDetailView(viewModel: DIContainer.preview().makeRuleDetailViewModel(ruleId: 1), onNavigate: { _ in })
+        RuleDetailView(viewModel: DIContainer.preview().makeRuleDetailViewModel(ruleId: "project-principles"), onNavigate: { _ in })
     }
 }

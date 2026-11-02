@@ -96,7 +96,7 @@ final class NoticeTests: XCTestCase {
     }
 
     func testLinkedDocumentRoutes() {
-        XCTAssertEqual(NoticeLinkedDocument(id: 1, title: "프로젝트 운영 원칙", category: .rule).route, .ruleDetail(id: 1))
+        XCTAssertEqual(NoticeLinkedDocument(id: 1, title: "프로젝트 운영 원칙", category: .rule).route, .ruleDetail(id: "1"))
     }
 
     // MARK: 10-7 전체 공지 작성

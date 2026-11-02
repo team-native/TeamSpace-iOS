@@ -30,6 +30,8 @@ struct SearchHit: Equatable, Identifiable, Sendable {
     var department: String?
     var pmName: String?
     var progress: Int?
+    /// 문서 slug (href 끝부분)
+    var documentSlug: String?
 
     var id: String { "\(category.rawValue)-\(serverId)" }
     var targetId: Int? { Int(serverId) }

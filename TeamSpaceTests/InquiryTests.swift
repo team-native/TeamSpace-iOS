@@ -44,7 +44,7 @@ final class InquiryTests: XCTestCase {
         XCTAssertEqual(detail.history.map(\.status), [.received, .reviewing, .answered])
         XCTAssertTrue(detail.history.first?.detailText.hasSuffix("NativeOps에 전달") == true)
         XCTAssertTrue(detail.inquiry.reply?.body.hasPrefix("좋은 의견 감사합니다.") == true)
-        XCTAssertEqual(detail.reference?.route, .ruleDetail(id: 5), "payload 에 reference 가 있으면 읽어요 (백엔드 협의안)")
+        XCTAssertEqual(detail.reference?.route, .ruleDetail(id: "meeting-principles"), "payload 에 reference 가 있으면 읽어요 (백엔드 협의안)")
         XCTAssertEqual(detail.history.last?.actor, "양지우", "답변한 사람은 answer.who")
         XCTAssertEqual(viewModel.followUpTitle, "이 답변에 후속 문의하기")
     }
@@ -172,7 +172,7 @@ final class InquiryTests: XCTestCase {
         XCTAssertEqual(viewModel.statusChangeText, "검토 중 → 답변 완료")
 
         viewModel.draft.body = "평일 9시부터 22시까지 이용할 수 있어요."
-        viewModel.draft.referenceRuleId = 8
+        viewModel.draft.referenceRuleId = "onboarding"
         XCTAssertEqual(viewModel.selectedRule?.title, "신규 멤버 온보딩 규칙")
         await viewModel.submit()
 

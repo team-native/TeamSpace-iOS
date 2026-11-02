@@ -60,11 +60,15 @@ extension SearchHit {
     }
 
     var route: AppRoute {
+        // 문서는 서버 slug 그대로 열어요.
+        if category == .documents {
+            let slug = documentSlug ?? serverId
+            if isRule { return .ruleDetail(id: slug) }
+            return documentType?.uppercased() == "TEMPLATE" ? .templateDetail(id: slug) : .comingSoon(title: title)
+        }
         guard let id = targetId else { return .comingSoon(title: title) }
         switch category {
-        case .documents:
-            if isRule { return .ruleDetail(id: id) }
-            return documentType?.uppercased() == "TEMPLATE" ? .templateDetail(id: id) : .comingSoon(title: title)
+        case .documents: return .comingSoon(title: title)
         case .projects: return .projectDetail(id: id)
         case .people: return .memberDetail(id: id)
         case .posts: return .postDetail(id: id)

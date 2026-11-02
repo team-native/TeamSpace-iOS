@@ -16,10 +16,11 @@ struct TemplateField: Equatable, Sendable {
 
 /// 06-3 템플릿 설명과 연결할 결재 양식
 struct LibraryTemplate: Equatable, Identifiable, Sendable {
-    let id: Int
+    let id: String
     let title: String
     let description: String
     let fields: [TemplateField]
+    /// 서버에 없어 0이면 숨겨요.
     let monthlyUsageCount: Int
     let formKind: TemplateFormKind
 }

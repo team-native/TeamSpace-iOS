@@ -86,18 +86,25 @@ struct TemplateDetailContent: View {
                     .foregroundStyle(Color.tsInk)
                 TemplateFieldList(fields: template.fields)
             }
-            HStack(spacing: Spacing.sm) {
-                TSIcon.templateUsers.sized(.base)
-                Text("이번 달 \(template.monthlyUsageCount)명이 이 템플릿을 사용했어요")
-                    .tsFont(.footnote)
-                    .fixedSize(horizontal: false, vertical: true)
+            if template.monthlyUsageCount > 0 {
+                usageBanner(template.monthlyUsageCount)
             }
-            .foregroundStyle(Color.tsTemplateAccent)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, Spacing.md + Spacing.xxxs)
-            .padding(.vertical, Spacing.md + Spacing.hairline)
-            .background(Color.tsTemplateBanner, in: RoundedRectangle(cornerRadius: Radius.lg))
         }
+    }
+
+    /// 서버에 사용 수가 없으면 숨겨요.
+    private func usageBanner(_ count: Int) -> some View {
+        HStack(spacing: Spacing.sm) {
+            TSIcon.templateUsers.sized(.base)
+            Text("이번 달 \(count)명이 이 템플릿을 사용했어요")
+                .tsFont(.footnote)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .foregroundStyle(Color.tsTemplateAccent)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, Spacing.md + Spacing.xxxs)
+        .padding(.vertical, Spacing.md + Spacing.hairline)
+        .background(Color.tsTemplateBanner, in: RoundedRectangle(cornerRadius: Radius.lg))
     }
 
     private var heading: some View {
@@ -173,6 +180,6 @@ struct TemplateComposeButton: View {
 
 #Preview {
     NavigationStack {
-        TemplateDetailView(viewModel: DIContainer.preview().makeTemplateDetailViewModel(templateId: 3), onNavigate: { _ in })
+        TemplateDetailView(viewModel: DIContainer.preview().makeTemplateDetailViewModel(templateId: "budget-request"), onNavigate: { _ in })
     }
 }

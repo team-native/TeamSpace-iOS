@@ -12,14 +12,13 @@ import Foundation
 ///   Figma 05 결재 · 07-4 · 07-5 내 문서 예시 (MockApprovalStore, 서버 develop 형식, 처리 결과를 메모리에 기억)
 /// - GET /finance/~: Figma 04 재무 예시 (MockFinanceFixture)
 /// - GET /dashboard/home: Figma 02-1 홈 예시 (MockDashboardFixture)
-/// - GET /library · /library/search: Figma 06 문서함 예시 (MockLibraryFixture)
+/// - GET /docs · /docs/{slug} · /docs/{slug}/history · POST /docs/{slug}/read: Figma 06 문서함 · 09 규칙 (MockDocStore, 서버 develop 형식)
 /// - GET /me/summary · /me/projects: Figma 07 내 공간 예시 (서버 develop 형식, 홈은 여러 API 를 조합)
 /// - GET · POST /todos · PATCH /todos/{id}: Figma 07-2 (MockTodoStore, 서버 develop 형식, 메모리에 기억)
 /// - GET /events · POST /events/{id}/rsvp: Figma 07-7 ~ 07-9 (MockScheduleStore, 서버 develop 형식, 참석 응답 기억)
 /// - GET /me/activity: Figma 07-10 댓글 (MockActivityFixture, 서버 develop 형식) · 내 글 · 제안은 /posts · /proposals 의 mine
 /// - GET · PATCH /me: Figma 07-13 (MockProfileStore, 서버 develop 형식, 저장 내용 기억)
 /// - /projects/~ · /applications/~: Figma 08 (MockProjectStore, 신청 · 결과 등록 기억)
-/// - GET /rules · /rules/{id} · POST /rules/{id}/acknowledge: Figma 09 (MockRuleStore, 읽음 확인 기억)
 /// - /proposals/~: Figma 12 운영 제안 (MockProposalStore, 제안 · 추천 · 댓글 기억)
 /// - /inquiries/~: Figma 11 익명 문의 · 담당자 받은함 (MockInquiryStore, 제출 · 배정 · 답변 기억)
 /// - /notices/~: Figma 10-5 ~ 10-7 공지 (MockNoticeStore, 확인 · 게시 기억)
@@ -44,7 +43,7 @@ struct MockTransport: HTTPTransport {
     private let scheduleStore = MockScheduleStore()
     private let profileStore = MockProfileStore()
     private let projectStore = MockProjectStore()
-    private let ruleStore = MockRuleStore()
+    private let docStore = MockDocStore()
     let boardStore = MockBoardStore()
     private let inquiryStore = MockInquiryStore()
     private let proposalStore = MockProposalStore()
@@ -59,9 +58,6 @@ struct MockTransport: HTTPTransport {
             return response
         }
         if let response = try approvalRoute(request, path: path) {
-            return response
-        }
-        if let response = try libraryRoute(request, path: path) {
             return response
         }
         if let response = try projectRoute(request, path: path) {
@@ -204,8 +200,8 @@ struct MockTransport: HTTPTransport {
         if components.first == "applications" {
             return try applicationRoute(request, components: components)
         }
-        if components.first == "rules" {
-            return try ruleRoute(request, components: components)
+        if components.first == "docs" {
+            return try docRoute(request, components: components)
         }
         if components.first == "uploads", request.httpMethod == "POST" {
             return try upload(request)
@@ -286,18 +282,21 @@ struct MockTransport: HTTPTransport {
         }
     }
 
-    /// 09 규칙 · 제도 — /rules/~
-    private func ruleRoute(_ request: URLRequest, components: [String]) throws -> (Data, HTTPURLResponse)? {
-        let notFound = #"{"code":404,"message":"해당 규칙을 찾을 수 없습니다."}"#
-        let id = components.count > 1 ? Int(components[1]) : nil
+    /// 06 문서함 · 09 규칙 — /docs/~ (slug 문자열 id)
+    private func docRoute(_ request: URLRequest, components: [String]) throws -> (Data, HTTPURLResponse)? {
+        let notFound = #"{"detail":"문서를 찾을 수 없습니다."}"#
+        let slug = components.count > 1 ? components[1] : ""
         switch (request.httpMethod ?? "", components.count) {
         case ("GET", 1):
-            return try respond(request, status: 200, json: ruleStore.listJSON())
+            return try respond(request, status: 200, json: docStore.listJSON(query: Self.query(of: request)))
         case ("GET", 2):
-            guard let id = id, let json = ruleStore.detailJSON(id: id) else { return try respond(request, status: 404, json: notFound) }
+            guard let json = docStore.detailJSON(slug: slug) else { return try respond(request, status: 404, json: notFound) }
             return try respond(request, status: 200, json: json)
-        case ("POST", 3) where components[2] == "acknowledge":
-            guard let id = id, let json = ruleStore.acknowledge(id: id) else { return try respond(request, status: 404, json: notFound) }
+        case ("GET", 3) where components[2] == "history":
+            guard let json = docStore.historyJSON(slug: slug) else { return try respond(request, status: 404, json: notFound) }
+            return try respond(request, status: 200, json: json)
+        case ("POST", 3) where components[2] == "read":
+            guard let json = docStore.read(slug: slug) else { return try respond(request, status: 404, json: notFound) }
             return try respond(request, status: 200, json: json)
         default:
             return nil
@@ -607,31 +606,6 @@ struct MockTransport: HTTPTransport {
                 return try respond(request, status: 409, json: #"{"code":409,"message":"취소할 수 없는 신청이에요."}"#)
             }
             return try respond(request, status: 200, json: #"{"code":200,"message":"취소 완료","data":{"success":true}}"#)
-        default:
-            return nil
-        }
-    }
-
-    /// 06 문서함 — GET /library · /library/search
-    private func libraryRoute(_ request: URLRequest, path: String) throws -> (Data, HTTPURLResponse)? {
-        guard
-            request.httpMethod == "GET",
-            let url = request.url,
-            url.pathComponents.contains("library")
-        else { return nil }
-        if url.pathComponents.contains("templates"), let id = Int(path) {
-            guard let json = MockTemplateFixture.template(id: id) else {
-                return try respond(request, status: 404, json: #"{"code":404,"message":"템플릿을 찾을 수 없어요","data":null}"#)
-            }
-            return try respond(request, status: 200, json: json)
-        }
-        switch path {
-        case "library":
-            return try respond(request, status: 200, json: MockLibraryFixture.library())
-        case "search":
-            let keyword = URLComponents(url: url, resolvingAgainstBaseURL: false)?
-                .queryItems?.first { $0.name == "keyword" }?.value ?? ""
-            return try respond(request, status: 200, json: MockLibraryFixture.search(keyword: keyword))
         default:
             return nil
         }
