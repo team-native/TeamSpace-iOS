@@ -14,6 +14,8 @@ protocol ApprovalRepository: Sendable {
     func addComment(documentId: Int, body: String) async throws -> ApprovalComment
     /// POST /approvals — 작성(임시 저장, submit false) · 제출(submit true)을 한 번에. 새 결재 ID 를 돌려줘요.
     func createDocument(_ draft: DocumentDraft, submit: Bool) async throws -> Int
+    /// PATCH /approvals/{id} — 작성 중 · 반려된 내 결재를 고쳐 다시 저장(submit false) · 제출(submit true)해요.
+    func updateDocument(documentId: Int, _ draft: DocumentDraft, submit: Bool) async throws -> Int
     /// POST /approvals/{id}/cancel — 요청 취소 (상태가 '취소' 가 돼요)
     func withdraw(documentId: Int) async throws
 }

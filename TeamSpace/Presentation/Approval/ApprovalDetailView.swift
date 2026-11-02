@@ -70,10 +70,13 @@ struct ApprovalDetailView: View {
                     isLeadingDestructive: true,
                     isDisabled: viewModel.isProcessing
                 )
-            } else if detail.canEdit {
+            } else if detail.canEdit || detail.canWithdraw {
+                // 서버 규칙: 검토 중이면 취소만, 반려면 고쳐서 다시 올리기만, 작성 중이면 둘 다
                 DualButtonBar(
-                    leading: ("요청 취소", { viewModel.isWithdrawConfirmPresented = true }),
-                    trailing: ("수정하기", { onNavigate(.comingSoon(title: "결재 수정")) }),
+                    leading: detail.canWithdraw ? ("요청 취소", { viewModel.isWithdrawConfirmPresented = true }) : nil,
+                    trailing: detail.canEdit
+                        ? (detail.item.status == .rejected ? "수정 후 다시 올리기" : "수정하기", { onNavigate(.approvalEdit(documentId: detail.item.id)) })
+                        : nil,
                     isLeadingDestructive: false,
                     isDisabled: viewModel.isProcessing
                 )

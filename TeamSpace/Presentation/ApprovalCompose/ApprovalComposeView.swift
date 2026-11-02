@@ -45,6 +45,8 @@ struct ApprovalComposeView: View {
     private let container: DIContainer
     private let onNavigate: (AppRoute) -> Void
     private let templateTitle: String?
+    /// 고치는 결재 (작성 중 · 반려) — 있으면 그 종류 양식을 기존 내용으로 채워 열어요.
+    private let editing: ApprovalDetail?
 
     @State private var activeSheet: ApprovalComposeKind?
     @State private var submitted: SubmittedDocument?
@@ -54,12 +56,14 @@ struct ApprovalComposeView: View {
         container: DIContainer,
         onNavigate: @escaping (AppRoute) -> Void,
         initialKind: ApprovalComposeKind? = nil,
-        templateTitle: String? = nil
+        templateTitle: String? = nil,
+        editing: ApprovalDetail? = nil
     ) {
         self.container = container
         self.onNavigate = onNavigate
         self.templateTitle = templateTitle
-        _activeSheet = State(initialValue: initialKind)
+        self.editing = editing
+        _activeSheet = State(initialValue: editing?.item.kind.composeKind ?? initialKind)
     }
 
     var body: some View {
@@ -115,20 +119,22 @@ struct ApprovalComposeView: View {
             activeSheet = nil
             submitted = result
         }
+        // 고치는 결재와 같은 종류를 열 때만 기존 내용을 채워요.
+        let editing = editing.flatMap { $0.item.kind.composeKind == kind ? $0 : nil }
         switch kind {
         case .expense:
-            ExpenseRequestSheet(viewModel: container.makeExpenseRequestViewModel(), onFinish: onFinish)
+            let viewModel = container.makeExpenseRequestViewModel()
+            let _ = editing.map(viewModel.prefill)
+            ExpenseRequestSheet(viewModel: viewModel, onFinish: onFinish)
         case .staffing:
-            StaffingRequestSheet(viewModel: container.makeStaffingRequestViewModel(), onFinish: onFinish)
-        case .projectRequest:
-            RequestFormSheet(viewModel: container.makeRequestFormViewModel(kind: .project), onFinish: onFinish)
-        case .operationRequest:
-            RequestFormSheet(viewModel: container.makeRequestFormViewModel(kind: .operation), onFinish: onFinish)
-        case .etcDocument:
-            RequestFormSheet(
-                viewModel: container.makeRequestFormViewModel(kind: .etc, initialTitle: templateTitle ?? ""),
-                onFinish: onFinish
-            )
+            let viewModel = container.makeStaffingRequestViewModel()
+            let _ = editing.map(viewModel.prefill)
+            StaffingRequestSheet(viewModel: viewModel, onFinish: onFinish)
+        case .projectRequest, .operationRequest, .etcDocument:
+            let formKind: RequestFormKind = kind == .projectRequest ? .project : kind == .operationRequest ? .operation : .etc
+            let viewModel = container.makeRequestFormViewModel(kind: formKind, initialTitle: formKind == .etc ? templateTitle ?? "" : "")
+            let _ = editing.map(viewModel.prefill)
+            RequestFormSheet(viewModel: viewModel, onFinish: onFinish)
         }
     }
 }

@@ -20,7 +20,7 @@ struct AppRouteView: View {
         case .financeContractLedger, .financeContractDetail, .financeMonthlyFlow, .financeComposition,
              .financeAccess, .financeProjectAmounts:
             financeScreen
-        case .approvalDetail, .approvalCompose, .approvalResume, .librarySearch, .templateDetail, .templateCompose:
+        case .approvalDetail, .approvalCompose, .approvalEdit, .librarySearch, .templateDetail, .templateCompose:
             documentScreen
         case .workspaceDashboard, .workspaceTodos, .workspaceDocuments, .workspaceDrafts, .workspaceProjects, .workspaceProjectList,
              .workspaceSchedules, .workspaceScheduleDetail, .workspaceMyPosts, .workspaceMyProposals, .workspaceActivity:
@@ -103,8 +103,8 @@ struct AppRouteView: View {
         switch route {
         case .approvalDetail(let documentId):
             ApprovalDetailView(viewModel: container.makeApprovalDetailViewModel(documentId: documentId), onNavigate: onNavigate)
-        case .approvalResume(let kind, let title):
-            ApprovalComposeView(container: container, onNavigate: onNavigate, initialKind: kind, templateTitle: title)
+        case .approvalEdit(let documentId):
+            ApprovalEditView(viewModel: container.makeApprovalDetailViewModel(documentId: documentId), container: container, onNavigate: onNavigate)
         case .librarySearch:
             LibrarySearchView(viewModel: container.makeLibrarySearchViewModel(), onNavigate: onNavigate)
         case .templateDetail(let id):

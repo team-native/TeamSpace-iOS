@@ -441,7 +441,7 @@ struct MockTransport: HTTPTransport {
         }
     }
 
-    /// 05 결재 — GET /approvals?box= · GET /approvals/{id} · POST approve · reject · cancel · comments
+    /// 05 결재 — GET /approvals?box= · GET · PATCH /approvals/{id} · POST approve · reject · cancel · comments
     private func serverApprovalRoute(_ request: URLRequest, components: [String]) throws -> (Data, HTTPURLResponse)? {
         let notFound = #"{"detail":"결재를 찾을 수 없습니다."}"#
         switch (request.httpMethod ?? "", components.count) {
@@ -464,6 +464,15 @@ struct MockTransport: HTTPTransport {
                 return try respond(request, status: 404, json: notFound)
             }
             return try respond(request, status: 200, json: json)
+        case ("PATCH", 2):
+            guard let id = Int(components[1]) else { return try respond(request, status: 404, json: notFound) }
+            let body = request.httpBody.flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] } ?? [:]
+            switch approvalStore.update(id: id, body: body) {
+            case .success(let json): return try respond(request, status: 200, json: json)
+            case .failure(.forbidden):
+                return try respond(request, status: 403, json: #"{"detail":"작성 중이거나 반려된 본인 결재만 수정할 수 있습니다."}"#)
+            case .failure(.invalid(let message)): return try respond(request, status: 422, json: #"{"detail":"\#(message)"}"#)
+            }
         case ("POST", 3):
             guard let id = Int(components[1]) else { return try respond(request, status: 404, json: notFound) }
             let body = request.httpBody.flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] } ?? [:]

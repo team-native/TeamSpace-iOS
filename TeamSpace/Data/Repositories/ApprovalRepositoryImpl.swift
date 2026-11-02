@@ -69,6 +69,12 @@ final class ApprovalRepositoryImpl: ApprovalRepository, @unchecked Sendable {
         return try await request(endpoint, as: ServerApprovalCreatedDTO.self).id
     }
 
+    func updateDocument(documentId: Int, _ draft: DocumentDraft, submit: Bool) async throws -> Int {
+        let body = ServerApprovalCreateRequestDTO(draft, submit: submit).patch
+        _ = try await request(Endpoint(method: .patch, path: "approvals/\(documentId)", body: body), as: IgnoredJSONValue.self)
+        return documentId
+    }
+
     func withdraw(documentId: Int) async throws {
         _ = try await request(Endpoint(method: .post, path: "approvals/\(documentId)/cancel"), as: IgnoredJSONValue.self)
     }

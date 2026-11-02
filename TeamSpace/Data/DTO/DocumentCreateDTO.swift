@@ -52,6 +52,30 @@ struct ServerApprovalCreateRequestDTO: Encodable, Equatable {
     }
 }
 
+/// PATCH /approvals/{id} 요청 — 서버 `ApprovalPatch` 는 모르는 항목을 거절해서 kind 를 빼고 보내요.
+struct ServerApprovalPatchRequestDTO: Encodable, Equatable {
+    let type: String
+    let title: String
+    let amount: Int
+    /// 작성 중 · 결재 대기 (결재 대기면 서버가 결재선을 다시 만들어요)
+    let status: String
+    let project: String
+    let useDate: String
+    let period: String
+    let reason: String
+    let staff: [String: Int]
+    let details: ServerApprovalCreateRequestDTO.Details
+}
+
+extension ServerApprovalCreateRequestDTO {
+    var patch: ServerApprovalPatchRequestDTO {
+        ServerApprovalPatchRequestDTO(
+            type: type, title: title, amount: amount, status: status, project: project,
+            useDate: useDate, period: period, reason: reason, staff: staff, details: details
+        )
+    }
+}
+
 /// POST /approvals 응답 — `{id, status}`
 struct ServerApprovalCreatedDTO: Decodable {
     let id: Int

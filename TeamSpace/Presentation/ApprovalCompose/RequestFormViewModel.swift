@@ -73,6 +73,8 @@ final class RequestFormViewModel {
     var isFileImporterPresented = false
     private(set) var isSubmitting = false
     var errorMessage: String?
+    /// 고치는 중인 결재 (작성 중 · 반려). nil 이면 새로 올려요.
+    private(set) var documentId: Int?
 
     private let submitDocumentUseCase: SubmitDocumentUseCase
 
@@ -93,6 +95,20 @@ final class RequestFormViewModel {
         }
         self.target = targets.first ?? ""
         self.category = kind.categories.first
+    }
+
+    /// 작성 중 · 반려된 결재를 고칠 때 기존 내용을 채워요.
+    func prefill(from detail: ApprovalDetail) {
+        documentId = detail.item.id
+        title = detail.item.title
+        if let value = detail.fieldValue("프로젝트", "담당 부서") { target = value }
+        if let value = detail.fieldValue("요청 종류", "요청 분류") { category = value }
+        quantity = detail.fieldValue("필요 인원", "수량") ?? ""
+        period = detail.fieldValue("기간") ?? ""
+        amountText = detail.item.amount.map(String.init) ?? ""
+        if let date = detail.fieldValue("희망 반영일", "희망 처리일").flatMap(TSFormat.parseFullDate) { desiredDate = date }
+        body = detail.reason
+        attachmentNames = detail.attachments.map(\.name)
     }
 
     var amount: Int {
@@ -163,11 +179,11 @@ final class RequestFormViewModel {
     }
 
     func submit() async -> SubmittedDocument? {
-        await run { try await self.submitDocumentUseCase.submit(self.draft) }
+        await run { try await self.submitDocumentUseCase.submit(self.draft, documentId: self.documentId) }
     }
 
     func saveDraft() async -> Bool {
-        await run { try await self.submitDocumentUseCase.saveDraft(self.draft) } != nil
+        await run { try await self.submitDocumentUseCase.saveDraft(self.draft, documentId: self.documentId) } != nil
     }
 
     private func run(_ work: () async throws -> Int) async -> SubmittedDocument? {
