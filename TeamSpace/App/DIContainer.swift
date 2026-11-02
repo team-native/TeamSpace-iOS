@@ -44,7 +44,10 @@ final class DIContainer {
         self.tokenStorage = tokenStorage
         self.authRepository = AuthRepositoryImpl(client: apiClient)
         self.notificationRepository = NotificationRepositoryImpl(client: apiClient)
-        self.notificationSettingsRepository = notificationSettingsRepository
+        self.notificationSettingsRepository = NotificationSettingsRepositoryImpl(
+            client: apiClient,
+            cache: notificationSettingsRepository
+        )
         self.notificationPermissionRepository = notificationPermissionRepository
         self.pushTokenRepository = PushTokenRepositoryImpl(client: apiClient)
         self.dashboardRepository = DashboardRepositoryImpl(client: apiClient)
