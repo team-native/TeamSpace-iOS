@@ -20,7 +20,11 @@ final class InquiryRepositoryImpl: InquiryRepository, @unchecked Sendable {
         return item.toDetail()
     }
 
+    /// 답변받은 문의의 후속 문의는 같은 문의에 추가 메시지로(POST /inquiries/{id}/comments), 나머지는 새 문의로 접수해요.
     func submit(_ draft: InquiryDraft) async throws -> InquirySummary {
+        if let original = draft.followUpOf {
+            return try await addFollowUp(to: original, draft: draft)
+        }
         let body = ServerInquiryCreateRequestDTO(
             type: ServerInquiryCreateRequestDTO.defaultType,
             dept: draft.department.serverValue,
@@ -38,6 +42,23 @@ final class InquiryRepositoryImpl: InquiryRepository, @unchecked Sendable {
             createdAt: Date(),
             status: InquiryStatus(serverValue: created.status ?? "접수"),
             reply: nil
+        )
+    }
+
+    /// 추가 메시지는 제목 없이 내용만 보내요.
+    private func addFollowUp(to inquiryId: Int, draft: InquiryDraft) async throws -> InquirySummary {
+        let endpoint = Endpoint(
+            method: .post,
+            path: "inquiries/\(inquiryId)/comments",
+            body: ServerInquiryCommentRequestDTO(text: draft.body)
+        )
+        _ = try await request(endpoint, as: IgnoredJSONValue.self)
+        if let original = try? await fetchAllMine().first(where: { $0.id == inquiryId }) {
+            return original.toEntity()
+        }
+        return InquirySummary(
+            id: inquiryId, department: draft.department, title: draft.title, body: draft.body,
+            isAnonymous: draft.isAnonymous, createdAt: Date(), status: .answered, reply: nil
         )
     }
 

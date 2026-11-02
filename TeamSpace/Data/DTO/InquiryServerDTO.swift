@@ -26,6 +26,23 @@ struct ServerInquiryDTO: Decodable {
     let assignee: String?
     /// 답변과 함께 보여줄 규칙 — 서버가 저장하면 읽어요. (백엔드 협의 중)
     let reference: InquiryReferenceDTO?
+    /// 추가 메시지 `[{text, at, who}]`
+    let replies: [Reply]
+
+    struct Reply: Decodable {
+        let text: String
+        let at: Date?
+        let who: String?
+
+        private enum CodingKeys: String, CodingKey { case text, at, who }
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            text = (try? container.decodeIfPresent(String.self, forKey: .text)) ?? ""
+            at = (try? container.decodeIfPresent(String.self, forKey: .at)).flatMap { $0.flatMap(ServerDate.parse) }
+            who = try? container.decodeIfPresent(String.self, forKey: .who)
+        }
+    }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -43,10 +60,11 @@ struct ServerInquiryDTO: Decodable {
         author = try? container.decodeIfPresent(String.self, forKey: .author)
         assignee = try? container.decodeIfPresent(String.self, forKey: .assignee)
         reference = try? container.decodeIfPresent(InquiryReferenceDTO.self, forKey: .reference)
+        replies = (try? container.decodeIfPresent([Reply].self, forKey: .replies)) ?? []
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, type, dept, title, body, anonymous, status, steps, answer, createdAt, author, assignee, reference
+        case id, type, dept, title, body, anonymous, status, steps, answer, createdAt, author, assignee, reference, replies
     }
 
     var departmentValue: InquiryDepartment { department }
@@ -89,7 +107,14 @@ struct ServerInquiryDTO: Decodable {
         if history.isEmpty {
             history = [InquiryHistory(status: .received, occurredAt: receivedAt, note: Self.note(for: .received, department: summary.department))]
         }
-        return InquiryDetail(inquiry: summary, history: history, reference: reference?.toEntity())
+        return InquiryDetail(
+            inquiry: summary,
+            history: history,
+            reference: reference?.toEntity(),
+            followUps: replies.filter { !$0.text.isEmpty }.map {
+                InquiryFollowUp(text: $0.text, author: $0.who ?? "익명", sentAt: $0.at ?? receivedAt)
+            }
+        )
     }
 
     /// 11-5 · 11-6 담당자 화면 — 익명 문의는 작성자를 보여주지 않아요.
@@ -127,6 +152,11 @@ struct ServerInquiryPatchRequestDTO: Codable, Equatable {
 struct ServerInquiryAnswerRequestDTO: Codable, Equatable {
     let text: String
     var referenceRuleId: String?
+}
+
+/// POST /inquiries/{id}/comments 요청 · 응답 `{text, at, who}`
+struct ServerInquiryCommentRequestDTO: Codable, Equatable {
+    let text: String
 }
 
 /// POST /inquiries 요청

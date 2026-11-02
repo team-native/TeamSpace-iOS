@@ -96,6 +96,31 @@ struct InquiryReplyCard: View {
     }
 }
 
+/// 11-4 답변 뒤에 이어서 보낸 추가 메시지
+struct InquiryFollowUpCard: View {
+    let followUps: [InquiryFollowUp]
+
+    var body: some View {
+        WorkspaceCard {
+            Text("추가 문의 \(followUps.count)")
+                .tsFont(.footnoteBold)
+                .foregroundStyle(Color.tsInk)
+            ForEach(Array(followUps.enumerated()), id: \.offset) { _, item in
+                VStack(alignment: .leading, spacing: Spacing.xxxs) {
+                    Text("\(item.author) · \(TSFormat.fullDate(item.sentAt)) \(TSFormat.time(item.sentAt))")
+                        .tsFont(.caption2)
+                        .foregroundStyle(Color.tsInk3)
+                    Text(item.text)
+                        .tsFont(.footnote)
+                        .foregroundStyle(Color.tsInk)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .accessibilityElement(children: .combine)
+            }
+        }
+    }
+}
+
 /// 11-4 관련 규칙 · 11-7 관련 공지
 struct InquiryReferenceCard: View {
     let reference: InquiryReference

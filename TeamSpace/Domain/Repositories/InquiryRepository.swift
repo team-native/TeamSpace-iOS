@@ -7,7 +7,7 @@ protocol InquiryRepository: Sendable {
     func fetchMyInquiries() async throws -> [InquirySummary]
     /// 11-4 · 11-7 문의 상세 (작성자 본인) — 서버에 상세 경로가 없어 GET /inquiries 에서 찾아요.
     func fetchInquiry(id: Int) async throws -> InquiryDetail
-    /// POST /inquiries — 11-2 문의 제출
+    /// POST /inquiries — 11-2 문의 제출 · 답변받은 문의의 후속 문의는 POST /inquiries/{id}/comments
     func submit(_ draft: InquiryDraft) async throws -> InquirySummary
     /// GET /admin/inquiries — 11-5 담당 부서 받은함
     func fetchInbox() async throws -> InquiryInbox
