@@ -129,9 +129,35 @@ struct ServerNoticeItemDTO: Decodable {
             viewCount: nil,
             linkedDocument: nil,
             isAcknowledged: confirmedByMe,
-            acknowledgedAt: nil
+            acknowledgedAt: nil,
+            confirmedCount: confirmed,
+            memberCount: total
         )
     }
+}
+
+/// GET /admin/notices/{id}/unconfirmed — `{items: [{id, name, email}], nextCursor}`
+struct ServerNoticeUnconfirmedPageDTO: Decodable {
+    struct Item: Decodable {
+        let id: String
+        let name: String
+        let email: String
+
+        private enum CodingKeys: String, CodingKey { case id, name, email }
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            id = try container.decodeIntOrString(forKey: .id).description
+            name = (try? container.decodeIfPresent(String.self, forKey: .name)) ?? ""
+            email = (try? container.decodeIfPresent(String.self, forKey: .email)) ?? ""
+        }
+
+        func toEntity() -> NoticeUnconfirmedMember {
+            NoticeUnconfirmedMember(id: id, name: name.isEmpty ? "이름 없음" : name, email: email)
+        }
+    }
+
+    let items: [Item]
 }
 
 /// 값은 읽지 않고 개수만 셀 때 — 어떤 JSON 값이든 받아요.

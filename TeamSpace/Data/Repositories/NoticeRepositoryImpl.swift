@@ -46,6 +46,14 @@ final class NoticeRepositoryImpl: NoticeRepository, @unchecked Sendable {
         )
     }
 
+    func fetchUnconfirmed(noticeId: Int) async throws -> [NoticeUnconfirmedMember] {
+        let page = try await request(
+            Endpoint(method: .get, path: "admin/notices/\(noticeId)/unconfirmed"),
+            as: ServerNoticeUnconfirmedPageDTO.self
+        )
+        return page.items.map { $0.toEntity() }
+    }
+
     func update(noticeId: Int, _ draft: NoticeDraft) async throws {
         let body = ServerNoticePatchRequestDTO(draft: draft)
         _ = try await request(Endpoint(method: .patch, path: "admin/notices/\(noticeId)", body: body), as: IgnoredJSONValue.self)

@@ -268,6 +268,50 @@ final class NoticeTests: XCTestCase {
         XCTAssertEqual(Set(json.keys), ["title", "body", "pinned", "mustRead", "sendPush"], "대상 · 첨부 · 상태는 보내지 않아요")
     }
 
+    // MARK: 공지 미확인자 (GET /admin/notices/{id}/unconfirmed)
+
+    private let admin = AuthUser(id: 3, name: "관리자", roles: [.admin])
+
+    func testAdminSeesReceiptsAndUnconfirmed() async throws {
+        let container = makeContainer()
+        let viewModel = container.makeNoticeDetailViewModel(noticeId: 41, user: admin)
+        await viewModel.load()
+        XCTAssertTrue(viewModel.canSeeReceipts)
+        let detail = try XCTUnwrap(viewModel.detail)
+        XCTAssertEqual(detail.memberCount, MockNoticeStore.memberCount)
+        XCTAssertEqual(viewModel.receiptText, "\(detail.confirmedCount) / \(MockNoticeStore.memberCount)명 확인")
+
+        await viewModel.showUnconfirmed()
+        XCTAssertTrue(viewModel.isUnconfirmedPresented)
+        XCTAssertEqual(viewModel.unconfirmedState.value?.map(\.name), ["옥물결", "유다인", "조현우"], "이름순")
+        XCTAssertEqual(viewModel.unconfirmedState.value?.first?.email, "s26103@gsm.hs.kr")
+
+        await viewModel.acknowledge()
+        await viewModel.loadUnconfirmed()
+        XCTAssertEqual(viewModel.unconfirmedState.value?.map(\.name), ["유다인", "조현우"], "확인하면 빠져요")
+    }
+
+    func testReceiptsAreAdminOnly() async {
+        let container = makeContainer()
+        for user in [member, fa] {
+            let viewModel = container.makeNoticeDetailViewModel(noticeId: 41, user: user)
+            await viewModel.load()
+            XCTAssertFalse(viewModel.canSeeReceipts, "FA · 구성원은 확인 현황이 없어요 (서버 require_admin)")
+            XCTAssertNil(viewModel.receiptText)
+            await viewModel.loadUnconfirmed()
+            guard case .forbidden = viewModel.unconfirmedState else { return XCTFail("권한 없음이어야 해요") }
+        }
+    }
+
+    func testUnconfirmedDecoding() throws {
+        let json = #"{"items":[{"id":"12","name":"김하늘","email":"a@b.c"},{"id":13,"name":"","email":""}],"nextCursor":null}"#
+        let page = try JSONCoder.makeDecoder().decode(ServerNoticeUnconfirmedPageDTO.self, from: Data(json.utf8))
+        XCTAssertEqual(page.items.map { $0.toEntity() }, [
+            NoticeUnconfirmedMember(id: "12", name: "김하늘", email: "a@b.c"),
+            NoticeUnconfirmedMember(id: "13", name: "이름 없음", email: "")
+        ])
+    }
+
     func testNoticeNotificationRoutes() {
         XCTAssertEqual(NotificationType.notice.targetRoute(deepLink: "/notices/1"), .noticeDetail(id: 1), "02-2 공지 알림 → 10-6")
         XCTAssertEqual(NotificationType.notice.targetRoute(deepLink: nil), .notices)

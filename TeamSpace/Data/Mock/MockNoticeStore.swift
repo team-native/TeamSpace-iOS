@@ -142,6 +142,25 @@ final class MockNoticeStore: @unchecked Sendable {
         return String(decoding: data, as: UTF8.self)
     }
 
+    /// 미확인자 예시 — 로그인한 사람(옥물결)은 "확인했어요"를 누르면 빠져요.
+    private static let pendingMembers: [(id: String, name: String, email: String)] = [
+        ("7", "유다인", "s26107@gsm.hs.kr"),
+        ("3", "옥물결", "s26103@gsm.hs.kr"),
+        ("5", "조현우", "s26105@gsm.hs.kr")
+    ]
+
+    /// GET /admin/notices/{id}/unconfirmed — `{items: [{id, name, email}], nextCursor: null}`. 없으면 nil
+    func unconfirmedJSON(id: Int) -> String? {
+        lock.lock()
+        defer { lock.unlock() }
+        guard records.contains(where: { $0.summary.id == id }) else { return nil }
+        let pending = Self.pendingMembers.filter { !(confirmedIds.contains(id) && $0.name == "옥물결") }
+        return json([
+            "items": pending.map { ["id": $0.id, "name": $0.name, "email": $0.email] },
+            "nextCursor": NSNull()
+        ])
+    }
+
     /// PATCH /admin/notices/{id} — 제목 · 본문 · 고정 · 필독만 바꿔요. 없으면 nil
     func update(id: Int, request: ServerNoticePatchRequestDTO) -> String? {
         lock.lock()

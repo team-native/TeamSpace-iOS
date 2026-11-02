@@ -793,6 +793,7 @@ extension DIContainer {
             noticeId: noticeId,
             fetchNoticeDetailUseCase: fetchNoticeDetailUseCase,
             acknowledgeNoticeUseCase: acknowledgeNoticeUseCase,
+            fetchNoticeUnconfirmedUseCase: FetchNoticeUnconfirmedUseCase(noticeRepository: noticeRepository),
             user: user
         )
     }

@@ -12,6 +12,8 @@ enum Permission: Hashable, Sendable {
     case answerInquiry
     /// 10-7 전체 공지 작성 (NativeOps · FA · Leader)
     case publishNotice
+    /// 공지 확인 현황 · 미확인자 (서버 `require_admin` — Admin 만)
+    case viewNoticeReceipts
 }
 
 extension AuthUser {
@@ -30,6 +32,8 @@ extension AuthUser {
             return !roles.isDisjoint(with: [.fa, .leader, .admin])
         case .publishNotice:
             return !roles.isDisjoint(with: [.fa, .leader, .admin])
+        case .viewNoticeReceipts:
+            return roles.contains(.admin)
         }
     }
 
