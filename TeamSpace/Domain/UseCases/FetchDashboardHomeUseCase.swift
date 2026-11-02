@@ -7,7 +7,7 @@ struct FetchDashboardHomeUseCase {
         self.dashboardRepository = dashboardRepository
     }
 
-    /// 일정은 가까운 순, 프로젝트는 마감이 가까운 순으로 정렬합니다.
+    /// 일정은 가까운 순, 프로젝트는 마감이 가까운 순(마감 없으면 뒤)으로 정렬합니다.
     func execute() async throws -> DashboardHome {
         let home = try await dashboardRepository.fetchHome()
         return DashboardHome(
@@ -16,7 +16,7 @@ struct FetchDashboardHomeUseCase {
             latestNotification: home.latestNotification,
             finance: home.finance,
             contracts: home.contracts,
-            projects: home.projects.sorted { $0.dueDate < $1.dueDate },
+            projects: home.projects.sorted { ($0.dueDate ?? .distantFuture) < ($1.dueDate ?? .distantFuture) },
             schedules: home.schedules.sorted { $0.startsAt < $1.startsAt },
             notices: home.notices
         )

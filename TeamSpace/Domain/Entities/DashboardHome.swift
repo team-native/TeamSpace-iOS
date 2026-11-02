@@ -26,7 +26,8 @@ struct ProjectProgress: Equatable, Identifiable, Sendable {
     let id: Int
     let name: String
     let memberCount: Int
-    let dueDate: Date
+    /// 서버 `due` · 기간이 없으면 nil
+    let dueDate: Date?
     /// 0~100
     let progress: Int
 }

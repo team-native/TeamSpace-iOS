@@ -11,7 +11,7 @@ import Foundation
 /// - GET · POST /approvals · GET /approvals/{id} · POST approve · reject · cancel · comments:
 ///   Figma 05 결재 · 07-4 · 07-5 내 문서 예시 (MockApprovalStore, 서버 develop 형식, 처리 결과를 메모리에 기억)
 /// - GET /finance/summary · receipts · contracts/{project}: Figma 04 재무 (MockFinanceFixture, 서버 develop 형식, FA 아니면 403)
-/// - GET /dashboard/home: Figma 02-1 홈 예시 (MockDashboardFixture)
+/// - GET /dashboard/home: Figma 02-1 홈 예시 (MockDashboardFixture, 서버 develop 형식, FA 만 finance)
 /// - GET /docs · /docs/{slug} · /docs/{slug}/history · POST /docs/{slug}/read: Figma 06 문서함 · 09 규칙 (MockDocStore, 서버 develop 형식)
 /// - GET /me/summary · /me/projects: Figma 07 내 공간 예시 (서버 develop 형식, 홈은 여러 API 를 조합)
 /// - GET · POST /todos · PATCH /todos/{id}: Figma 07-2 (MockTodoStore, 서버 develop 형식, 메모리에 기억)
@@ -79,7 +79,8 @@ struct MockTransport: HTTPTransport {
         case ("GET", "me"):
             return try me(request)
         case ("GET", "home"):
-            return try respond(request, status: 200, json: MockDashboardFixture.json())
+            let isFA = request.value(forHTTPHeaderField: "Authorization")?.contains(Self.faToken) == true
+            return try respond(request, status: 200, json: MockDashboardFixture.json(isFA: isFA))
         case ("POST", "push-token"):
             return try pushToken(request)
         case ("POST", "password-reset-requests"):
