@@ -1,6 +1,7 @@
 import Foundation
 
-/// Mock 일정 — 서버 develop `GET /events` · `POST /events/{id}/rsvp` 형식. 참석 응답을 메모리에 기억해요.
+/// Mock 일정 — 서버 develop `GET /events` · `GET /events/{id}` · `POST rsvp` · `GET · PATCH reminders` 형식.
+/// 참석 응답 · 리마인더를 메모리에 기억해요.
 /// 날짜는 오늘 기준이라 언제 실행해도 이번 달 달력에 일정이 보여요.
 /// 일정 1 · 2 는 07-1 대시보드 · 07-2 To-do 의 일정과 같아요.
 final class MockScheduleStore: @unchecked Sendable {
@@ -16,7 +17,11 @@ final class MockScheduleStore: @unchecked Sendable {
         let agenda: String
         var rsvpCount: Int
         var myRsvp: String?
+        var respondedAt: Date?
     }
+
+    /// 일정별 내 리마인더 — 서버처럼 처음엔 모두 꺼져 있어요.
+    private var reminders: [Int: [String: Bool]] = [:]
 
     private let lock = NSLock()
     private var events: [Event]
@@ -70,7 +75,30 @@ final class MockScheduleStore: @unchecked Sendable {
         if events[index].myRsvp != "참석", value == "참석" { events[index].rsvpCount += 1 }
         if events[index].myRsvp == "참석", value != "참석" { events[index].rsvpCount -= 1 }
         events[index].myRsvp = value
+        events[index].respondedAt = Date()
         return json(["eventId": String(id), "rsvp": value])
+    }
+
+    /// GET /events/{id}
+    func detailJSON(id: Int) -> String? {
+        lock.lock()
+        defer { lock.unlock() }
+        return events.first { $0.id == id }.map { json(fields($0)) }
+    }
+
+    /// GET /events/{id}/reminders · PATCH 는 보낸 값만 바꿔요.
+    func remindersJSON(id: Int, patch: [String: Bool]? = nil) -> String? {
+        lock.lock()
+        defer { lock.unlock() }
+        guard events.contains(where: { $0.id == id }) else { return nil }
+        var values = reminders[id] ?? ["oneDayBefore": false, "oneHourBefore": false, "tenMinutesBefore": false]
+        if let patch {
+            for (key, value) in patch where values[key] != nil { values[key] = value }
+            reminders[id] = values
+        }
+        var result: [String: Any] = values
+        result["eventId"] = String(id)
+        return json(result)
     }
 
     private func fields(_ event: Event) -> [String: Any] {
@@ -86,6 +114,8 @@ final class MockScheduleStore: @unchecked Sendable {
             "agenda": event.agenda,
             "rsvp": true,
             "myRsvp": event.myRsvp ?? NSNull(),
+            "respondedAt": event.respondedAt.map { ISO8601DateFormatter().string(from: $0) } ?? NSNull(),
+            "audience": event.scope == "팀" ? "전체" : "참여자",
             "rsvpCount": event.rsvpCount
         ]
     }

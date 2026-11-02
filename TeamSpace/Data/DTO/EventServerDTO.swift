@@ -20,6 +20,10 @@ struct ServerEventDTO: Decodable {
     /// 참석 · 불참 · 미정
     let myRsvp: String?
     let rsvpCount: Int
+    /// 내 참석 응답 시각 (GET /events/{id} · 목록 모두)
+    let respondedAt: Date?
+    /// 대상 — "전체" · "PMO" 등
+    let audience: String?
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -36,10 +40,12 @@ struct ServerEventDTO: Decodable {
         rsvpEnabled = (try? container.decodeIfPresent(Bool.self, forKey: .rsvp)) ?? false
         myRsvp = try? container.decodeIfPresent(String.self, forKey: .myRsvp)
         rsvpCount = (try? container.decodeIfPresent(Int.self, forKey: .rsvpCount)) ?? 0
+        respondedAt = (try? container.decodeIfPresent(String.self, forKey: .respondedAt)).flatMap { $0.flatMap(ServerDate.parse) }
+        audience = try? container.decodeIfPresent(String.self, forKey: .audience)
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, title, date, start, end, time, place, host, agenda, scope, kind, rsvp, myRsvp, rsvpCount
+        case id, title, date, start, end, time, place, host, agenda, scope, kind, rsvp, myRsvp, rsvpCount, respondedAt, audience
     }
 
     /// 시작 · 끝 시각 — start/end 가 없으면 time 문자열의 "HH:mm" 을 차례로 써요. 시간이 없으면 종일(0시 ~ 23:59)
@@ -67,11 +73,11 @@ struct ServerEventDTO: Decodable {
             participantCount: rsvpCount,
             isChanged: false,
             myResponse: myRsvp.flatMap(ScheduleResponse.init(serverValue:)),
-            respondedAt: nil
+            respondedAt: respondedAt
         )
     }
 
-    /// 07-8 상세 — 서버는 진행자 · 관련 문서 · 변경 이력을 주지 않아요.
+    /// 07-8 상세 — 서버는 진행자 · 변경 이력 내용을 따로 주지 않아요.
     /// agenda 의 "14:00–14:20 제목" 줄은 안건 시간표로, 나머지는 안건 메모로 보여줘요.
     func toDetail(reminders: [ReminderTiming]) -> ScheduleEventDetail? {
         guard let event = toEntity() else { return nil }
@@ -94,7 +100,7 @@ struct ServerEventDTO: Decodable {
             category: scope ?? scopeTitle,
             summary: notes.first ?? "\(title) 일정이에요.",
             host: host ?? "",
-            audience: event.scope == .team ? "전체 구성원" : "참여자",
+            audience: audience.map { $0 == "전체" ? "전체 구성원" : $0 } ?? (event.scope == .team ? "전체 구성원" : "참여자"),
             facilitator: host ?? "",
             agenda: items,
             agendaNote: notes.count > 1 ? notes.dropFirst().joined(separator: "\n") : nil,
@@ -144,20 +150,30 @@ extension ScheduleResponse {
     }
 }
 
-/// 07-8 리마인더 — 서버에 저장할 곳이 없어 기기에 일정별로 저장해요.
-final class ScheduleReminderStore: @unchecked Sendable {
-    static let keyPrefix = "schedule.reminders."
-    private let defaults: UserDefaults
+/// GET · PATCH /events/{id}/reminders — `{ eventId, oneDayBefore, oneHourBefore, tenMinutesBefore }`
+struct ServerEventRemindersDTO: Codable, Equatable {
+    var oneDayBefore: Bool
+    var oneHourBefore: Bool
+    var tenMinutesBefore: Bool
 
-    init(defaults: UserDefaults = .standard) {
-        self.defaults = defaults
+    private enum CodingKeys: String, CodingKey { case oneDayBefore, oneHourBefore, tenMinutesBefore }
+
+    init(_ reminders: [ReminderTiming]) {
+        oneDayBefore = reminders.contains(.dayBefore)
+        oneHourBefore = reminders.contains(.hourBefore)
+        tenMinutesBefore = reminders.contains(.tenMinutesBefore)
     }
 
-    func reminders(for id: Int) -> [ReminderTiming] {
-        (defaults.stringArray(forKey: Self.keyPrefix + String(id)) ?? []).compactMap(ReminderTiming.init(rawValue:))
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        oneDayBefore = (try? container.decodeIfPresent(Bool.self, forKey: .oneDayBefore)) ?? false
+        oneHourBefore = (try? container.decodeIfPresent(Bool.self, forKey: .oneHourBefore)) ?? false
+        tenMinutesBefore = (try? container.decodeIfPresent(Bool.self, forKey: .tenMinutesBefore)) ?? false
     }
 
-    func save(_ reminders: [ReminderTiming], for id: Int) {
-        defaults.set(reminders.map(\.rawValue), forKey: Self.keyPrefix + String(id))
+    /// 이른 순 — 하루 전 · 1시간 전 · 10분 전
+    var reminders: [ReminderTiming] {
+        [(oneDayBefore, ReminderTiming.dayBefore), (oneHourBefore, .hourBefore), (tenMinutesBefore, .tenMinutesBefore)]
+            .filter(\.0).map(\.1)
     }
 }
