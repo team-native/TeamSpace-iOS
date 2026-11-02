@@ -7,7 +7,7 @@ import Foundation
 /// - GET /users/me: Authorization 헤더가 없으면 401
 /// - GET /notifications · POST /notifications/read: 읽음 상태를 메모리에 기억 (서버 develop 형식)
 /// - 계정 요청: 이메일이 `taken@` 으로 시작하면 409 (이미 요청됨)
-/// - GET /users · /users/{id} · /organization/tree: Figma 03 팀원 예시 (MockMemberFixture)
+/// - GET /people · /people/{id}: Figma 03 팀원 예시 (MockMemberFixture, 서버 develop 형식, 조직도는 앱에서 묶음)
 /// - GET · POST /approvals · GET /approvals/{id} · POST approve · reject · cancel · comments:
 ///   Figma 05 결재 · 07-4 · 07-5 내 문서 예시 (MockApprovalStore, 서버 develop 형식, 처리 결과를 메모리에 기억)
 /// - GET /finance/summary · receipts · contracts/{project}: Figma 04 재무 (MockFinanceFixture, 서버 develop 형식, FA 아니면 403)
@@ -660,24 +660,20 @@ struct MockTransport: HTTPTransport {
         }
     }
 
-    /// 03 팀원 — GET /users, /users/{id}, /organization/tree
+    /// 03 팀원 — GET /people, /people/{id} (서버 develop 형식)
     private func memberRoute(_ request: URLRequest, path: String) throws -> (Data, HTTPURLResponse)? {
-        guard request.httpMethod == "GET" else { return nil }
-        let parent = request.url?.deletingLastPathComponent().lastPathComponent
-        let body: Data?
-        if path == "users" {
-            body = MockMemberFixture.list()
-        } else if parent == "users", let id = Int(path) {
-            body = MockMemberFixture.detail(id: id)
-        } else if parent == "organization", path == "tree" {
-            body = MockMemberFixture.tree()
-        } else {
-            return nil
+        guard request.httpMethod == "GET", let url = request.url else { return nil }
+        let components = url.pathComponents.filter { $0 != "/" && $0 != MockTransport.baseURL.lastPathComponent }
+        guard components.first == "people" else { return nil }
+        if components.count == 1 {
+            let query = Self.query(of: request)
+            let json = MockMemberFixture.list(cursor: query["cursor"].flatMap(Int.init), limit: query["limit"].flatMap(Int.init) ?? 20)
+            return try respond(request, status: 200, json: json)
         }
-        guard let body else {
-            return try respond(request, status: 404, json: #"{"code":404,"message":"해당 팀원을 찾을 수 없습니다."}"#)
+        guard components.count == 2, let id = Int(components[1]), let json = MockMemberFixture.detail(id: id) else {
+            return try respond(request, status: 404, json: #"{"detail":"팀원을 찾을 수 없습니다."}"#)
         }
-        return try respond(request, status: 200, json: String(decoding: body, as: UTF8.self))
+        return try respond(request, status: 200, json: json)
     }
 
     private func pushToken(_ request: URLRequest) throws -> (Data, HTTPURLResponse) {

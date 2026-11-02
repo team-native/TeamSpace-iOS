@@ -32,20 +32,20 @@ struct MemberProject: Equatable, Identifiable, Sendable {
     let status: Status
 }
 
-/// GET /users/{userId}
+/// GET /people/{id}
 struct MemberDetail: Equatable, Sendable {
     let member: Member
     let email: String
     /// 예) 프로젝트 일정 · 인력 관리
     let responsibility: String
-    /// 기수
-    let generation: Int
+    /// 기수 — 서버 `cohort` 가 비어 있으면 nil
+    let generation: Int?
     let statusMessage: String?
     let projects: [MemberProject]
     let interests: [String]
 }
 
-/// GET /organization/tree — 부서 하나
+/// 조직도 — 부서 하나
 struct OrganizationUnit: Equatable, Identifiable, Sendable {
     let id: Int
     let name: String
@@ -54,7 +54,7 @@ struct OrganizationUnit: Equatable, Identifiable, Sendable {
     let members: [Member]
 }
 
-/// GET /organization/tree
+/// 조직도
 struct OrganizationTree: Equatable, Sendable {
     let leader: Member
     let units: [OrganizationUnit]

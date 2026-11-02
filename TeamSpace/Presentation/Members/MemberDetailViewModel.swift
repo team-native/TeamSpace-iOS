@@ -23,7 +23,8 @@ final class MemberDetailViewModel {
 
     /// "2026년 3월 · 2기"
     func joinedText(_ detail: MemberDetail) -> String {
-        "\(TSFormat.yearMonth(detail.member.joinedAt)) · \(detail.generation)기"
+        let joined = TSFormat.yearMonth(detail.member.joinedAt)
+        return detail.generation.map { "\(joined) · \($0)기" } ?? joined
     }
 
     func mailURL(_ detail: MemberDetail) -> URL? {

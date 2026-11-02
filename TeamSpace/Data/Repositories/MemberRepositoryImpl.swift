@@ -7,24 +7,32 @@ final class MemberRepositoryImpl: MemberRepository, @unchecked Sendable {
         self.client = client
     }
 
+    /// 인원이 많지 않아 커서를 따라 모두 받아서 화면에서 검색 · 필터해요.
     func fetchMembers() async throws -> [Member] {
-        // 동아리 인원이 많지 않아 한 번에 받아 화면에서 검색 · 필터합니다.
-        let endpoint = Endpoint(
-            method: .get,
-            path: "users",
-            queryItems: [URLQueryItem(name: "limit", value: "200")]
-        )
-        return try await request(endpoint, as: MemberListResponseDTO.self).list.map { $0.toEntity() }
+        var members: [Member] = []
+        var cursor: String?
+        repeat {
+            var query = [URLQueryItem(name: "limit", value: "100")]
+            if let cursor { query.append(URLQueryItem(name: "cursor", value: cursor)) }
+            let page = try await request(
+                Endpoint(method: .get, path: "people", queryItems: query),
+                as: CursorPageDTO<ServerPersonDTO>.self
+            )
+            members += page.items.map { $0.toEntity() }
+            cursor = page.nextCursor == cursor ? nil : page.nextCursor
+        } while cursor != nil && members.count < 1_000
+        return members
     }
 
     func fetchMember(id: Int) async throws -> MemberDetail {
-        let endpoint = Endpoint(method: .get, path: "users/\(id)")
-        return try await request(endpoint, as: MemberDetailResponseDTO.self).toEntity()
+        try await request(Endpoint(method: .get, path: "people/\(id)"), as: ServerPersonDTO.self).toDetail()
     }
 
     func fetchOrganization() async throws -> OrganizationTree {
-        let endpoint = Endpoint(method: .get, path: "organization/tree")
-        return try await request(endpoint, as: OrganizationTreeResponseDTO.self).toEntity()
+        guard let tree = OrganizationTreeBuilder.build(try await fetchMembers()) else {
+            throw AppError.notFound(nil)
+        }
+        return tree
     }
 
     private func request<Response: Decodable>(_ endpoint: Endpoint, as type: Response.Type) async throws -> Response {
