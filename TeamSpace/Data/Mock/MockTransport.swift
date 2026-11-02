@@ -413,12 +413,15 @@ struct MockTransport: HTTPTransport {
         return try respond(request, status: 201, json: boardStore.noticeStore.publish(dto))
     }
 
-    /// 11 문의 — /inquiries/mine · /inquiries/{id} · POST /inquiries
+    /// 11 문의 — GET · POST /inquiries (서버 develop 형식), 받은함 · 배정 · 답변은 예전 형식
     private func inquiryRoute(_ request: URLRequest, components: [String]) throws -> (Data, HTTPURLResponse)? {
         let notFound = #"{"code":404,"message":"해당 문의를 찾을 수 없습니다."}"#
         switch (request.httpMethod ?? "", components.count) {
-        case ("GET", 2) where components[1] == "mine":
-            return try respond(request, status: 200, json: inquiryStore.mineJSON())
+        case ("GET", 1):
+            let query = Self.query(of: request)
+            let limit = query["limit"].flatMap(Int.init) ?? 20
+            guard (1...100).contains(limit) else { return try respond(request, status: 422, json: #"{"detail":"limit 범위가 아니에요."}"#) }
+            return try respond(request, status: 200, json: inquiryStore.mineJSON(cursor: query["cursor"], limit: limit))
         case ("GET", 2) where components[1] == "inbox":
             return try respond(request, status: 200, json: inquiryStore.inboxJSON())
         case ("GET", 3) where components[1] == "inbox":
@@ -442,16 +445,13 @@ struct MockTransport: HTTPTransport {
                 let json = inquiryStore.reply(id: id, request: dto)
             else { return try respond(request, status: 409, json: #"{"code":409,"message":"이미 처리가 끝난 문의예요."}"#) }
             return try respond(request, status: 200, json: json)
-        case ("GET", 2):
-            guard let id = Int(components[1]), let json = inquiryStore.detailJSON(id: id) else {
-                return try respond(request, status: 404, json: notFound)
-            }
-            return try respond(request, status: 200, json: json)
         case ("POST", 1):
+            let types: Set<String> = ["문의", "건의", "불편 신고"]
             guard
                 let body = request.httpBody,
-                let dto = try? JSONDecoder().decode(InquirySubmitRequestDTO.self, from: body)
-            else { return try respond(request, status: 400, json: #"{"code":400,"message":"잘못된 요청입니다."}"#) }
+                let dto = try? JSONDecoder().decode(ServerInquiryCreateRequestDTO.self, from: body),
+                types.contains(dto.type), !dto.dept.isEmpty, !dto.title.isEmpty, !dto.body.isEmpty
+            else { return try respond(request, status: 422, json: #"{"detail":"입력한 정보를 다시 확인해 주세요."}"#) }
             return try respond(request, status: 201, json: inquiryStore.submit(dto))
         default:
             return nil

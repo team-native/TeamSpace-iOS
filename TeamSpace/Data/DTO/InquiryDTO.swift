@@ -1,10 +1,7 @@
 import Foundation
 
-/// GET /inquiries/mine · /inquiries/{id} · POST /inquiries 응답의 `data`
-/// 명세서에서 응답 예시를 찾지 못해 Figma 11 기준으로 정했습니다. (백엔드와 맞춰야 함)
-struct InquiryListResponseDTO: Codable {
-    let list: [InquirySummaryDTO]
-}
+/// 담당자 화면(받은함 · 배정 · 답변) 응답 · 목 서버 저장용 — 구성원 화면은 서버 형식(ServerInquiryDTO)을 읽어요.
+/// 담당자 경로는 다음 작업에서 서버(develop) /admin/inquiries 로 맞춰요.
 
 struct InquiryReplyDTO: Codable {
     let department: InquiryDepartment
@@ -54,29 +51,6 @@ struct InquiryReferenceDTO: Codable {
     func toEntity() -> InquiryReference {
         InquiryReference(kind: kind, id: id, title: title, summary: summary)
     }
-}
-
-struct InquiryDetailDTO: Codable {
-    let inquiry: InquirySummaryDTO
-    let history: [InquiryHistoryDTO]
-    let reference: InquiryReferenceDTO?
-
-    func toEntity() -> InquiryDetail {
-        InquiryDetail(
-            inquiry: inquiry.toEntity(),
-            history: history.map { $0.toEntity() },
-            reference: reference?.toEntity()
-        )
-    }
-}
-
-/// POST /inquiries 요청
-struct InquirySubmitRequestDTO: Codable {
-    let department: InquiryDepartment
-    let title: String
-    let body: String
-    let isAnonymous: Bool
-    let followUpOf: Int?
 }
 
 /// GET /inquiries/inbox · /inquiries/inbox/{id} 응답의 `data` (담당자 화면)
