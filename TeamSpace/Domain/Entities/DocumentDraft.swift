@@ -1,6 +1,6 @@
 import Foundation
 
-/// POST /documents — 작성 · 임시 저장할 결재 문서
+/// POST /approvals — 작성 · 임시 저장 · 제출할 결재 문서
 struct DocumentDraft: Equatable, Sendable {
     let kind: ApprovalKind
     let title: String

@@ -33,7 +33,7 @@ final class ApprovalComposeTests: XCTestCase {
         XCTAssertEqual(result.firstApproverName, "안율")
 
         let detail = try await container.fetchApprovalDetailUseCase.execute(documentId: result.documentId)
-        XCTAssertEqual(detail.item.status, .pending, "제출하면 결재 대기")
+        XCTAssertEqual(detail.item.status, .reviewing, "서버는 제출하면 결재선을 만들고 바로 검토 중")
         XCTAssertEqual(detail.item.amount, 1_200_000)
         XCTAssertEqual(detail.fields.first?.value, "물품 구매")
     }
@@ -48,6 +48,39 @@ final class ApprovalComposeTests: XCTestCase {
         XCTAssertTrue(saved)
         let box = try await container.fetchApprovalBoxUseCase.execute()
         XCTAssertEqual(box.mine.first { $0.title == "워크숍 간식" }?.status, .draft)
+    }
+
+    func testServerCreateRequestBody() throws {
+        let staffing = DocumentDraft(
+            kind: .staffing, title: "Book-on 프로젝트 인력 지원", amount: nil,
+            fields: [
+                ApprovalField(title: "프로젝트", value: "Book-on"),
+                ApprovalField(title: "필요 직군", value: "Design"),
+                ApprovalField(title: "인원", value: "2명"),
+                ApprovalField(title: "투입 기간", value: "2026.11 ~ 2026.12")
+            ],
+            reason: "QA", attachmentNames: ["a.pdf"]
+        )
+        let body = ServerApprovalCreateRequestDTO(staffing, submit: true)
+        XCTAssertEqual(body.kind, "인력 지원")
+        XCTAssertEqual(body.status, "결재 대기")
+        XCTAssertEqual(body.staff, ["Design": 2], "서버는 staff 로 인원을 받아요")
+        XCTAssertEqual(body.project, "Book-on")
+        XCTAssertEqual(body.period, "2026.11 ~ 2026.12")
+        XCTAssertEqual(body.files, [], "첨부는 업로드 ID 가 생기면 보내요")
+        XCTAssertEqual(body.details.fields.map(\.title), ["프로젝트", "필요 직군", "인원", "투입 기간"])
+
+        let operation = DocumentDraft(
+            kind: .operationRequest, title: "화이트보드", amount: 180_000,
+            fields: [ApprovalField(title: "요청 분류", value: "물품 · 시설"), ApprovalField(title: "수량", value: "-")],
+            reason: "필요해요", attachmentNames: []
+        )
+        let draft = ServerApprovalCreateRequestDTO(operation, submit: false)
+        XCTAssertEqual(draft.kind, "운영 요청")
+        XCTAssertEqual(draft.status, "작성 중")
+        XCTAssertEqual(draft.type, "물품 · 시설")
+        XCTAssertEqual(draft.amount, 180_000)
+        XCTAssertEqual(draft.staff, [:])
     }
 
     func testSubmitValidation() {

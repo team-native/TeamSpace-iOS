@@ -13,17 +13,15 @@ struct SubmitDocumentUseCase {
         guard !draft.title.trimmingCharacters(in: .whitespaces).isEmpty else {
             throw AppError.invalidInput("요청 내용을 입력해 주세요.")
         }
-        return try await approvalRepository.createDocument(draft)
+        return try await approvalRepository.createDocument(draft, submit: false)
     }
 
-    /// 작성 → 제출. 필수 항목이 비어 있으면 제출하지 않아요.
+    /// 작성과 제출을 한 번에 (서버가 결재선을 만들어요). 필수 항목이 비어 있으면 제출하지 않아요.
     func submit(_ draft: DocumentDraft) async throws -> Int {
         if let message = Self.validationMessage(for: draft) {
             throw AppError.invalidInput(message)
         }
-        let documentId = try await approvalRepository.createDocument(draft)
-        try await approvalRepository.submitDocument(documentId: documentId)
-        return documentId
+        return try await approvalRepository.createDocument(draft, submit: true)
     }
 
     static func validationMessage(for draft: DocumentDraft) -> String? {

@@ -156,7 +156,7 @@ struct MockTransport: HTTPTransport {
         return try respond(request, status: 200, json: #"{"code":200,"message":"읽음 처리 완료","data":{"success":true,"updatedId":\#(id)}}"#)
     }
 
-    /// 05 결재 — /approvals/~ (서버 develop 형식) · /documents/~ (작성 · 제출, 다음 묶음에서 바꿔요)
+    /// 05 결재 — /approvals/~ (서버 develop 형식) · DELETE /documents/{id} (07-5 임시 저장 삭제)
     private func approvalRoute(_ request: URLRequest, path: String) throws -> (Data, HTTPURLResponse)? {
         guard let url = request.url else { return nil }
         let serverComponents = url.pathComponents.filter { $0 != "/" && $0 != MockTransport.baseURL.lastPathComponent }
@@ -171,24 +171,6 @@ struct MockTransport: HTTPTransport {
                 return try respond(request, status: 404, json: notFound)
             }
             return try respond(request, status: 200, json: #"{"code":200,"message":"삭제 완료","data":{"documentId":\#(path)}}"#)
-        case ("POST", "documents"):
-            guard
-                let body = request.httpBody,
-                let dto = try? JSONDecoder().decode(DocumentCreateRequestDTO.self, from: body)
-            else { return try respond(request, status: 400, json: #"{"code":400,"message":"잘못된 요청입니다."}"#) }
-            let json = approvalStore.createJSON(
-                kind: dto.type,
-                title: dto.title,
-                amount: dto.amount,
-                fields: dto.fields.map { ($0.title, $0.value) },
-                reason: dto.reason
-            )
-            return try respond(request, status: 201, json: json)
-        case ("POST", "submit"):
-            guard let id = Int(parent), approvalStore.update(id: id, status: "PENDING") else {
-                return try respond(request, status: 404, json: notFound)
-            }
-            return try respond(request, status: 200, json: #"{"code":200,"message":"제출 완료","data":{"success":true}}"#)
         default:
             return nil
         }
@@ -423,6 +405,12 @@ struct MockTransport: HTTPTransport {
     private func serverApprovalRoute(_ request: URLRequest, components: [String]) throws -> (Data, HTTPURLResponse)? {
         let notFound = #"{"detail":"결재를 찾을 수 없습니다."}"#
         switch (request.httpMethod ?? "", components.count) {
+        case ("POST", 1):
+            let body = request.httpBody.flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] } ?? [:]
+            switch approvalStore.create(body) {
+            case .success(let json): return try respond(request, status: 201, json: json)
+            case .failure(.invalid(let message)): return try respond(request, status: 422, json: #"{"detail":"\#(message)"}"#)
+            }
         case ("GET", 1):
             let query = Self.query(of: request)
             let box = query["box"] ?? "mine"
