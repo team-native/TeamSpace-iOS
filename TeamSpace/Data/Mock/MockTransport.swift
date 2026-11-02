@@ -259,6 +259,9 @@ struct MockTransport: HTTPTransport {
         if components == ["admin", "notices"], request.httpMethod == "POST" {
             return try adminNoticeCreate(request)
         }
+        if components.starts(with: ["admin", "inquiries"]) {
+            return try adminInquiryRoute(request, components: Array(components.dropFirst(2)))
+        }
         if components.first == "inquiries" {
             return try inquiryRoute(request, components: components)
         }
@@ -413,38 +416,14 @@ struct MockTransport: HTTPTransport {
         return try respond(request, status: 201, json: boardStore.noticeStore.publish(dto))
     }
 
-    /// 11 문의 — GET · POST /inquiries (서버 develop 형식), 받은함 · 배정 · 답변은 예전 형식
+    /// 11 문의 — GET · POST /inquiries (서버 develop 형식)
     private func inquiryRoute(_ request: URLRequest, components: [String]) throws -> (Data, HTTPURLResponse)? {
-        let notFound = #"{"code":404,"message":"해당 문의를 찾을 수 없습니다."}"#
         switch (request.httpMethod ?? "", components.count) {
         case ("GET", 1):
             let query = Self.query(of: request)
             let limit = query["limit"].flatMap(Int.init) ?? 20
             guard (1...100).contains(limit) else { return try respond(request, status: 422, json: #"{"detail":"limit 범위가 아니에요."}"#) }
             return try respond(request, status: 200, json: inquiryStore.mineJSON(cursor: query["cursor"], limit: limit))
-        case ("GET", 2) where components[1] == "inbox":
-            return try respond(request, status: 200, json: inquiryStore.inboxJSON())
-        case ("GET", 3) where components[1] == "inbox":
-            guard let id = Int(components[2]), let json = inquiryStore.inboxItemJSON(id: id) else {
-                return try respond(request, status: 404, json: notFound)
-            }
-            return try respond(request, status: 200, json: json)
-        case ("PATCH", 3) where components[2] == "assignee":
-            guard
-                let id = Int(components[1]),
-                let body = request.httpBody,
-                let dto = try? JSONDecoder().decode(InquiryAssignRequestDTO.self, from: body),
-                let json = inquiryStore.assign(id: id, assignee: dto.assignee)
-            else { return try respond(request, status: 404, json: notFound) }
-            return try respond(request, status: 200, json: json)
-        case ("POST", 3) where components[2] == "reply":
-            guard
-                let id = Int(components[1]),
-                let body = request.httpBody,
-                let dto = try? JSONDecoder().decode(InquiryReplyRequestDTO.self, from: body),
-                let json = inquiryStore.reply(id: id, request: dto)
-            else { return try respond(request, status: 409, json: #"{"code":409,"message":"이미 처리가 끝난 문의예요."}"#) }
-            return try respond(request, status: 200, json: json)
         case ("POST", 1):
             let types: Set<String> = ["문의", "건의", "불편 신고"]
             guard
@@ -453,6 +432,36 @@ struct MockTransport: HTTPTransport {
                 types.contains(dto.type), !dto.dept.isEmpty, !dto.title.isEmpty, !dto.body.isEmpty
             else { return try respond(request, status: 422, json: #"{"detail":"입력한 정보를 다시 확인해 주세요."}"#) }
             return try respond(request, status: 201, json: inquiryStore.submit(dto))
+        default:
+            return nil
+        }
+    }
+
+    /// 11-5 · 11-6 담당자 — GET /admin/inquiries · PATCH /admin/inquiries/{id} · POST /admin/inquiries/{id}/answer
+    private func adminInquiryRoute(_ request: URLRequest, components: [String]) throws -> (Data, HTTPURLResponse)? {
+        let notFound = #"{"detail":"리소스를 찾을 수 없습니다."}"#
+        let id = components.first.flatMap(Int.init)
+        switch (request.httpMethod ?? "", components.count) {
+        case ("GET", 0):
+            let query = Self.query(of: request)
+            let limit = query["limit"].flatMap(Int.init) ?? 30
+            guard (1...100).contains(limit) else { return try respond(request, status: 422, json: #"{"detail":"limit 범위가 아니에요."}"#) }
+            return try respond(request, status: 200, json: inquiryStore.adminJSON(status: query["status"], cursor: query["cursor"], limit: limit))
+        case ("PATCH", 1):
+            // 서버 허용 상태 + 반려(백엔드 협의안)
+            let states: Set<String> = ["접수", "검토 중", "답변 완료", "해결됨", "반려"]
+            guard let id, let body = request.httpBody,
+                  let dto = try? JSONDecoder().decode(ServerInquiryPatchRequestDTO.self, from: body), states.contains(dto.status)
+            else { return try respond(request, status: 422, json: #"{"detail":"문의 상태가 올바르지 않습니다."}"#) }
+            guard let json = inquiryStore.patch(id: id, request: dto) else { return try respond(request, status: 404, json: notFound) }
+            return try respond(request, status: 200, json: json)
+        case ("POST", 2) where components[1] == "answer":
+            guard let id, let body = request.httpBody,
+                  let dto = try? JSONDecoder().decode(ServerInquiryAnswerRequestDTO.self, from: body),
+                  !dto.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            else { return try respond(request, status: 400, json: #"{"detail":"답변을 입력해주세요."}"#) }
+            guard let json = inquiryStore.answer(id: id, request: dto) else { return try respond(request, status: 404, json: notFound) }
+            return try respond(request, status: 200, json: json)
         default:
             return nil
         }

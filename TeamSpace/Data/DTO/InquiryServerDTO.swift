@@ -20,6 +20,12 @@ struct ServerInquiryDTO: Decodable {
     let steps: [Date?]
     let answer: Answer?
     let createdAt: Date?
+    /// 실명 문의의 작성자 (익명이면 "익명")
+    let author: String?
+    /// 담당자 — 서버가 저장하면 읽어요. (백엔드 협의 중)
+    let assignee: String?
+    /// 답변과 함께 보여줄 규칙 — 서버가 저장하면 읽어요. (백엔드 협의 중)
+    let reference: InquiryReferenceDTO?
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -34,11 +40,16 @@ struct ServerInquiryDTO: Decodable {
         steps = rawSteps.map { $0.isEmpty ? nil : ServerDate.parse($0) }
         answer = try? container.decodeIfPresent(Answer.self, forKey: .answer)
         createdAt = try? container.decodeIfPresent(Date.self, forKey: .createdAt)
+        author = try? container.decodeIfPresent(String.self, forKey: .author)
+        assignee = try? container.decodeIfPresent(String.self, forKey: .assignee)
+        reference = try? container.decodeIfPresent(InquiryReferenceDTO.self, forKey: .reference)
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, type, dept, title, body, anonymous, status, steps, answer, createdAt
+        case id, type, dept, title, body, anonymous, status, steps, answer, createdAt, author, assignee, reference
     }
+
+    var departmentValue: InquiryDepartment { department }
 
     private var department: InquiryDepartment { InquiryDepartment(serverValue: dept) }
     private var inquiryStatus: InquiryStatus { InquiryStatus(serverValue: status) }
@@ -72,13 +83,25 @@ struct ServerInquiryDTO: Decodable {
                 status: status,
                 occurredAt: date,
                 note: Self.note(for: status, department: summary.department),
-                actor: status == finalStatus ? answer?.who : nil
+                actor: status == finalStatus ? answer?.who : status == .reviewing ? assignee : nil
             ))
         }
         if history.isEmpty {
             history = [InquiryHistory(status: .received, occurredAt: receivedAt, note: Self.note(for: .received, department: summary.department))]
         }
-        return InquiryDetail(inquiry: summary, history: history, reference: nil)
+        return InquiryDetail(inquiry: summary, history: history, reference: reference?.toEntity())
+    }
+
+    /// 11-5 · 11-6 담당자 화면 — 익명 문의는 작성자를 보여주지 않아요.
+    func toInboxItem() -> InquiryInboxItem {
+        let detail = toDetail()
+        return InquiryInboxItem(
+            inquiry: detail.inquiry,
+            authorName: anonymous ? nil : author,
+            assignee: assignee,
+            history: detail.history,
+            reference: detail.reference
+        )
     }
 
     static func note(for status: InquiryStatus, department: InquiryDepartment) -> String {
@@ -90,6 +113,20 @@ struct ServerInquiryDTO: Decodable {
         case .unknown: return ""
         }
     }
+}
+
+/// PATCH /admin/inquiries/{id} 요청 — 서버는 status 만 읽어요. assignee · answer 는 백엔드 협의 중이에요.
+struct ServerInquiryPatchRequestDTO: Codable, Equatable {
+    let status: String
+    var assignee: String?
+    /// 반려 사유
+    var answer: String?
+}
+
+/// POST /admin/inquiries/{id}/answer 요청 — 서버 값은 모두 문자열이에요. (referenceRuleId 는 백엔드 협의 중)
+struct ServerInquiryAnswerRequestDTO: Codable, Equatable {
+    let text: String
+    var referenceRuleId: String?
 }
 
 /// POST /inquiries 요청
