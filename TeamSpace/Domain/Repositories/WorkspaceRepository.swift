@@ -11,13 +11,13 @@ protocol WorkspaceRepository: Sendable {
     func fetchMyDocuments() async throws -> [MyDocument]
     /// DELETE /documents/{documentId} — 임시 저장 문서 삭제 (명세서에 없음)
     func deleteDraft(documentId: Int) async throws
-    /// GET /workspace/schedules?month=yyyy-MM — 07-7 한 달 일정 (명세서에 없음)
+    /// GET /events?month=yyyy-MM — 07-7 한 달 일정
     func fetchSchedules(month: Date) async throws -> [ScheduleEvent]
-    /// GET /workspace/schedules/{id} — 07-8 일정 상세 (명세서에 없음)
+    /// 07-8 일정 상세 — 서버에 상세 경로가 없어 월별 일정에서 찾아요.
     func fetchScheduleDetail(id: Int) async throws -> ScheduleEventDetail
-    /// POST /workspace/schedules/{id}/response — 참석 · 불참 · 미정 (명세서에 없음)
+    /// POST /events/{id}/rsvp — 참석 · 불참 · 미정
     func respond(scheduleId: Int, response: ScheduleResponse) async throws -> ScheduleEvent
-    /// PATCH /workspace/schedules/{id}/reminders — 내 리마인더 (명세서에 없음)
+    /// 내 리마인더 — 서버에 없어 기기에 저장해요.
     func updateReminders(scheduleId: Int, reminders: [ReminderTiming]) async throws -> [ReminderTiming]
     /// GET /workspace/activity — 07-12 내 활동 요약 (명세서에 없음)
     func fetchActivitySummary() async throws -> ActivitySummary

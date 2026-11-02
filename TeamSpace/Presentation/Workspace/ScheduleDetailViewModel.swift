@@ -33,7 +33,9 @@ final class ScheduleDetailViewModel {
 
     /// "내 응답 저장됨 · 10.16 09:20"
     var savedResponseText: String? {
-        guard let event = detail?.event, event.myResponse != nil, let respondedAt = event.respondedAt else { return nil }
+        guard let event = detail?.event, event.myResponse != nil else { return nil }
+        // 서버(GET /events)는 응답 시각을 주지 않아요 — 이번에 응답했을 때만 시각을 보여줘요.
+        guard let respondedAt = event.respondedAt else { return "내 응답 저장됨" }
         return "내 응답 저장됨 · \(TSFormat.shortDate(respondedAt)) \(TSFormat.time(respondedAt))"
     }
 
