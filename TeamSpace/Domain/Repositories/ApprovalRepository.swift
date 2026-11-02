@@ -12,10 +12,8 @@ protocol ApprovalRepository: Sendable {
     func decide(documentId: Int, decision: ApprovalDecision, comment: String?) async throws -> ApprovalDecisionResult
     /// POST /approvals/{id}/comments — 의견 남기기
     func addComment(documentId: Int, body: String) async throws -> ApprovalComment
-    /// POST /documents — 업무 문서 작성 및 임시 저장. 새 문서 ID 를 돌려줘요. (다음 묶음에서 /approvals 로)
-    func createDocument(_ draft: DocumentDraft) async throws -> Int
-    /// POST /documents/{documentId}/submit — 문서 제출 (다음 묶음에서 /approvals 로)
-    func submitDocument(documentId: Int) async throws
+    /// POST /approvals — 작성(임시 저장, submit false) · 제출(submit true)을 한 번에. 새 결재 ID 를 돌려줘요.
+    func createDocument(_ draft: DocumentDraft, submit: Bool) async throws -> Int
     /// POST /approvals/{id}/cancel — 요청 취소 (상태가 '취소' 가 돼요)
     func withdraw(documentId: Int) async throws
 }

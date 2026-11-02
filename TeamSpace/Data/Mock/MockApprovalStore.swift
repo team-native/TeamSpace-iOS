@@ -1,7 +1,7 @@
 import Foundation
 
 /// 결재 Mock 서버 저장소 — Figma 05-1 · 05-2 예시 내용
-/// 목록 · 상세 · 승인 · 반려 · 의견 · 취소는 서버 develop `/approvals` 형식으로 내려줘요. (보는 사람 = 내 id 1)
+/// 작성 · 목록 · 상세 · 승인 · 반려 · 의견 · 취소는 서버 develop `/approvals` 형식으로 내려줘요. (보는 사람 = 내 id 1)
 /// 승인 · 반려 · 제출을 하면 상태가 메모리에 기억돼요.
 final class MockApprovalStore: @unchecked Sendable {
     struct Item: Encodable {
@@ -75,18 +75,6 @@ final class MockApprovalStore: @unchecked Sendable {
         lock.lock()
         defer { lock.unlock() }
         return storage.first { $0.id == id }
-    }
-
-    /// 상태 바꾸기 (승인 · 반려 · 제출)
-    @discardableResult
-    func update(id: Int, status: String, now: Date = Date()) -> Bool {
-        lock.lock()
-        defer { lock.unlock() }
-        guard let index = storage.firstIndex(where: { $0.id == id }) else { return false }
-        storage[index].status = status
-        storage[index].updatedAt = ISO8601DateFormatter().string(from: now)
-        lines[id] = nil
-        return true
     }
 
     // MARK: 서버 develop /approvals 형식
@@ -286,26 +274,40 @@ final class MockApprovalStore: @unchecked Sendable {
 
     // MARK: 05-5 · 05-6 작성 · 제출
 
-    /// POST /documents — 내가 올린 결재에 '작성 중' 으로 추가
-    func createJSON(
-        kind: String,
-        title: String,
-        amount: Int?,
-        fields: [(String, String)],
-        reason: String,
-        now: Date = Date()
-    ) -> String {
+    enum CreateError: Error { case invalid(String) }
+
+    /// POST /approvals — 서버처럼 검증하고, 제출이면 결재선(안율 → 김민준 → 이시우)을 만들어 바로 '검토 중'
+    func create(_ body: [String: Any], now: Date = Date()) -> Result<String, CreateError> {
+        let names = Self.kindNames.reduce(into: [String: String]()) { $0[$1.value] = $1.key }
+        guard let kindName = body["kind"] as? String, let kind = names[kindName] else {
+            return .failure(.invalid("지원하지 않는 결재 문서 유형입니다."))
+        }
+        let title = (body["title"] as? String ?? "").trimmingCharacters(in: .whitespaces)
+        let reason = body["reason"] as? String ?? ""
+        let isDraft = (body["status"] as? String) == "작성 중"
+        if !isDraft {
+            if title.isEmpty { return .failure(.invalid("결재 제목을 입력해주세요.")) }
+            if kind == "STAFFING", (body["staff"] as? [String: Any] ?? [:]).isEmpty {
+                return .failure(.invalid("지원할 직군과 인원을 입력해주세요."))
+            }
+            if ["PROJECT_REQUEST", "OPERATION_REQUEST", "ETC"].contains(kind), reason.trimmingCharacters(in: .whitespaces).isEmpty {
+                return .failure(.invalid("요청 사유를 입력해주세요."))
+            }
+        }
+        let amount = body["amount"] as? Int ?? 0
+        let fields = ((body["details"] as? [String: Any])?["fields"] as? [[String: String]] ?? [])
+            .map { ($0["title"] ?? "", $0["value"] ?? "") }
         lock.lock()
+        defer { lock.unlock() }
         nextDocumentId += 1
         let id = nextDocumentId
         storage.append(Item(
-            id: id, kind: kind, title: title, amount: amount, status: "DRAFT", requesterName: "홍길동",
-            requesterDepartment: "NativeOps", summary: nil, updatedAt: ISO8601DateFormatter().string(from: now), isMine: true
+            id: id, kind: kind, title: title, amount: kind == "STAFFING" || amount == 0 ? nil : amount,
+            status: isDraft ? "DRAFT" : "IN_REVIEW", requesterName: "옥물결", requesterDepartment: "Design",
+            summary: nil, updatedAt: ISO8601DateFormatter().string(from: now), isMine: true
         ))
         drafts[id] = (fields, reason)
-        lock.unlock()
-        struct Created: Encodable { let documentId: Int }
-        return encode(Created(documentId: id), message: "작성 완료")
+        return .success(Self.json(["id": String(id), "status": isDraft ? "작성 중" : "검토 중"]))
     }
 
     // MARK: 07-4 · 07-5 내 문서
