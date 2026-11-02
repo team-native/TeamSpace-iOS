@@ -24,6 +24,7 @@ import Foundation
 /// - /notices/~: Figma 10-5 ~ 10-7 공지 (MockNoticeStore, 확인 · 게시 기억)
 /// - /posts/~: Figma 10 팀 게시판 (MockBoardStore, 글 · 댓글 · 공감 · 신고 · 삭제 기억)
 /// - GET /search: Figma 13 통합 검색 (MockSearchFixture)
+/// - GET · PATCH /me/notification-settings: Figma 02-9 알림 설정 (MockNotificationSettingsStore, 서버 develop 형식, 저장 내용 기억)
 /// - POST /notifications/push-token: Authorization 헤더가 없으면 401
 struct MockTransport: HTTPTransport {
     static let baseURL = URL(fileURLWithPath: "/mock-api")
@@ -38,6 +39,7 @@ struct MockTransport: HTTPTransport {
 
     var latencyNanoseconds: UInt64 = 700_000_000
     private let notificationStore = MockNotificationStore()
+    private let notificationSettingsStore = MockNotificationSettingsStore()
     private let approvalStore = MockApprovalStore()
     private let todoStore = MockTodoStore()
     private let scheduleStore = MockScheduleStore()
@@ -152,6 +154,22 @@ struct MockTransport: HTTPTransport {
         return try respond(request, status: 200, json: #"{"code":200,"message":"읽음 처리했습니다.","data":{"updated":\#(updated)}}"#)
     }
 
+    /// 02-9 알림 설정 — GET 은 서버 기본값, PATCH 는 보낸 값만 합쳐서 기억해요. (kinds 는 5개 분류만)
+    private func notificationSettingsRoute(_ request: URLRequest) throws -> (Data, HTTPURLResponse) {
+        if request.httpMethod == "PATCH" {
+            let body = request.httpBody.flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] } ?? [:]
+            if let kinds = body["kinds"] as? [String: Bool],
+               !Set(kinds.keys).isSubset(of: ["내 업무", "재정", "일정", "공지", "게시판"]) {
+                return try respond(request, status: 422, json: #"{"detail":"지원하지 않는 알림 분류가 포함되어 있습니다."}"#)
+            }
+            notificationSettingsStore.patch(body)
+        } else if request.httpMethod != "GET" {
+            return try respond(request, status: 405, json: #"{"detail":"Method Not Allowed"}"#)
+        }
+        let data = try JSONSerialization.data(withJSONObject: notificationSettingsStore.current(), options: .sortedKeys)
+        return try respond(request, status: 200, json: #"{"code":200,"message":"OK","data":\#(String(decoding: data, as: UTF8.self))}"#)
+    }
+
     /// 05 결재 · 07-4 · 07-5 내 문서 — /approvals/~ (서버 develop 형식)
     private func approvalRoute(_ request: URLRequest, path: String) throws -> (Data, HTTPURLResponse)? {
         guard let url = request.url else { return nil }
@@ -166,6 +184,9 @@ struct MockTransport: HTTPTransport {
         let components = url.pathComponents.filter { $0 != "/" && $0 != MockTransport.baseURL.lastPathComponent }
         if components == ["me"] {
             return try profileRoute(request)
+        }
+        if components == ["me", "notification-settings"] {
+            return try notificationSettingsRoute(request)
         }
         if components == ["me", "summary"], request.httpMethod == "GET" {
             let todos = todoStore.summary()
@@ -749,6 +770,37 @@ private struct MockNotificationPage: Encodable {
     private enum CodingKeys: String, CodingKey {
         case items
         case nextCursor
+    }
+}
+
+/// Mock 알림 설정 — 서버 기본값에서 시작해요.
+private final class MockNotificationSettingsStore: @unchecked Sendable {
+    private let lock = NSLock()
+    private var storage: [String: Any] = [
+        "push": false,
+        "kinds": ["내 업무": true, "재정": true, "일정": true, "공지": true, "게시판": false],
+        "dnd": true,
+        "dndFrom": "23:00",
+        "dndTo": "08:00",
+        "dndDays": ["월", "화", "수", "목", "금"]
+    ]
+
+    func current() -> [String: Any] {
+        lock.lock()
+        defer { lock.unlock() }
+        return storage
+    }
+
+    func patch(_ values: [String: Any]) {
+        lock.lock()
+        defer { lock.unlock() }
+        for (key, value) in values {
+            if key == "kinds", let kinds = value as? [String: Bool] {
+                storage["kinds"] = (storage["kinds"] as? [String: Bool] ?? [:]).merging(kinds) { $1 }
+            } else {
+                storage[key] = value
+            }
+        }
     }
 }
 

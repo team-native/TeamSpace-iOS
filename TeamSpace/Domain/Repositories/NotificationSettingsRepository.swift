@@ -1,6 +1,6 @@
 import Foundation
 
-/// 알림 설정 저장소. 명세서에 설정 API 가 없어 지금은 기기에만 저장합니다.
+/// 알림 설정 저장소 — 서버 GET · PATCH /me/notification-settings, 기기 저장소는 캐시로 써요.
 protocol NotificationSettingsRepository: Sendable {
     func fetch() async -> NotificationSettings
     func save(_ settings: NotificationSettings) async throws
