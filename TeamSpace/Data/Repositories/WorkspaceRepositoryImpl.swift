@@ -252,6 +252,11 @@ final class WorkspaceRepositoryImpl: WorkspaceRepository, @unchecked Sendable {
         return try await request(endpoint, as: ServerProfileDTO.self).toEntity()
     }
 
+    func changePassword(current: String, new: String) async throws {
+        let body = ServerPasswordChangeRequestDTO(currentPassword: current, newPassword: new)
+        _ = try await request(Endpoint(method: .patch, path: "me/settings", body: body), as: IgnoredJSONValue.self)
+    }
+
     /// GET /todos — 오프셋 커서로 끝까지 (100건씩, 최대 5페이지)
     func fetchTodos() async throws -> [TodoItem] {
         var items: [TodoItem] = []

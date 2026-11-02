@@ -187,6 +187,9 @@ struct MockTransport: HTTPTransport {
         if components == ["me"] {
             return try profileRoute(request)
         }
+        if components == ["me", "settings"] {
+            return try settingsRoute(request)
+        }
         if components == ["me", "notification-settings"] {
             return try notificationSettingsRoute(request)
         }
@@ -500,6 +503,28 @@ struct MockTransport: HTTPTransport {
             default:
                 return nil
             }
+        default:
+            return nil
+        }
+    }
+
+    /// 07-14 설정 — GET · PATCH /me/settings. 비밀번호는 현재 비밀번호가 `failingPassword` 면 틀린 것으로 봐요.
+    private func settingsRoute(_ request: URLRequest) throws -> (Data, HTTPURLResponse)? {
+        switch request.httpMethod ?? "" {
+        case "GET":
+            return try respond(request, status: 200, json: #"{"theme":"시스템"}"#)
+        case "PATCH":
+            let body = request.httpBody.flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] } ?? [:]
+            if let new = body["newPassword"] as? String, !new.isEmpty {
+                let current = body["currentPassword"] as? String ?? ""
+                guard !current.isEmpty, current != Self.failingPassword else {
+                    return try respond(request, status: 400, json: #"{"detail":"현재 비밀번호가 일치하지 않습니다."}"#)
+                }
+                guard new.count >= 8 else {
+                    return try respond(request, status: 422, json: #"{"detail":"새 비밀번호는 8자 이상이어야 합니다."}"#)
+                }
+            }
+            return try respond(request, status: 200, json: #"{"theme":"시스템"}"#)
         default:
             return nil
         }

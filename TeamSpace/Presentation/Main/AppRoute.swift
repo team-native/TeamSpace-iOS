@@ -41,6 +41,7 @@ enum AppRoute: Hashable {
     case workspaceProfile                // 07-13 프로필 편집 (07-16 미모티콘 바꾸기)
     case workspaceSettings               // 07-14 설정 (07-17 로그아웃 확인)
     case workspacePermissions            // 07-15 내 권한 · 접근 범위
+    case passwordChange                  // 07-14 설정 · 비밀번호 변경
     // 08 프로젝트
     case projects                        // 08-1 전체 프로젝트 탐색
     case projectDetail(id: String)        // 08-2 프로젝트 상세

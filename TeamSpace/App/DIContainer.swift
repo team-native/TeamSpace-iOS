@@ -294,6 +294,10 @@ final class DIContainer {
         FetchProfileUseCase(workspaceRepository: workspaceRepository)
     }
 
+    var changePasswordUseCase: ChangePasswordUseCase {
+        ChangePasswordUseCase(workspaceRepository: workspaceRepository)
+    }
+
     var updateProfileUseCase: UpdateProfileUseCase {
         UpdateProfileUseCase(workspaceRepository: workspaceRepository)
     }
@@ -675,6 +679,10 @@ extension DIContainer {
 
     func makeProfileEditViewModel() -> ProfileEditViewModel {
         ProfileEditViewModel(fetchProfileUseCase: fetchProfileUseCase, updateProfileUseCase: updateProfileUseCase)
+    }
+
+    func makePasswordChangeViewModel() -> PasswordChangeViewModel {
+        PasswordChangeViewModel(changePasswordUseCase: changePasswordUseCase)
     }
 
     func makePermissionsViewModel(user: AuthUser) -> PermissionsViewModel {
