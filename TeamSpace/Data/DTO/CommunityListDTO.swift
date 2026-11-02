@@ -117,12 +117,12 @@ struct IgnoredJSONValue: Decodable {
 }
 
 extension PostCategory {
-    /// 서버는 한글 분류(`자유` · `질문` · `정보공유`)를 써요. 예전 영문 값도 받아요.
+    /// 서버는 한글 분류(`자유` · `질문` · `정보 공유`)를 써요. 예전 영문 값도 받아요.
     init(serverValue: String) {
         switch serverValue.trimmingCharacters(in: .whitespaces) {
         case "자유", "FREE": self = .free
         case "질문", "QUESTION": self = .question
-        case "정보공유", "정보", "INFO": self = .info
+        case "정보 공유", "정보공유", "정보", "INFO": self = .info
         default: self = .unknown
         }
     }
@@ -132,7 +132,7 @@ extension PostCategory {
         switch self {
         case .free: return "자유"
         case .question: return "질문"
-        case .info: return "정보공유"
+        case .info: return "정보 공유"
         case .unknown: return nil
         }
     }

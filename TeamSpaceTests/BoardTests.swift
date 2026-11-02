@@ -111,7 +111,7 @@ final class BoardTests: XCTestCase {
     func testPostQueryUsesServerParameters() {
         var query = PostListQuery(category: .info, period: .week, sort: .likes)
         let items = Dictionary(uniqueKeysWithValues: query.queryItems(cursor: "o:20", limit: 20).map { ($0.name, $0.value ?? "") })
-        XCTAssertEqual(items, ["category": "정보공유", "period": "week", "sort": "likes", "cursor": "o:20", "limit": "20"])
+        XCTAssertEqual(items, ["category": "정보 공유", "period": "week", "sort": "likes", "cursor": "o:20", "limit": "20"])
 
         let from = ISO8601DateFormatter().date(from: "2026-10-01T03:00:00Z") ?? Date()
         let to = ISO8601DateFormatter().date(from: "2026-10-05T03:00:00Z") ?? Date()
@@ -203,7 +203,7 @@ final class BoardTests: XCTestCase {
         XCTAssertEqual(detail.post.viewCount, 49, "볼 때마다 조회 수 +1")
         XCTAssertEqual(detail.policyText, "이 글은 익명 댓글로 운영돼요.")
         XCTAssertEqual(detail.commentButtonTitle, "익명으로 댓글 남기기")
-        XCTAssertEqual(detail.comments.map(\.authorText), ["익명 1", "익명 2 · 글쓴이"])
+        XCTAssertEqual(detail.comments.map(\.authorText), ["익명", "익명 · 글쓴이"], "서버는 익명 번호 없이 글쓴이만 알려줘요")
         XCTAssertTrue(viewModel.canReport)
         XCTAssertFalse(viewModel.canDelete)
 
@@ -359,7 +359,7 @@ final class BoardTests: XCTestCase {
 
     // MARK: 10-4 댓글 작성
 
-    func testAnonymousCommentKeepsMyNumber() async throws {
+    func testAnonymousCommentsShowWithoutNumbers() async throws {
         let container = makeContainer()
         let compose = container.makeCommentComposeViewModel(postId: 41, userName: "옥물결")
         await compose.load()
@@ -382,8 +382,8 @@ final class BoardTests: XCTestCase {
         let detail = container.makePostDetailViewModel(postId: 41)
         await detail.load()
         let authors = detail.detail?.comments.map(\.authorText) ?? []
-        XCTAssertEqual(authors.filter { $0 == "익명 3" }.count, 2, "같은 사람은 같은 번호")
-        XCTAssertTrue(authors.contains("익명 2 · 글쓴이"))
+        XCTAssertEqual(authors.sorted(), ["익명", "익명", "익명", "익명 · 글쓴이"], "서버는 익명 번호를 주지 않아요")
+        XCTAssertEqual(detail.detail?.comments.filter(\.isMine).count, 2)
         XCTAssertEqual(detail.detail?.post.commentCount, 4)
     }
 

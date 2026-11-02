@@ -43,22 +43,6 @@ struct NoticeSummaryDTO: Codable {
     }
 }
 
-/// GET /posts/{id} 응답의 `data`
-struct PostDetailDTO: Codable {
-    let post: PostSummaryDTO
-    let body: String
-    let commentPolicy: CommentPolicy
-    let isLiked: Bool
-    let comments: [PostCommentDTO]
-
-    func toEntity() -> PostDetail {
-        PostDetail(
-            post: post.toEntity(), body: body, commentPolicy: commentPolicy,
-            isLiked: isLiked, comments: comments.map { $0.toEntity() }
-        )
-    }
-}
-
 struct PostCommentDTO: Codable {
     let id: Int
     let authorName: String?
@@ -76,31 +60,4 @@ struct PostCommentDTO: Codable {
             body: body, createdAt: createdAt
         )
     }
-}
-
-/// POST /posts/{id}/like 응답의 `data`
-struct PostLikeResponseDTO: Codable {
-    let isLiked: Bool
-    let likeCount: Int
-}
-
-/// POST /posts/{id}/reports 요청
-struct PostReportRequestDTO: Codable {
-    let reason: String
-}
-
-/// POST /posts 요청 — 사진은 base64 문자열 (업로드 방식은 백엔드와 맞춰야 함)
-struct PostCreateRequestDTO: Codable {
-    let isAnonymous: Bool
-    let category: PostCategory
-    let title: String
-    let body: String
-    let commentPolicy: CommentPolicy
-    let images: [String]
-}
-
-/// POST /posts/{id}/comments 요청
-struct CommentCreateRequestDTO: Codable {
-    let body: String
-    let isAnonymous: Bool
 }

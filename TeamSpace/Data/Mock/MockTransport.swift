@@ -247,6 +247,9 @@ struct MockTransport: HTTPTransport {
         if components.first == "rules" {
             return try ruleRoute(request, components: components)
         }
+        if components.first == "uploads", request.httpMethod == "POST" {
+            return try upload(request)
+        }
         if components.first == "posts" {
             return try boardRoute(request, components: components)
         }
@@ -344,7 +347,7 @@ struct MockTransport: HTTPTransport {
             guard let id = id, boardStore.delete(id: id) else { return try respond(request, status: 403, json: forbidden) }
             return try respond(request, status: 200, json: #"{"code":200,"message":"삭제 완료","data":{"success":true}}"#)
         case ("POST", 1):
-            guard let body = request.httpBody, let dto = try? JSONDecoder().decode(PostCreateRequestDTO.self, from: body) else {
+            guard let body = request.httpBody, let dto = try? JSONDecoder().decode(ServerPostCreateRequestDTO.self, from: body) else {
                 return try respond(request, status: 400, json: #"{"code":400,"message":"잘못된 요청입니다."}"#)
             }
             return try respond(request, status: 201, json: boardStore.create(dto))
@@ -352,15 +355,18 @@ struct MockTransport: HTTPTransport {
             guard
                 let id = id,
                 let body = request.httpBody,
-                let dto = try? JSONDecoder().decode(CommentCreateRequestDTO.self, from: body),
+                let dto = try? JSONDecoder().decode(ServerCommentCreateRequestDTO.self, from: body),
                 let json = boardStore.createComment(postId: id, request: dto)
             else { return try respond(request, status: 404, json: notFound) }
             return try respond(request, status: 201, json: json)
         case ("POST", 3) where components[2] == "like":
             guard let id = id, let json = boardStore.toggleLike(id: id) else { return try respond(request, status: 404, json: notFound) }
             return try respond(request, status: 200, json: json)
-        case ("POST", 3) where components[2] == "reports":
-            let reason = request.httpBody.flatMap { try? JSONDecoder().decode(PostReportRequestDTO.self, from: $0) }?.reason ?? ""
+        case ("POST", 3) where components[2] == "report":
+            let reason = request.httpBody.flatMap { try? JSONDecoder().decode(ServerReportRequestDTO.self, from: $0) }?.reason ?? ""
+            guard Self.reportReasons.contains(reason) else {
+                return try respond(request, status: 422, json: #"{"detail":"신고 사유가 올바르지 않습니다."}"#)
+            }
             guard let id = id, boardStore.report(id: id, reason: reason) else { return try respond(request, status: 403, json: forbidden) }
             return try respond(request, status: 201, json: #"{"code":201,"message":"신고 접수 완료","data":{"success":true}}"#)
         default:
@@ -699,6 +705,19 @@ struct MockTransport: HTTPTransport {
             return try respond(request, status: 409, json: #"{"detail":"이미 등록된 이메일입니다."}"#)
         }
         return try respond(request, status: 202, json: #"{"id":"12","status":"PENDING"}"#)
+    }
+
+    /// 서버 `REPORT_REASONS`
+    static let reportReasons: Set<String> = ["욕설·비하", "개인정보 노출", "도배·광고", "사실과 다른 내용", "기타"]
+
+    /// POST /uploads — multipart 로 온 JPG · PNG 만 받아요.
+    private func upload(_ request: URLRequest) throws -> (Data, HTTPURLResponse) {
+        let contentType = request.value(forHTTPHeaderField: "Content-Type") ?? ""
+        guard contentType.hasPrefix("multipart/form-data"), let body = request.httpBody, !body.isEmpty else {
+            return try respond(request, status: 422, json: #"{"detail":"파일이 필요합니다."}"#)
+        }
+        let id = UUID().uuidString.prefix(8).lowercased()
+        return try respond(request, status: 201, json: #"{"id":"\#(id)","url":"/uploads/\#(id)","filename":"image","size":\#(body.count)}"#)
     }
 
     /// 요청 URL 의 쿼리를 이름 → 값으로
