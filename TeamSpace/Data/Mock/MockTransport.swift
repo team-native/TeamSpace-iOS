@@ -8,13 +8,12 @@ import Foundation
 /// - GET /notifications · PATCH /notifications/{id}/read: 읽음 상태를 메모리에 기억
 /// - 계정 요청: 이메일이 `taken@` 으로 시작하면 409 (이미 요청됨)
 /// - GET /users · /users/{id} · /organization/tree: Figma 03 팀원 예시 (MockMemberFixture)
-/// - GET /documents/{id} · POST /approvals/{id}/decide · POST /documents/{id}/comments · withdraw
-/// - GET /approvals/~: Figma 05 결재 예시 (MockApprovalStore, 처리 결과를 메모리에 기억)
+/// - GET · POST /approvals · GET /approvals/{id} · POST approve · reject · cancel · comments:
+///   Figma 05 결재 · 07-4 · 07-5 내 문서 예시 (MockApprovalStore, 서버 develop 형식, 처리 결과를 메모리에 기억)
 /// - GET /finance/~: Figma 04 재무 예시 (MockFinanceFixture)
 /// - GET /dashboard/home: Figma 02-1 홈 예시 (MockDashboardFixture)
 /// - GET /library · /library/search: Figma 06 문서함 예시 (MockLibraryFixture)
 /// - GET /workspace/home · /me/projects: Figma 07 내 공간 예시 (MockWorkspaceFixture, /me/projects 는 서버 develop 형식)
-/// - GET /workspace/documents · DELETE /documents/{id}: 07-4 · 07-5 (MockApprovalStore 의 내 결재)
 /// - GET · POST /todos · PATCH /todos/{id}: Figma 07-2 (MockTodoStore, 서버 develop 형식, 메모리에 기억)
 /// - GET /events · POST /events/{id}/rsvp: Figma 07-7 ~ 07-9 (MockScheduleStore, 서버 develop 형식, 참석 응답 기억)
 /// - GET /workspace/activity · posts · proposals: Figma 07-10 ~ 07-12 (MockActivityFixture)
@@ -156,24 +155,12 @@ struct MockTransport: HTTPTransport {
         return try respond(request, status: 200, json: #"{"code":200,"message":"읽음 처리 완료","data":{"success":true,"updatedId":\#(id)}}"#)
     }
 
-    /// 05 결재 — /approvals/~ (서버 develop 형식) · DELETE /documents/{id} (07-5 임시 저장 삭제)
+    /// 05 결재 · 07-4 · 07-5 내 문서 — /approvals/~ (서버 develop 형식)
     private func approvalRoute(_ request: URLRequest, path: String) throws -> (Data, HTTPURLResponse)? {
         guard let url = request.url else { return nil }
         let serverComponents = url.pathComponents.filter { $0 != "/" && $0 != MockTransport.baseURL.lastPathComponent }
-        if serverComponents.first == "approvals" {
-            return try serverApprovalRoute(request, components: serverComponents)
-        }
-        let parent = url.deletingLastPathComponent().lastPathComponent
-        let notFound = #"{"code":404,"message":"해당 문서를 찾을 수 없습니다."}"#
-        switch (request.httpMethod ?? "", path) {
-        case ("DELETE", _) where parent == "documents":
-            guard let id = Int(path), approvalStore.deleteDraft(id: id) else {
-                return try respond(request, status: 404, json: notFound)
-            }
-            return try respond(request, status: 200, json: #"{"code":200,"message":"삭제 완료","data":{"documentId":\#(path)}}"#)
-        default:
-            return nil
-        }
+        guard serverComponents.first == "approvals" else { return nil }
+        return try serverApprovalRoute(request, components: serverComponents)
     }
 
     /// 08 프로젝트 — /projects/~ (재무 · 내 공간의 projects 와 구분하려고 첫 경로를 확인해요)
@@ -632,8 +619,6 @@ struct MockTransport: HTTPTransport {
             return try respond(request, status: 200, json: MockActivityFixture.posts())
         case ("GET", "proposals"):
             return try respond(request, status: 200, json: MockActivityFixture.proposals())
-        case ("GET", "documents"):
-            return try respond(request, status: 200, json: approvalStore.myDocumentsJSON())
         default:
             return nil
         }

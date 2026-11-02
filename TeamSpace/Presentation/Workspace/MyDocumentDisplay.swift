@@ -38,14 +38,14 @@ extension MyDocument {
         case .draft:
             return "제출일 없음 · 현재 결재자 없음 · \(TSFormat.shortDate(updatedAt)) 자동 저장"
         case .pending, .reviewing:
-            let approver = currentApprover.map { "현재 결재자 \($0.name) · \($0.department)" }
+            let approver = currentApprover.map { "현재 결재자 \($0.text)" }
             return [amount.map(TSFormat.won), approver, currentStepTitle].compactMap { $0 }.joined(separator: " · ")
         case .approved:
             let decider = decidedBy.map { "최종 결재 \($0.name)" }
             let when = decidedAt.map { "\(TSFormat.shortDate($0)) 승인 완료" }
             return [decider, when, "현재 결재자 없음"].compactMap { $0 }.joined(separator: " · ")
         case .rejected:
-            let decider = decidedBy.map { "\($0.name) · \($0.department)" }
+            let decider = decidedBy.map(\.text)
             let when = decidedAt.map { "\(TSFormat.shortDate($0)) 반려 사유: \(rejectReason ?? "-")" }
             return [decider, when].compactMap { $0 }.joined(separator: " · ")
         case .cancelled:
@@ -82,5 +82,12 @@ extension MyDocument {
         guard !keyword.isEmpty else { return true }
         return title.localizedCaseInsensitiveContains(keyword)
             || (projectName?.localizedCaseInsensitiveContains(keyword) ?? false)
+    }
+}
+
+extension DocumentPerson {
+    /// "이시우 · PMO" — 부서가 없으면 이름만
+    var text: String {
+        [name, department].filter { !$0.isEmpty }.joined(separator: " · ")
     }
 }

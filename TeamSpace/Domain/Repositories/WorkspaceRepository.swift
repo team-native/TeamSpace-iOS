@@ -7,9 +7,9 @@ protocol WorkspaceRepository: Sendable {
     func fetchHome() async throws -> WorkspaceHome
     /// GET /me/projects — 07-6 참여 프로젝트
     func fetchJoinedProjects() async throws -> [JoinedProject]
-    /// GET /workspace/documents — 07-4 · 07-5 내가 작성 · 제출한 문서 (명세서에 없음)
+    /// GET /approvals?box=mine — 07-4 내가 제출한 문서 · 07-5 임시 저장
     func fetchMyDocuments() async throws -> [MyDocument]
-    /// DELETE /documents/{documentId} — 임시 저장 문서 삭제 (명세서에 없음)
+    /// POST /approvals/{id}/cancel — 07-5 임시 저장 삭제 (서버에 삭제가 없어 취소)
     func deleteDraft(documentId: Int) async throws
     /// GET /events?month=yyyy-MM — 07-7 한 달 일정
     func fetchSchedules(month: Date) async throws -> [ScheduleEvent]
