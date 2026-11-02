@@ -29,6 +29,8 @@ protocol WorkspaceRepository: Sendable {
     func fetchProfile() async throws -> MyProfile
     /// PATCH /me — 한 줄 소개(bio) · 관심사 · 배경색 저장 (배경색은 서버에 아직 없음)
     func updateProfile(_ update: ProfileUpdate) async throws -> MyProfile
+    /// PATCH /me/settings — 비밀번호 변경 (현재 비밀번호가 다르면 400)
+    func changePassword(current: String, new: String) async throws
     /// GET /todos — 사용자 할 일 목록 (받은 결재 할 일 포함)
     func fetchTodos() async throws -> [TodoItem]
     /// POST /todos — 할 일 추가

@@ -54,7 +54,7 @@ struct SettingsView: View {
                 }
             }
             SettingsSection(title: "계정") {
-                Button { onNavigate(.comingSoon(title: "비밀번호 변경")) } label: { SettingsRow(title: "비밀번호 변경") }
+                Button { onNavigate(.passwordChange) } label: { SettingsRow(title: "비밀번호 변경") }
                 TSDivider()
                 Button { onNavigate(.financeAccess) } label: {
                     SettingsRow(title: "재정 정보 권한", badge: user.financeScopeTitle)

@@ -25,7 +25,7 @@ struct AppRouteView: View {
         case .workspaceDashboard, .workspaceTodos, .workspaceDocuments, .workspaceDrafts, .workspaceProjects, .workspaceProjectList,
              .workspaceSchedules, .workspaceScheduleDetail, .workspaceMyPosts, .workspaceMyProposals, .workspaceActivity:
             workspaceScreen
-        case .workspaceProfile, .workspaceSettings, .workspacePermissions:
+        case .workspaceProfile, .workspaceSettings, .workspacePermissions, .passwordChange:
             accountScreen
         case .projects, .projectDetail, .projectTimeline, .projectRecruitment, .myApplications, .applicantReview:
             projectScreen
@@ -160,6 +160,8 @@ struct AppRouteView: View {
         switch route {
         case .workspaceProfile:
             ProfileEditView(viewModel: container.makeProfileEditViewModel())
+        case .passwordChange:
+            PasswordChangeView(viewModel: container.makePasswordChangeViewModel())
         case .workspacePermissions:
             PermissionsView(viewModel: container.makePermissionsViewModel(user: user), onNavigate: onNavigate)
         default:
