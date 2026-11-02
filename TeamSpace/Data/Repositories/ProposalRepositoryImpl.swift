@@ -7,39 +7,61 @@ final class ProposalRepositoryImpl: ProposalRepository, @unchecked Sendable {
         self.client = client
     }
 
-    func fetchProposals() async throws -> [ProposalSummary] {
-        try await request(Endpoint(method: .get, path: "proposals"), as: ProposalListResponseDTO.self).list.map { $0.toEntity() }
+    func fetchProposals(cursor: String?, limit: Int) async throws -> CursorPage<ProposalSummary> {
+        var query = [URLQueryItem(name: "sort", value: "latest"), URLQueryItem(name: "limit", value: String(limit))]
+        if let cursor { query.append(URLQueryItem(name: "cursor", value: cursor)) }
+        let page = try await request(
+            Endpoint(method: .get, path: "proposals", queryItems: query),
+            as: CursorPageDTO<ServerProposalDTO>.self
+        )
+        return CursorPage(items: page.items.map { $0.toEntity() }, nextCursor: page.nextCursor)
     }
 
     func fetchProposal(id: Int) async throws -> ProposalDetail {
-        try await request(Endpoint(method: .get, path: "proposals/\(id)"), as: ProposalDetailDTO.self).toEntity()
+        try await request(Endpoint(method: .get, path: "proposals/\(id)"), as: ServerProposalDTO.self).toDetail()
     }
 
     func toggleRecommend(proposalId: Int) async throws -> ProposalRecommend {
         let dto = try await request(
             Endpoint(method: .post, path: "proposals/\(proposalId)/recommend"),
-            as: ProposalRecommendResponseDTO.self
+            as: ServerProposalRecommendDTO.self
         )
-        return ProposalRecommend(isRecommended: dto.isRecommended, recommendCount: dto.recommendCount)
+        return ProposalRecommend(isRecommended: dto.recommended, recommendCount: dto.recommendCount)
     }
 
+    /// 응답에 작성 시각 · 내 댓글 여부가 없어 지금 시각 · 내 댓글로 채워요. (제안자 여부는 유스케이스가 정해요)
     func addComment(proposalId: Int, body: String, isAnonymous: Bool) async throws -> ProposalComment {
         let endpoint = Endpoint(
             method: .post,
             path: "proposals/\(proposalId)/comments",
-            body: ProposalCommentRequestDTO(body: body, isAnonymous: isAnonymous)
+            body: ServerProposalCommentRequestDTO(text: body, anonymous: isAnonymous)
         )
-        return try await request(endpoint, as: ProposalCommentDTO.self).toEntity()
+        return try await request(endpoint, as: ServerProposalCommentDTO.self).toEntity(proposalAuthor: nil)
     }
 
+    /// 응답은 `{id, status}` 뿐이라 보낸 내용으로 목록 항목을 만들어요.
     func create(_ draft: ProposalDraft) async throws -> ProposalSummary {
-        let body = ProposalCreateRequestDTO(
-            department: draft.department,
+        let body = ServerProposalCreateRequestDTO(
             title: draft.title,
             body: draft.body,
-            isAnonymous: draft.isAnonymous
+            category: draft.department,
+            dept: draft.department,
+            anonymous: draft.isAnonymous
         )
-        return try await request(Endpoint(method: .post, path: "proposals", body: body), as: ProposalSummaryDTO.self).toEntity()
+        let created = try await request(Endpoint(method: .post, path: "proposals", body: body), as: ServerProposalCreatedDTO.self)
+        return ProposalSummary(
+            id: created.id,
+            department: draft.department,
+            title: draft.title,
+            excerpt: ServerPostItemDTO.excerpt(of: draft.body),
+            isAnonymous: draft.isAnonymous,
+            authorName: nil,
+            createdAt: Date(),
+            status: ProposalStatus(serverValue: created.status ?? "접수"),
+            recommendCount: 0,
+            commentCount: 0,
+            isMine: true
+        )
     }
 
     private func request<Response: Decodable>(_ endpoint: Endpoint, as type: Response.Type) async throws -> Response {

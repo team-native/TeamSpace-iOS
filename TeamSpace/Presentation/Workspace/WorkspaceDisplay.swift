@@ -78,6 +78,7 @@ extension ProposalStatus {
         case .answered: return "답변 완료"
         case .adopted: return "채택"
         case .closed: return "종료"
+        case .rejected: return "반려"
         case .unknown: return "확인 중"
         }
     }

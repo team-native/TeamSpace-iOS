@@ -8,7 +8,7 @@ enum ProposalSort: CaseIterable, Hashable {
     var title: String { self == .latest ? "최신순" : "추천순" }
 }
 
-/// 12-1b 진행 단계 칩 — 진행중(접수 · 검토 · 진행) / 완료(완료 · 답변 · 채택 · 종료)
+/// 12-1b 진행 단계 칩 — 진행중(접수 · 검토 · 진행) / 완료(완료 · 답변 · 채택 · 종료 · 반려)
 enum ProposalPhase: CaseIterable, Hashable {
     case ongoing
     case done
@@ -18,7 +18,7 @@ enum ProposalPhase: CaseIterable, Hashable {
     func contains(_ status: ProposalStatus) -> Bool {
         switch status {
         case .received, .reviewing, .inProgress: return self == .ongoing
-        case .completed, .answered, .adopted, .closed: return self == .done
+        case .completed, .answered, .adopted, .closed, .rejected: return self == .done
         case .unknown: return false
         }
     }
@@ -43,8 +43,10 @@ extension ProposalSummary {
 }
 
 extension ProposalDetail {
-    /// "익명 · 10.15 · 조회 128"
-    var metaText: String { "\(proposal.authorDateText) · 조회 \(viewCount)" }
+    /// "익명 · 10.15 · 조회 128" — 조회 수가 없으면 빼요.
+    var metaText: String {
+        viewCount.map { "\(proposal.authorDateText) · 조회 \($0)" } ?? proposal.authorDateText
+    }
 
     /// 12-2b 진행 상태 — 4단계마다 도달한 날짜 (없으면 nil)
     var stepDates: [(status: ProposalStatus, date: Date?)] {

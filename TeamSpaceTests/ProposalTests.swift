@@ -46,7 +46,7 @@ final class ProposalTests: XCTestCase {
         await viewModel.load()
 
         XCTAssertEqual(viewModel.departments, ["NativeOps", "NativeLab", "PMO", "FA"])
-        XCTAssertEqual(viewModel.statuses, [.received, .reviewing, .inProgress, .completed, .answered])
+        XCTAssertEqual(viewModel.statuses, [.received, .reviewing, .inProgress, .answered], "서버 상태에는 완료가 없고 답변 완료로 끝나요")
 
         viewModel.department = "NativeOps"
         XCTAssertEqual(viewModel.proposals.map(\.id), [16, 12, 9, 13])
@@ -64,7 +64,7 @@ final class ProposalTests: XCTestCase {
         await viewModel.load()
         let detail = try XCTUnwrap(viewModel.detail)
 
-        XCTAssertTrue(detail.metaText.hasSuffix("조회 128"), "볼 때마다 조회 수 +1")
+        XCTAssertFalse(detail.metaText.contains("조회"), "서버는 조회 수를 주지 않아요")
         XCTAssertEqual(detail.stepDates.map(\.status), [.received, .reviewing, .inProgress, .completed])
         XCTAssertEqual(detail.stepDates.map { $0.date != nil }, [true, true, false, false])
         XCTAssertEqual(detail.answer?.department, "NativeOps")
@@ -98,12 +98,45 @@ final class ProposalTests: XCTestCase {
         await viewModel.sendComment()
         let last = try XCTUnwrap(viewModel.detail?.comments.last)
         XCTAssertEqual(last.body, "캘린더 연동도 같이 보면 좋겠어요")
-        XCTAssertTrue(last.headerText.hasPrefix("옥물결 · 제안자 · "))
+        XCTAssertTrue(last.headerText.hasPrefix("익명 · 제안자 · "), "익명 제안에 제안자가 단 댓글은 서버가 글쓴이로 가려요")
         XCTAssertEqual(viewModel.commentText, "")
 
         let list = container.makeProposalListViewModel()
         await list.load()
         XCTAssertEqual(list.proposals.first { $0.id == 12 }?.commentCount, 3)
+    }
+
+    func testServerProposalDecoding() throws {
+        let json = #"{"id":"21","category":"PMO","title":"회의록","body":"양식을 통일해요","status":"반려","anonymous":false,"likes":3,"recommendCount":3,"commentCount":1,"createdAt":"2026-10-20T09:30:00.123456","mine":false,"author":"이시우","dept":"Design","answer":{"who":"안율","at":"2026-10-22T10:00:00+09:00","text":"이번엔 어려워요."},"history":[{"status":"접수","who":"이시우","at":"2026-10-20T09:30:00+00:00"},{"status":"반려","who":"안율","at":"2026-10-22T10:00:00+09:00"}],"comments":[{"id":"5","text":"저도요","createdAt":"2026-10-21T08:00:00","anonymous":false,"mine":true,"author":"이시우"},{"id":"6","text":"익명 의견","createdAt":"2026-10-21T09:00:00","anonymous":true,"mine":false}]}"#
+        let detail = try JSONCoder.makeDecoder().decode(ServerProposalDTO.self, from: Data(json.utf8)).toDetail()
+
+        XCTAssertEqual(detail.proposal.id, 21)
+        XCTAssertEqual(detail.proposal.department, "PMO", "대상 부서는 category (dept 는 작성자 소속)")
+        XCTAssertEqual(detail.proposal.status, .rejected)
+        XCTAssertEqual(detail.proposal.status.title, "반려")
+        XCTAssertTrue(ProposalPhase.done.contains(.rejected))
+        XCTAssertEqual(detail.stepDates.map { $0.date != nil }, [true, false, false, true], "반려는 마지막 단계")
+        XCTAssertEqual(detail.answer?.department, "PMO")
+        XCTAssertEqual(detail.answer?.body, "이번엔 어려워요.")
+        XCTAssertTrue(detail.comments[0].isProposer, "실명 제안자 이름과 같은 실명 댓글")
+        XCTAssertTrue(detail.comments[0].isMine)
+        XCTAssertTrue(detail.comments[1].isAnonymous)
+        XCTAssertNil(detail.comments[1].authorName)
+        XCTAssertEqual(ProposalStatus(serverValue: "협업 중"), .inProgress)
+    }
+
+    func testListLoadsEveryPage() async throws {
+        let store = MockProposalStore()
+        let first = try JSONCoder.makeDecoder().decode(
+            CursorPageDTO<ServerProposalDTO>.self, from: Data(store.listJSON(limit: 3).utf8)
+        )
+        XCTAssertEqual(first.items.count, 3)
+        XCTAssertEqual(first.nextCursor, "o:3")
+        let last = try JSONCoder.makeDecoder().decode(
+            CursorPageDTO<ServerProposalDTO>.self, from: Data(store.listJSON(cursor: "o:6", limit: 3).utf8)
+        )
+        XCTAssertEqual(last.items.count, 1)
+        XCTAssertNil(last.nextCursor)
     }
 
     // MARK: 12-3 운영 제안 쓰기
