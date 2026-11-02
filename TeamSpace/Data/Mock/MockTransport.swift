@@ -15,7 +15,7 @@ import Foundation
 /// - GET /library · /library/search: Figma 06 문서함 예시 (MockLibraryFixture)
 /// - GET /workspace/home · /workspace/projects: Figma 07 내 공간 예시 (MockWorkspaceFixture)
 /// - GET /workspace/documents · DELETE /documents/{id}: 07-4 · 07-5 (MockApprovalStore 의 내 결재)
-/// - GET · POST /workspace/todos · PATCH /workspace/todos/{id}: Figma 07-2 (MockTodoStore, 메모리에 기억)
+/// - GET · POST /todos · PATCH /todos/{id}: Figma 07-2 (MockTodoStore, 서버 develop 형식, 메모리에 기억)
 /// - /workspace/schedules/~: Figma 07-7 ~ 07-9 (MockScheduleStore, 참석 응답 · 리마인더 기억)
 /// - GET /workspace/activity · posts · proposals: Figma 07-10 ~ 07-12 (MockActivityFixture)
 /// - GET · PATCH /workspace/profile: Figma 07-13 (MockProfileStore, 저장 내용 기억)
@@ -259,6 +259,9 @@ struct MockTransport: HTTPTransport {
         if components == ["admin", "notices"], request.httpMethod == "POST" {
             return try adminNoticeCreate(request)
         }
+        if components.first == "todos" {
+            return try todoRoute(request, components: components)
+        }
         if components.starts(with: ["admin", "inquiries"]) {
             return try adminInquiryRoute(request, components: Array(components.dropFirst(2)))
         }
@@ -437,6 +440,33 @@ struct MockTransport: HTTPTransport {
         }
     }
 
+    /// 07-2 할 일 — GET · POST /todos · PATCH /todos/{id} (서버 develop 형식)
+    private func todoRoute(_ request: URLRequest, components: [String]) throws -> (Data, HTTPURLResponse)? {
+        switch (request.httpMethod ?? "", components.count) {
+        case ("GET", 1):
+            let query = Self.query(of: request)
+            let limit = query["limit"].flatMap(Int.init) ?? 30
+            guard (1...100).contains(limit) else { return try respond(request, status: 422, json: #"{"detail":"limit 범위가 아니에요."}"#) }
+            return try respond(request, status: 200, json: todoStore.listJSON(cursor: query["cursor"], limit: limit))
+        case ("POST", 1):
+            guard let body = request.httpBody,
+                  let dto = try? JSONDecoder().decode(ServerTodoCreateRequestDTO.self, from: body), !dto.title.isEmpty
+            else { return try respond(request, status: 422, json: #"{"detail":"입력한 정보를 다시 확인해 주세요."}"#) }
+            return try respond(request, status: 201, json: todoStore.add(dto))
+        case ("PATCH", 2):
+            guard let id = Int(components[1]), let body = request.httpBody,
+                  let dto = try? JSONDecoder().decode(ServerTodoPatchRequestDTO.self, from: body),
+                  ["미완료", "예정", "완료"].contains(dto.status)
+            else { return try respond(request, status: 404, json: #"{"detail":"리소스를 찾을 수 없습니다."}"#) }
+            guard let json = todoStore.update(id: id, status: dto.status) else {
+                return try respond(request, status: 404, json: #"{"detail":"할 일을 찾을 수 없습니다."}"#)
+            }
+            return try respond(request, status: 200, json: json)
+        default:
+            return nil
+        }
+    }
+
     /// 11-5 · 11-6 담당자 — GET /admin/inquiries · PATCH /admin/inquiries/{id} · POST /admin/inquiries/{id}/answer
     private func adminInquiryRoute(_ request: URLRequest, components: [String]) throws -> (Data, HTTPURLResponse)? {
         let notFound = #"{"detail":"리소스를 찾을 수 없습니다."}"#
@@ -586,26 +616,6 @@ struct MockTransport: HTTPTransport {
             return try respond(request, status: 200, json: approvalStore.myDocumentsJSON())
         case ("GET", "projects"):
             return try respond(request, status: 200, json: MockWorkspaceFixture.projects())
-        case ("GET", "todos"):
-            return try respond(request, status: 200, json: todoStore.listJSON())
-        case ("POST", "todos"):
-            guard
-                let body = request.httpBody,
-                let dto = try? JSONCoder.makeDecoder().decode(TodoCreateRequestDTO.self, from: body)
-            else {
-                return try respond(request, status: 400, json: #"{"code":400,"message":"잘못된 요청입니다."}"#)
-            }
-            return try respond(request, status: 201, json: todoStore.add(dto))
-        case ("PATCH", _) where parent == "todos":
-            guard
-                let id = Int(path),
-                let body = request.httpBody,
-                let dto = try? JSONCoder.makeDecoder().decode(TodoUpdateRequestDTO.self, from: body),
-                let json = todoStore.update(id: id, status: dto.status)
-            else {
-                return try respond(request, status: 404, json: #"{"code":404,"message":"해당 할 일을 찾을 수 없습니다."}"#)
-            }
-            return try respond(request, status: 200, json: json)
         default:
             return nil
         }

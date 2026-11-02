@@ -25,38 +25,64 @@ final class MockTodoStore: @unchecked Sendable {
         ]
     }
 
-    func listJSON() -> String {
+    /// GET /todos — 서버 형식 `{items, nextCursor}`, 오프셋 커서. 결재 할 일은 `approval:{결재 id}`
+    func listJSON(cursor: String? = nil, limit: Int = 30) -> String {
         lock.lock()
         defer { lock.unlock() }
-        return envelope(#"{"list":\#(encode(storage))}"#)
+        let start = Int(cursor ?? "0") ?? 0
+        let page = Array(storage.dropFirst(start).prefix(limit))
+        let next: Any = start + limit < storage.count ? String(start + limit) : NSNull()
+        return json(["items": page.map(Self.serverFields), "nextCursor": next])
     }
 
-    func add(_ request: TodoCreateRequestDTO) -> String {
+    /// POST /todos — 날짜만 정한 할 일로 추가해요.
+    func add(_ request: ServerTodoCreateRequestDTO) -> String {
         lock.lock()
         defer { lock.unlock() }
         nextId += 1
+        let dueAt = ServerTodoDTO.date(fromDay: request.dueDate) ?? Date()
         let item = TodoDTO(
-            id: nextId, title: request.title, dueAt: request.dueAt, hasTime: false, endsAt: nil, place: nil,
-            projectName: request.projectName, linkKind: TodoLinkKind(rawValue: request.linkKind) ?? .manual,
+            id: nextId, title: request.title, dueAt: dueAt, hasTime: false, endsAt: nil, place: nil,
+            projectName: request.projectName, linkKind: TodoLinkKind(serverCategory: request.category),
             linkedId: nil, status: .open, completedAt: nil
         )
         storage.append(item)
-        return envelope(encode(item))
+        return json(Self.serverFields(item))
     }
 
+    /// PATCH /todos/{id} — 결재 할 일(`approval:`)은 서버처럼 찾을 수 없어요.
     func update(id: Int, status: String, now: Date = Date()) -> String? {
         lock.lock()
         defer { lock.unlock() }
-        guard let index = storage.firstIndex(where: { $0.id == id }) else { return nil }
+        guard let index = storage.firstIndex(where: { $0.id == id && $0.linkKind != .approval }) else { return nil }
         let old = storage[index]
-        let newStatus = TodoStatus(rawValue: status) ?? .open
+        let newStatus: TodoStatus = status == "완료" ? .done : .open
         let item = TodoDTO(
             id: old.id, title: old.title, dueAt: old.dueAt, hasTime: old.hasTime, endsAt: old.endsAt,
             place: old.place, projectName: old.projectName, linkKind: old.linkKind, linkedId: old.linkedId,
             status: newStatus, completedAt: newStatus == .done ? now : nil
         )
         storage[index] = item
-        return envelope(encode(item))
+        return json(Self.serverFields(item))
+    }
+
+    private static func serverFields(_ item: TodoDTO) -> [String: Any] {
+        var fields: [String: Any] = [:]
+        let isApproval = item.linkKind == .approval
+        fields["id"] = isApproval ? "\(ServerTodoDTO.approvalPrefix)\(item.linkedId ?? item.id)" : String(item.id)
+        fields["title"] = item.title
+        fields["dueDate"] = PostListQuery.day(item.dueAt)
+        if item.hasTime { fields["dueAt"] = MockBoardStore.pythonISO(item.dueAt) }
+        fields["projectName"] = item.projectName ?? ""
+        fields["category"] = item.linkKind.serverCategory
+        fields["status"] = item.status == .done ? "완료" : "미완료"
+        fields["completedAt"] = item.completedAt.map(MockBoardStore.pythonISO) ?? NSNull()
+        fields["createdAt"] = MockBoardStore.pythonISO(item.dueAt)
+        if isApproval {
+            fields["sourceType"] = "approval"
+            fields["sourceId"] = String(item.linkedId ?? item.id)
+        }
+        return fields
     }
 
     /// 07-1 대시보드의 To-do 요약 — 오늘까지 남은 할 일 · 오늘 완료한 할 일
@@ -72,12 +98,8 @@ final class MockTodoStore: @unchecked Sendable {
         return (today.map(\.title), completed.count)
     }
 
-    private func encode<T: Encodable>(_ value: T) -> String {
-        guard let data = try? JSONCoder.makeEncoder().encode(value) else { return "null" }
+    private func json(_ object: [String: Any]) -> String {
+        let data = (try? JSONSerialization.data(withJSONObject: object, options: [.sortedKeys])) ?? Data()
         return String(decoding: data, as: UTF8.self)
-    }
-
-    private func envelope(_ data: String) -> String {
-        #"{"code":200,"message":"성공","data":\#(data)}"#
     }
 }

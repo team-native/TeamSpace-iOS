@@ -83,23 +83,35 @@ final class WorkspaceRepositoryImpl: WorkspaceRepository, @unchecked Sendable {
         return try await request(endpoint, as: MyProfileDTO.self).toEntity()
     }
 
+    /// GET /todos — 오프셋 커서로 끝까지 (100건씩, 최대 5페이지)
     func fetchTodos() async throws -> [TodoItem] {
-        try await request(Endpoint(method: .get, path: "workspace/todos"), as: TodoListResponseDTO.self)
-            .list.map { $0.toEntity() }
+        var items: [TodoItem] = []
+        var cursor: String?
+        for _ in 0..<5 {
+            var query = [URLQueryItem(name: "limit", value: "100")]
+            if let cursor { query.append(URLQueryItem(name: "cursor", value: cursor)) }
+            let page = try await request(Endpoint(method: .get, path: "todos", queryItems: query), as: CursorPageDTO<ServerTodoDTO>.self)
+            items += page.items.compactMap { $0.toEntity() }
+            guard let next = page.nextCursor else { break }
+            cursor = next
+        }
+        return items
     }
 
     func addTodo(_ draft: TodoDraft) async throws -> TodoItem {
-        let endpoint = Endpoint(method: .post, path: "workspace/todos", body: TodoCreateRequestDTO(draft))
-        return try await request(endpoint, as: TodoDTO.self).toEntity()
+        let endpoint = Endpoint(method: .post, path: "todos", body: ServerTodoCreateRequestDTO(draft))
+        guard let item = try await request(endpoint, as: ServerTodoDTO.self).toEntity() else {
+            throw AppError.unknown("할 일 번호를 읽지 못했어요.")
+        }
+        return item
     }
 
     func updateTodo(id: Int, status: TodoStatus) async throws -> TodoItem {
-        let endpoint = Endpoint(
-            method: .patch,
-            path: "workspace/todos/\(id)",
-            body: TodoUpdateRequestDTO(status: status.rawValue)
-        )
-        return try await request(endpoint, as: TodoDTO.self).toEntity()
+        let endpoint = Endpoint(method: .patch, path: "todos/\(id)", body: ServerTodoPatchRequestDTO(status: status.serverValue))
+        guard let item = try await request(endpoint, as: ServerTodoDTO.self).toEntity() else {
+            throw AppError.unknown("할 일 번호를 읽지 못했어요.")
+        }
+        return item
     }
 
     private func request<Response: Decodable>(_ endpoint: Endpoint, as type: Response.Type) async throws -> Response {

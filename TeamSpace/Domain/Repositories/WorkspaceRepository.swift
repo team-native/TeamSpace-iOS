@@ -29,10 +29,10 @@ protocol WorkspaceRepository: Sendable {
     func fetchProfile() async throws -> MyProfile
     /// PATCH /workspace/profile — 한 줄 소개 · 관심사 · 배경색 저장 (명세서에 없음)
     func updateProfile(_ update: ProfileUpdate) async throws -> MyProfile
-    /// GET /workspace/todos — 사용자 할 일 목록 (명세서)
+    /// GET /todos — 사용자 할 일 목록 (받은 결재 할 일 포함)
     func fetchTodos() async throws -> [TodoItem]
-    /// POST /workspace/todos — 할 일 추가 (명세서에 없음)
+    /// POST /todos — 할 일 추가
     func addTodo(_ draft: TodoDraft) async throws -> TodoItem
-    /// PATCH /workspace/todos/{todoId} — 완료 · 되돌리기 (명세서에 없음)
+    /// PATCH /todos/{todoId} — 완료 · 되돌리기
     func updateTodo(id: Int, status: TodoStatus) async throws -> TodoItem
 }
