@@ -113,7 +113,7 @@ struct MemberProjectsSection: View {
                             Text(project.name)
                                 .tsFont(.calloutBold)
                                 .foregroundStyle(Color.tsInk)
-                            Text("\(project.summary) · \(project.role)")
+                            Text([project.summary, project.role].filter { !$0.isEmpty }.joined(separator: " · "))
                                 .tsFont(.caption)
                                 .foregroundStyle(Color.tsInk3)
                         }

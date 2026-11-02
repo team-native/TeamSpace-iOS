@@ -81,6 +81,43 @@ final class MemberDirectoryTests: XCTestCase {
         XCTAssertEqual(viewModel.joinedText(detail), "2026년 3월 · 2기")
     }
 
+    func testPersonDecodingFromServer() throws {
+        let json = #"""
+        {"id":"7","name":"이서연","email":"seoyeon@native.team","dept":"Core Platform","role":"iOS","major":"iOS",
+         "cohort":"","github":"@seoyeon","photo":"","joined":"2026-10-20T00:00:00+00:00","bio":"",
+         "interests":["SwiftUI"],"projects":[["Book-on","iOS 개발 · 진행 중"],["Moil","QA 지원 · 완료"],["TeamSpace","Web"]],
+         "isNew":true,"lead":false,"roles":["Member"]}
+        """#
+        let dto = try JSONCoder.makeDecoder().decode(ServerPersonDTO.self, from: Data(json.utf8))
+        let detail = dto.toDetail()
+
+        XCTAssertEqual(detail.member.id, 7)
+        XCTAssertEqual(detail.member.department, .dev, "Core Platform 은 개발")
+        XCTAssertEqual(detail.member.position, "iOS")
+        XCTAssertNil(detail.generation, "기수가 비어 있으면 숨겨요")
+        XCTAssertNil(detail.statusMessage)
+        XCTAssertEqual(detail.projects.map(\.role), ["iOS 개발", "QA 지원", "Web"])
+        XCTAssertEqual(detail.projects.map(\.status), [.inProgress, .completed, .inProgress])
+    }
+
+    func testMembersFollowCursorPages() async throws {
+        let tokenStorage = InMemoryTokenStorage()
+        let client = APIClient(
+            baseURL: MockTransport.baseURL,
+            transport: MockTransport(latencyNanoseconds: 0),
+            tokenStorage: tokenStorage
+        )
+        let page = try await client.request(
+            Endpoint(method: .get, path: "people", queryItems: [URLQueryItem(name: "limit", value: "10")]),
+            as: CursorPageDTO<ServerPersonDTO>.self
+        )
+        XCTAssertEqual(page.items.count, 10)
+        XCTAssertEqual(page.nextCursor, "10")
+
+        let all = try await MemberRepositoryImpl(client: client).fetchMembers()
+        XCTAssertEqual(all.count, 24)
+    }
+
     func testUnknownMemberShowsError() async {
         let viewModel = makeContainer().makeMemberDetailViewModel(memberId: 999)
 
