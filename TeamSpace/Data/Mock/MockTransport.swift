@@ -16,7 +16,7 @@ import Foundation
 /// - GET /me/summary · /me/projects: Figma 07 내 공간 예시 (서버 develop 형식, 홈은 여러 API 를 조합)
 /// - GET · POST /todos · PATCH /todos/{id}: Figma 07-2 (MockTodoStore, 서버 develop 형식, 메모리에 기억)
 /// - GET /events · POST /events/{id}/rsvp: Figma 07-7 ~ 07-9 (MockScheduleStore, 서버 develop 형식, 참석 응답 기억)
-/// - GET /workspace/activity · posts · proposals: Figma 07-10 ~ 07-12 (MockActivityFixture)
+/// - GET /me/activity: Figma 07-10 댓글 (MockActivityFixture, 서버 develop 형식) · 내 글 · 제안은 /posts · /proposals 의 mine
 /// - GET · PATCH /me: Figma 07-13 (MockProfileStore, 서버 develop 형식, 저장 내용 기억)
 /// - /projects/~ · /applications/~: Figma 08 (MockProjectStore, 신청 · 결과 등록 기억)
 /// - GET /rules · /rules/{id} · POST /rules/{id}/acknowledge: Figma 09 (MockRuleStore, 읽음 확인 기억)
@@ -62,9 +62,6 @@ struct MockTransport: HTTPTransport {
             return response
         }
         if let response = try libraryRoute(request, path: path) {
-            return response
-        }
-        if let response = try workspaceRoute(request, path: path) {
             return response
         }
         if let response = try projectRoute(request, path: path) {
@@ -175,15 +172,18 @@ struct MockTransport: HTTPTransport {
             let summary: [String: Any] = [
                 "unreadNotifications": notificationStore.items().filter { !$0.isRead }.count,
                 "submittedApprovals": approvalStore.items(mine: true).count,
-                "myPosts": 3,
+                "myPosts": MockActivityFixture.postCount,
                 "myProposals": 3,
-                "myInquiries": 2,
+                "myInquiries": MockActivityFixture.inquiryCount,
                 "receivedApprovals": approvalStore.items(mine: false).filter { ["PENDING", "IN_REVIEW"].contains($0.status) }.count,
                 "todos": ["total": todos.today.count + todos.completed, "today": todos.today.count,
                           "completed": todos.completed, "linkedApprovals": 0]
             ]
             let data = (try? JSONSerialization.data(withJSONObject: summary, options: [.sortedKeys])) ?? Data()
             return try respond(request, status: 200, json: String(decoding: data, as: UTF8.self))
+        }
+        if components == ["me", "activity"], request.httpMethod == "GET" {
+            return try respond(request, status: 200, json: MockActivityFixture.activity())
         }
         if components == ["me", "projects"], request.httpMethod == "GET" {
             return try respond(request, status: 200, json: MockWorkspaceFixture.projects())
@@ -607,27 +607,6 @@ struct MockTransport: HTTPTransport {
                 return try respond(request, status: 409, json: #"{"code":409,"message":"취소할 수 없는 신청이에요."}"#)
             }
             return try respond(request, status: 200, json: #"{"code":200,"message":"취소 완료","data":{"success":true}}"#)
-        default:
-            return nil
-        }
-    }
-
-    /// 07 내 공간 — /workspace/~ (dashboard/home 과 마지막 경로가 같아서 먼저 걸러요)
-    private func workspaceRoute(_ request: URLRequest, path: String) throws -> (Data, HTTPURLResponse)? {
-        guard let url = request.url, url.pathComponents.contains("workspace") else { return nil }
-        let parent = url.deletingLastPathComponent().lastPathComponent
-        switch (request.httpMethod ?? "", path) {
-        case ("GET", "activity"):
-            let unread = notificationStore.items().filter { !$0.isRead }.count
-            let submitted = approvalStore.items(mine: true).filter { $0.status != "DRAFT" }.count
-            return try respond(request, status: 200, json: MockActivityFixture.summary(
-                unreadNotifications: unread,
-                submittedDocuments: submitted
-            ))
-        case ("GET", "posts"):
-            return try respond(request, status: 200, json: MockActivityFixture.posts())
-        case ("GET", "proposals"):
-            return try respond(request, status: 200, json: MockActivityFixture.proposals())
         default:
             return nil
         }

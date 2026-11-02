@@ -65,7 +65,7 @@ struct MyPostsView: View {
                 }
             case .comments:
                 ForEach(viewModel.comments) { comment in
-                    MyCommentCard(comment: comment) { onNavigate(.postDetail(id: comment.postId)) }
+                    MyCommentCard(comment: comment) { if let postId = comment.postId { onNavigate(.postDetail(id: postId)) } }
                 }
             }
         }
