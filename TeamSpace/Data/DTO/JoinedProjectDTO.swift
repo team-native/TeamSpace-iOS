@@ -8,6 +8,10 @@ struct ServerJoinedProjectDTO: Decodable {
     let desc: String
     let due: String
     let status: String
+    let pm: String
+    let dept: String
+    let progress: Int
+    let memberCount: Int
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -17,10 +21,21 @@ struct ServerJoinedProjectDTO: Decodable {
             ?? (try? container.decodeIfPresent(String.self, forKey: .desc)) ?? ""
         due = (try? container.decodeIfPresent(String.self, forKey: .due)) ?? ""
         status = (try? container.decodeIfPresent(String.self, forKey: .status)) ?? "진행 중"
+        pm = (try? container.decodeIfPresent(String.self, forKey: .pm)) ?? ""
+        dept = (try? container.decodeIfPresent(String.self, forKey: .dept)) ?? ""
+        progress = (try? container.decodeIfPresent(Int.self, forKey: .progress)) ?? 0
+        let memberIds = (try? container.decodeIfPresent([IgnoredJSONValue].self, forKey: .memberIds)) ?? nil
+        let members = (try? container.decodeIfPresent([IgnoredJSONValue].self, forKey: .members)) ?? nil
+        memberCount = max(memberIds?.count ?? 0, members?.count ?? 0)
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, name, desc, description, due, status
+        case id, name, desc, description, due, status, pm, dept, progress, memberIds, members
+    }
+
+    /// 07-1 홈 참여 프로젝트 카드
+    func toWorkspaceProject() -> WorkspaceProject {
+        WorkspaceProject(id: id, name: name, pmName: pm, team: dept, memberCount: memberCount, progress: min(max(progress, 0), 100))
     }
 
     func toEntity() -> JoinedProject {

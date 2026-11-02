@@ -13,7 +13,7 @@ import Foundation
 /// - GET /finance/~: Figma 04 재무 예시 (MockFinanceFixture)
 /// - GET /dashboard/home: Figma 02-1 홈 예시 (MockDashboardFixture)
 /// - GET /library · /library/search: Figma 06 문서함 예시 (MockLibraryFixture)
-/// - GET /workspace/home · /me/projects: Figma 07 내 공간 예시 (MockWorkspaceFixture, /me/projects 는 서버 develop 형식)
+/// - GET /me/summary · /me/projects: Figma 07 내 공간 예시 (서버 develop 형식, 홈은 여러 API 를 조합)
 /// - GET · POST /todos · PATCH /todos/{id}: Figma 07-2 (MockTodoStore, 서버 develop 형식, 메모리에 기억)
 /// - GET /events · POST /events/{id}/rsvp: Figma 07-7 ~ 07-9 (MockScheduleStore, 서버 develop 형식, 참석 응답 기억)
 /// - GET /workspace/activity · posts · proposals: Figma 07-10 ~ 07-12 (MockActivityFixture)
@@ -169,6 +169,21 @@ struct MockTransport: HTTPTransport {
         let components = url.pathComponents.filter { $0 != "/" && $0 != MockTransport.baseURL.lastPathComponent }
         if components == ["me"] {
             return try profileRoute(request)
+        }
+        if components == ["me", "summary"], request.httpMethod == "GET" {
+            let todos = todoStore.summary()
+            let summary: [String: Any] = [
+                "unreadNotifications": notificationStore.items().filter { !$0.isRead }.count,
+                "submittedApprovals": approvalStore.items(mine: true).count,
+                "myPosts": 3,
+                "myProposals": 3,
+                "myInquiries": 2,
+                "receivedApprovals": approvalStore.items(mine: false).filter { ["PENDING", "IN_REVIEW"].contains($0.status) }.count,
+                "todos": ["total": todos.today.count + todos.completed, "today": todos.today.count,
+                          "completed": todos.completed, "linkedApprovals": 0]
+            ]
+            let data = (try? JSONSerialization.data(withJSONObject: summary, options: [.sortedKeys])) ?? Data()
+            return try respond(request, status: 200, json: String(decoding: data, as: UTF8.self))
         }
         if components == ["me", "projects"], request.httpMethod == "GET" {
             return try respond(request, status: 200, json: MockWorkspaceFixture.projects())
@@ -602,12 +617,6 @@ struct MockTransport: HTTPTransport {
         guard let url = request.url, url.pathComponents.contains("workspace") else { return nil }
         let parent = url.deletingLastPathComponent().lastPathComponent
         switch (request.httpMethod ?? "", path) {
-        case ("GET", "home"):
-            let summary = todoStore.summary()
-            return try respond(request, status: 200, json: MockWorkspaceFixture.home(
-                todayTodoTitles: summary.today,
-                completedTodoCount: summary.completed
-            ))
         case ("GET", "activity"):
             let unread = notificationStore.items().filter { !$0.isRead }.count
             let submitted = approvalStore.items(mine: true).filter { $0.status != "DRAFT" }.count

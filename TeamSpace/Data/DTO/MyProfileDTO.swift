@@ -4,6 +4,7 @@ import Foundation
 /// 소속은 `dept` 로 "Native · {dept}" 를 만들고, 한 줄 소개는 `bio` 예요.
 /// 미모티콘 배경색은 서버에 없어 `avatarBackground` 가 오면 읽고, 없으면 회색이에요.
 struct ServerProfileDTO: Decodable {
+    let id: Int?
     let name: String
     let dept: String
     let bio: String
@@ -12,6 +13,7 @@ struct ServerProfileDTO: Decodable {
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try? container.decodeIntOrString(forKey: .id)
         name = (try? container.decodeIfPresent(String.self, forKey: .name)) ?? ""
         dept = (try? container.decodeIfPresent(String.self, forKey: .dept)) ?? ""
         bio = (try? container.decodeIfPresent(String.self, forKey: .bio)) ?? ""
@@ -21,7 +23,7 @@ struct ServerProfileDTO: Decodable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case name, dept, bio, interests, avatarBackground
+        case id, name, dept, bio, interests, avatarBackground
     }
 
     func toEntity() -> MyProfile {
