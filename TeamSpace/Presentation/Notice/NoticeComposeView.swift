@@ -13,6 +13,40 @@ struct NoticeComposeView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: Spacing.xl) {
+                if viewModel.isEditing {
+                    editForm
+                } else {
+                    composeForm
+                }
+            }
+            .padding(.horizontal, Spacing.screen)
+            .padding(.bottom, Spacing.xxxl)
+        }
+        .scrollDismissesKeyboard(.interactively)
+        .safeAreaInset(edge: .top, spacing: 0) {
+            TSNavigationBar(title: viewModel.isEditing ? "공지 수정" : "전체 공지 작성", onBack: { dismiss() })
+                .padding(.horizontal, Spacing.screen)
+                .padding(.bottom, Spacing.sm)
+                .background(Color.tsBackground)
+        }
+        .background(Color.tsBackground.ignoresSafeArea())
+        .toolbar(.hidden, for: .navigationBar)
+        .modifier(NoticeComposeAlerts(viewModel: viewModel, onDone: { dismiss() }))
+    }
+
+    /// 공지 수정 — 제목 · 본문 · 표시 · 수정 알림
+    @ViewBuilder
+    private var editForm: some View {
+        NoticeTextSection(viewModel: viewModel)
+        NoticeEditOptionsSection(viewModel: viewModel)
+        InfoBanner(message: "공지 대상 · 첨부 · 게시 시점은 그대로 두고 고쳐요.", style: .muted)
+        Button("수정 완료") { Task { await viewModel.publish() } }
+            .buttonStyle(.tsPrimaryLarge)
+            .disabled(!viewModel.canPublish)
+    }
+
+    @ViewBuilder
+    private var composeForm: some View {
                 VStack(alignment: .leading, spacing: Spacing.xs) {
                     StatusBadge(title: "공지 게시 권한 · NativeOps", tone: .primary, size: .small)
                     WorkspacePageTitle(eyebrow: "대상과 게시 시점을 확인한 뒤 공지해 주세요.", title: "팀에 필요한 소식을 전해요")
@@ -25,20 +59,6 @@ struct NoticeComposeView: View {
                 NoticeChecklistCard(lines: viewModel.draft.checklist)
                 InfoBanner(message: "푸시는 수신 설정과 기기 권한에 따라 표시돼요. 예약 등록 후에도 게시 전까지 수정·취소할 수 있어요.", style: .muted)
                 actions
-            }
-            .padding(.horizontal, Spacing.screen)
-            .padding(.bottom, Spacing.xxxl)
-        }
-        .scrollDismissesKeyboard(.interactively)
-        .safeAreaInset(edge: .top, spacing: 0) {
-            TSNavigationBar(title: "전체 공지 작성", onBack: { dismiss() })
-                .padding(.horizontal, Spacing.screen)
-                .padding(.bottom, Spacing.sm)
-                .background(Color.tsBackground)
-        }
-        .background(Color.tsBackground.ignoresSafeArea())
-        .toolbar(.hidden, for: .navigationBar)
-        .modifier(NoticeComposeAlerts(viewModel: viewModel, onDone: { dismiss() }))
     }
 
     private var actions: some View {

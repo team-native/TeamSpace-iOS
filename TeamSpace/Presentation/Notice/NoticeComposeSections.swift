@@ -25,6 +25,33 @@ struct NoticeAudienceSection: View {
     }
 }
 
+/// 공지 수정 — 중요 · 고정 · 수정 알림 (대상 · 첨부 · 게시 시점은 그대로)
+struct NoticeEditOptionsSection: View {
+    @Bindable var viewModel: NoticeComposeViewModel
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            PostComposeLabel(title: "표시")
+            HStack(spacing: Spacing.xs) {
+                NoticeCheckChip(title: "중요 공지", isOn: $viewModel.draft.isImportant)
+                NoticeCheckChip(title: "상단 고정", isOn: $viewModel.draft.isPinned)
+            }
+            WorkspaceCard {
+                Toggle(isOn: $viewModel.draft.sendsPush) {
+                    VStack(alignment: .leading, spacing: Spacing.xxxs) {
+                        Text("수정 알림")
+                            .tsFont(.footnoteBold)
+                        Text("켜면 \"공지 업데이트\" 알림을 함께 보내요")
+                            .tsFont(.caption2)
+                            .foregroundStyle(Color.tsInk3)
+                    }
+                }
+                .tint(Color.tsPrimary)
+            }
+        }
+    }
+}
+
 /// "✓ 중요 공지" 켜고 끄는 칩
 private struct NoticeCheckChip: View {
     let title: String

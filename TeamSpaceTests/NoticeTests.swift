@@ -197,6 +197,77 @@ final class NoticeTests: XCTestCase {
 
     // MARK: 연결
 
+    // MARK: 공지 수정 (PATCH /admin/notices/{id})
+
+    func testEditNoticePrefillsAndUpdates() async throws {
+        let container = makeContainer()
+        let detailViewModel = container.makeNoticeDetailViewModel(noticeId: 41, user: fa)
+        await detailViewModel.load()
+        XCTAssertTrue(detailViewModel.canEdit)
+        let detail = try XCTUnwrap(detailViewModel.detail)
+
+        let compose = container.makeNoticeComposeViewModel(user: fa, editing: detail)
+        XCTAssertTrue(compose.isEditing)
+        XCTAssertEqual(compose.draft.title, detail.notice.title)
+        XCTAssertEqual(compose.draft.body, detail.body)
+        XCTAssertEqual(compose.draft.isPinned, detail.notice.isPinned)
+        XCTAssertEqual(compose.draft.isImportant, detail.notice.isImportant)
+        XCTAssertFalse(compose.draft.sendsPush, "수정 알림은 기본으로 꺼요")
+
+        compose.draft.title = "  고친 공지 제목 "
+        compose.draft.body = "고친 공지 본문"
+        compose.draft.isPinned = !detail.notice.isPinned
+        await compose.publish()
+        XCTAssertNil(compose.errorMessage)
+        XCTAssertEqual(compose.completionMessage, "공지를 수정했어요.")
+
+        await detailViewModel.load()
+        XCTAssertEqual(detailViewModel.detail?.notice.title, "고친 공지 제목")
+        XCTAssertEqual(detailViewModel.detail?.body, "고친 공지 본문")
+        XCTAssertEqual(detailViewModel.detail?.notice.isPinned, !detail.notice.isPinned)
+    }
+
+    func testEditNoticeWithPushMessage() async throws {
+        let container = makeContainer()
+        let detailViewModel = container.makeNoticeDetailViewModel(noticeId: 42, user: fa)
+        await detailViewModel.load()
+        let compose = container.makeNoticeComposeViewModel(user: fa, editing: try XCTUnwrap(detailViewModel.detail))
+        compose.draft.sendsPush = true
+        await compose.publish()
+        XCTAssertEqual(compose.completionMessage, "공지를 수정하고 알림을 보냈어요.")
+    }
+
+    func testMemberCannotEditNotice() async throws {
+        let container = makeContainer()
+        let detailViewModel = container.makeNoticeDetailViewModel(noticeId: 41, user: member)
+        await detailViewModel.load()
+        XCTAssertFalse(detailViewModel.canEdit, "일반 구성원은 수정 버튼이 없어요")
+        XCTAssertFalse(container.makeNoticeDetailViewModel(noticeId: 41).canEdit)
+
+        let compose = container.makeNoticeComposeViewModel(user: member, editing: try XCTUnwrap(detailViewModel.detail))
+        await compose.publish()
+        XCTAssertEqual(compose.errorMessage, "공지 수정 권한이 없어요.")
+        XCTAssertNil(compose.completionMessage)
+    }
+
+    func testEditNoticeRejectsEmptyBody() async throws {
+        let container = makeContainer()
+        let detailViewModel = container.makeNoticeDetailViewModel(noticeId: 41, user: fa)
+        await detailViewModel.load()
+        let compose = container.makeNoticeComposeViewModel(user: fa, editing: try XCTUnwrap(detailViewModel.detail))
+        compose.draft.body = "  "
+        XCTAssertFalse(compose.canPublish)
+    }
+
+    func testNoticePatchBodyShape() throws {
+        var draft = NoticeDraft(scheduledAt: Date())
+        draft.title = "t"
+        draft.body = "b"
+        draft.attachments = [NoticeAttachment(fileName: "a.pdf", data: Data([1]))]
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(ServerNoticePatchRequestDTO(draft: draft))) as? [String: Any])
+        XCTAssertEqual(Set(json.keys), ["title", "body", "pinned", "mustRead", "sendPush"], "대상 · 첨부 · 상태는 보내지 않아요")
+    }
+
     func testNoticeNotificationRoutes() {
         XCTAssertEqual(NotificationType.notice.targetRoute(deepLink: "/notices/1"), .noticeDetail(id: 1), "02-2 공지 알림 → 10-6")
         XCTAssertEqual(NotificationType.notice.targetRoute(deepLink: nil), .notices)

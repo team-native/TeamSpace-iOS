@@ -21,7 +21,13 @@ struct NoticeDetailView: View {
             .padding(.bottom, Spacing.xxxl)
         }
         .safeAreaInset(edge: .top, spacing: 0) {
-            TSNavigationBar(title: "공지", onBack: { dismiss() })
+            TSNavigationBar(title: "공지", onBack: { dismiss() }) {
+                if viewModel.canEdit, let id = viewModel.detail?.notice.id {
+                    CircleIconButton(icon: .pencil, accessibilityLabel: "공지 수정", background: .tsSurface, hasBorder: true) {
+                        onNavigate(.noticeEdit(id: id))
+                    }
+                }
+            }
                 .padding(.horizontal, Spacing.screen)
                 .padding(.bottom, Spacing.sm)
                 .background(Color.tsBackground)

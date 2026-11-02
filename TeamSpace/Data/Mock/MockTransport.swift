@@ -245,6 +245,16 @@ struct MockTransport: HTTPTransport {
         if components == ["admin", "notices"], request.httpMethod == "POST" {
             return try adminNoticeCreate(request)
         }
+        if components.count == 3, components.starts(with: ["admin", "notices"]), request.httpMethod == "PATCH" {
+            guard
+                let id = Int(components[2]), let body = request.httpBody,
+                let dto = try? JSONDecoder().decode(ServerNoticePatchRequestDTO.self, from: body)
+            else { return try respond(request, status: 422, json: #"{"detail":"잘못된 요청입니다."}"#) }
+            guard let json = boardStore.noticeStore.update(id: id, request: dto) else {
+                return try respond(request, status: 404, json: #"{"detail":"공지를 찾을 수 없습니다."}"#)
+            }
+            return try respond(request, status: 200, json: json)
+        }
         if components.first == "todos" {
             return try todoRoute(request, components: components)
         }

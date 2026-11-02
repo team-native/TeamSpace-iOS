@@ -3,6 +3,23 @@ import Foundation
 /// POST /admin/notices 요청 (TeamSpace-backend develop `admin.create_notice`)
 /// 서버 필수 값은 kind · title · body 이고, pinned · mustRead 를 읽어요.
 /// audience · status · publishAt · sendPush 는 서버가 그대로 저장만 해요. (예약 · 임시 저장 · 알림 끄기는 백엔드와 협의 중)
+/// PATCH /admin/notices/{id} 요청 — 바꿀 값만 보내요. `sendPush` 가 true 면 서버가 "공지 업데이트" 알림을 보내요.
+struct ServerNoticePatchRequestDTO: Codable, Equatable {
+    let title: String
+    let body: String
+    let pinned: Bool
+    let mustRead: Bool
+    let sendPush: Bool
+
+    init(draft: NoticeDraft) {
+        title = draft.title
+        body = draft.body
+        pinned = draft.isPinned
+        mustRead = draft.isImportant
+        sendPush = draft.sendsPush
+    }
+}
+
 struct ServerNoticeCreateRequestDTO: Codable, Equatable {
     enum Status: String, Codable {
         case published = "PUBLISHED"
