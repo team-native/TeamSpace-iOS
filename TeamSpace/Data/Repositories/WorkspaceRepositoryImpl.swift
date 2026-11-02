@@ -22,19 +22,24 @@ final class WorkspaceRepositoryImpl: WorkspaceRepository, @unchecked Sendable {
             .items.map { $0.toEntity() }
     }
 
+    /// GET /approvals?box=mine — 07-4 · 07-5 는 내가 올린 결재예요. 취소한 임시 저장(=삭제)은 빼요.
     func fetchMyDocuments() async throws -> [MyDocument] {
-        try await request(Endpoint(method: .get, path: "workspace/documents"), as: MyDocumentListResponseDTO.self)
-            .list.map { $0.toEntity() }
+        var items: [ServerApprovalDTO] = []
+        var cursor: String?
+        for _ in 0..<5 {
+            var query = [URLQueryItem(name: "box", value: "mine"), URLQueryItem(name: "limit", value: "100")]
+            if let cursor { query.append(URLQueryItem(name: "cursor", value: cursor)) }
+            let page = try await request(Endpoint(method: .get, path: "approvals", queryItems: query), as: CursorPageDTO<ServerApprovalDTO>.self)
+            items += page.items
+            guard let next = page.nextCursor else { break }
+            cursor = next
+        }
+        return items.compactMap { $0.toMyDocument() }
     }
 
+    /// 서버에 결재 삭제가 없어 작성 중인 결재를 취소해요. (POST /approvals/{id}/cancel)
     func deleteDraft(documentId: Int) async throws {
-        do {
-            _ = try await client.request(Endpoint(method: .delete, path: "documents/\(documentId)"), as: EmptyResponseDTO.self)
-        } catch NetworkError.emptyData {
-            return
-        } catch let error as NetworkError {
-            throw error.asAppError
-        }
+        _ = try await request(Endpoint(method: .post, path: "approvals/\(documentId)/cancel"), as: IgnoredJSONValue.self)
     }
 
     /// GET /events?month=YYYY-MM

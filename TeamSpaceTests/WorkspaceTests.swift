@@ -201,6 +201,30 @@ final class WorkspaceTests: XCTestCase {
         XCTAssertEqual(viewModel.documents.map(\.title), ["Book-on 테스트 기기 구매"], "대소문자 구분 없이 제목 · 프로젝트 검색")
     }
 
+    func testMyDocumentFromServerLine() throws {
+        func decode(_ json: String) throws -> ServerApprovalDTO {
+            try JSONCoder.makeDecoder().decode(ServerApprovalDTO.self, from: Data(json.utf8))
+        }
+        let line = #"[{"who":"옥물결","userId":1,"role":"기안","state":"done","at":"2026-10-14T09:00:00+09:00"},"#
+        let reviewing = try decode(#"{"id":"1","kind":"비용 승인","title":"구매","amountValue":420000,"status":"검토 중","project":"Book-on","date":"2026-10-14T09:00:00+09:00","line":"# + line
+            + #"{"who":"안율","userId":21,"role":"검토","state":"done","at":"2026-10-15T10:00:00+09:00"},{"who":"김민준","userId":22,"role":"승인","state":"now","at":"검토 중"}]}"#)
+            .toMyDocument()
+        XCTAssertEqual(reviewing?.currentApprover?.text, "김민준", "지금(now) 차례인 사람")
+        XCTAssertEqual(reviewing?.currentStepTitle, "2차 승인 중")
+        XCTAssertEqual(reviewing?.projectName, "Book-on")
+        XCTAssertNotNil(reviewing?.submittedAt)
+
+        let rejected = try decode(#"{"id":"3","kind":"비용 승인","title":"구독","status":"반려","rejectReason":"근거 보완","line":"# + line
+            + #"{"who":"안율","userId":21,"role":"검토","state":"done","at":"2026-10-15T10:00:00+09:00"},{"who":"김민준","userId":22,"role":"승인","state":"wait","at":"대기"}]}"#)
+            .toMyDocument()
+        XCTAssertEqual(rejected?.decidedBy?.text, "안율", "마지막으로 처리한 사람")
+        XCTAssertEqual(rejected?.rejectReason, "근거 보완")
+        XCTAssertNil(rejected?.currentApprover)
+
+        let deletedDraft = try decode(#"{"id":"9","kind":"비용 승인","title":"초안","status":"취소","line":"# + line.dropLast() + "]}")
+        XCTAssertNil(deletedDraft.toMyDocument(), "취소한 임시 저장은 지운 것으로 보고 빼요")
+    }
+
     func testMyDocumentProgressText() {
         let reviewing = MyDocument(
             id: 1, kind: .expense, title: "Book-on 테스트 기기 구매", amount: 420_000, status: .reviewing,

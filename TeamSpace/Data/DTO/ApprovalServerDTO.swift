@@ -64,6 +64,7 @@ struct ServerApprovalDTO: Decodable {
     let useDate: String
     let period: String
     let reason: String
+    let rejectReason: String
     let author: String
     let authorId: Int?
     let date: Date?
@@ -85,6 +86,7 @@ struct ServerApprovalDTO: Decodable {
         useDate = text(.useDate)
         period = text(.period)
         reason = text(.reason)
+        rejectReason = text(.rejectReason)
         author = text(.author)
         authorId = try? container.decodeIntOrString(forKey: .authorId)
         date = ServerDate.parse(text(.updatedAt)) ?? ServerDate.parse(text(.date))
@@ -96,7 +98,7 @@ struct ServerApprovalDTO: Decodable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, kind, type, title, amountValue, status, project, useDate, period, reason, author, authorId, date, updatedAt
+        case id, kind, type, title, amountValue, status, project, useDate, period, reason, rejectReason, author, authorId, date, updatedAt
         case line, files, comments, details
     }
 
@@ -153,6 +155,33 @@ struct ServerApprovalDTO: Decodable {
             },
             isMine: viewerId != nil && authorId == viewerId,
             myApprovalId: item.status.isWaiting ? myStep : nil
+        )
+    }
+
+    /// 07-4 · 07-5 내 문서 한 건. 결재선(line)에서 현재 결재자 · 최종 결재자를 찾아요.
+    /// 결재 요청 전에 취소한 것(=임시 저장 삭제)은 nil
+    func toMyDocument() -> MyDocument? {
+        let item = toItem()
+        let steps = line.filter { $0.role != "기안" }
+        if item.status == .cancelled, steps.isEmpty { return nil }
+        let current = steps.firstIndex { $0.state == "now" }
+        let decided = item.status == .approved || item.status == .rejected ? steps.last { $0.state == "done" } : nil
+        let submitted = item.status == .draft ? nil : line.first { $0.role == "기안" }.flatMap { ServerDate.parse($0.at) } ?? item.updatedAt
+        return MyDocument(
+            id: item.id,
+            kind: item.kind,
+            title: item.title,
+            amount: item.amount,
+            status: item.status,
+            projectName: project.isEmpty ? nil : project,
+            summary: item.status == .draft && !reason.isEmpty ? reason : nil,
+            submittedAt: submitted,
+            updatedAt: item.updatedAt,
+            currentApprover: item.status.isWaiting ? current.map { DocumentPerson(name: steps[$0].who, department: "") } : nil,
+            currentStepTitle: item.status.isWaiting ? current.map { "\($0 + 1)차 \(steps[$0].role) 중" } : nil,
+            decidedBy: decided.map { DocumentPerson(name: $0.who, department: "") },
+            decidedAt: decided.flatMap { ServerDate.parse($0.at) },
+            rejectReason: item.status == .rejected && !rejectReason.isEmpty ? rejectReason : nil
         )
     }
 
