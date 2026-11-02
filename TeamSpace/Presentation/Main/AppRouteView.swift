@@ -33,7 +33,7 @@ struct AppRouteView: View {
             ruleScreen
         case .board, .boardSearch, .postDetail, .postCompose, .postEdit, .commentCompose:
             boardScreen
-        case .notices, .noticeDetail, .noticeCompose:
+        case .notices, .noticeDetail, .noticeCompose, .noticeEdit:
             noticeScreen
         case .myInquiries, .inquiryCompose, .inquiryDetail, .inquiryInbox, .inquiryReview:
             inquiryScreen
@@ -229,9 +229,11 @@ struct AppRouteView: View {
     private var noticeScreen: some View {
         switch route {
         case .noticeDetail(let id):
-            NoticeDetailView(viewModel: container.makeNoticeDetailViewModel(noticeId: id), onNavigate: onNavigate)
+            NoticeDetailView(viewModel: container.makeNoticeDetailViewModel(noticeId: id, user: user), onNavigate: onNavigate)
         case .noticeCompose:
             NoticeComposeView(viewModel: container.makeNoticeComposeViewModel(user: user))
+        case .noticeEdit(let id):
+            NoticeEditView(viewModel: container.makeNoticeDetailViewModel(noticeId: id, user: user), container: container, user: user)
         default:
             NoticeListView(viewModel: container.makeNoticeListViewModel(user: user), onNavigate: onNavigate)
         }

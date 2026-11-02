@@ -1,7 +1,7 @@
 import Foundation
 import Observation
 
-/// 10-7 전체 공지 작성 [담당자 운영 화면]
+/// 10-7 전체 공지 작성 [담당자 운영 화면] · 공지 수정 (PATCH /admin/notices/{id})
 @Observable
 @MainActor
 final class NoticeComposeViewModel {
@@ -13,14 +13,27 @@ final class NoticeComposeViewModel {
 
     private let user: AuthUser
     private let publishNoticeUseCase: PublishNoticeUseCase
+    private let updateNoticeUseCase: UpdateNoticeUseCase?
     private let now: () -> Date
+    /// 고치는 공지 id — 있으면 새 공지 대신 같은 공지를 고쳐요.
+    let editingNoticeId: Int?
 
-    init(user: AuthUser, publishNoticeUseCase: PublishNoticeUseCase, now: @escaping () -> Date = { Date() }) {
+    init(
+        user: AuthUser,
+        publishNoticeUseCase: PublishNoticeUseCase,
+        updateNoticeUseCase: UpdateNoticeUseCase? = nil,
+        editing: NoticeDetail? = nil,
+        now: @escaping () -> Date = { Date() }
+    ) {
         self.user = user
         self.publishNoticeUseCase = publishNoticeUseCase
+        self.updateNoticeUseCase = updateNoticeUseCase
         self.now = now
-        draft = NoticeDraft(scheduledAt: Self.defaultSchedule(now: now()))
+        editingNoticeId = editing?.notice.id
+        draft = editing.map { NoticeDraft(editing: $0, now: now()) } ?? NoticeDraft(scheduledAt: Self.defaultSchedule(now: now()))
     }
+
+    var isEditing: Bool { editingNoticeId != nil }
 
     /// 내일 오전 9시
     static func defaultSchedule(now: Date, calendar: Calendar = .current) -> Date {
@@ -50,7 +63,24 @@ final class NoticeComposeViewModel {
     }
 
     func publish() async {
-        await submit(asDraft: false)
+        if isEditing {
+            await update()
+        } else {
+            await submit(asDraft: false)
+        }
+    }
+
+    private func update() async {
+        guard let noticeId = editingNoticeId, let updateNoticeUseCase, !isSubmitting else { return }
+        isSubmitting = true
+        defer { isSubmitting = false }
+        do {
+            try await updateNoticeUseCase.execute(noticeId: noticeId, draft, user: user)
+            completionMessage = draft.sendsPush ? "공지를 수정하고 알림을 보냈어요." : "공지를 수정했어요."
+        } catch {
+            AppLog.record(error, context: "notice.update")
+            errorMessage = error.userMessage
+        }
     }
 
     func saveDraft() async {

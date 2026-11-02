@@ -13,12 +13,22 @@ final class NoticeDetailViewModel {
     private let noticeId: Int
     private let fetchNoticeDetailUseCase: FetchNoticeDetailUseCase
     private let acknowledgeNoticeUseCase: AcknowledgeNoticeUseCase
+    private let user: AuthUser?
 
-    init(noticeId: Int, fetchNoticeDetailUseCase: FetchNoticeDetailUseCase, acknowledgeNoticeUseCase: AcknowledgeNoticeUseCase) {
+    init(
+        noticeId: Int,
+        fetchNoticeDetailUseCase: FetchNoticeDetailUseCase,
+        acknowledgeNoticeUseCase: AcknowledgeNoticeUseCase,
+        user: AuthUser? = nil
+    ) {
         self.noticeId = noticeId
         self.fetchNoticeDetailUseCase = fetchNoticeDetailUseCase
         self.acknowledgeNoticeUseCase = acknowledgeNoticeUseCase
+        self.user = user
     }
+
+    /// 공지 게시 권한(FA · Leader · Admin)이 있으면 고칠 수 있어요.
+    var canEdit: Bool { detail != nil && user?.can(.publishNotice) == true }
 
     var detail: NoticeDetail? { state.value }
 

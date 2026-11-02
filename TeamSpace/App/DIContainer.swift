@@ -788,16 +788,22 @@ extension DIContainer {
         NoticeListViewModel(canPublish: user.can(.publishNotice), fetchNoticesUseCase: fetchNoticesUseCase)
     }
 
-    func makeNoticeDetailViewModel(noticeId: Int) -> NoticeDetailViewModel {
+    func makeNoticeDetailViewModel(noticeId: Int, user: AuthUser? = nil) -> NoticeDetailViewModel {
         NoticeDetailViewModel(
             noticeId: noticeId,
             fetchNoticeDetailUseCase: fetchNoticeDetailUseCase,
-            acknowledgeNoticeUseCase: acknowledgeNoticeUseCase
+            acknowledgeNoticeUseCase: acknowledgeNoticeUseCase,
+            user: user
         )
     }
 
-    func makeNoticeComposeViewModel(user: AuthUser) -> NoticeComposeViewModel {
-        NoticeComposeViewModel(user: user, publishNoticeUseCase: publishNoticeUseCase)
+    func makeNoticeComposeViewModel(user: AuthUser, editing: NoticeDetail? = nil) -> NoticeComposeViewModel {
+        NoticeComposeViewModel(
+            user: user,
+            publishNoticeUseCase: publishNoticeUseCase,
+            updateNoticeUseCase: UpdateNoticeUseCase(noticeRepository: noticeRepository),
+            editing: editing
+        )
     }
 
     func makeMyInquiriesViewModel() -> MyInquiriesViewModel {

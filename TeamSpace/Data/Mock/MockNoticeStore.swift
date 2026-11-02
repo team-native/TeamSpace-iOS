@@ -6,7 +6,7 @@ final class MockNoticeStore: @unchecked Sendable {
     private struct Record {
         var summary: NoticeSummaryDTO
         let authorName: String
-        let body: String
+        var body: String
         let isDraft: Bool
     }
 
@@ -18,6 +18,7 @@ final class MockNoticeStore: @unchecked Sendable {
     private var confirmedIds: Set<Int> = []
     /// 테스트에서 마지막 게시 요청을 확인할 때
     private(set) var lastCreateRequest: ServerNoticeCreateRequestDTO?
+    private(set) var lastPatchRequest: ServerNoticePatchRequestDTO?
 
     init(now: Date = Date()) {
         let today = Calendar.current.startOfDay(for: now)
@@ -139,6 +140,22 @@ final class MockNoticeStore: @unchecked Sendable {
     private func json(_ object: [String: Any]) -> String {
         let data = (try? JSONSerialization.data(withJSONObject: object, options: [.sortedKeys])) ?? Data()
         return String(decoding: data, as: UTF8.self)
+    }
+
+    /// PATCH /admin/notices/{id} — 제목 · 본문 · 고정 · 필독만 바꿔요. 없으면 nil
+    func update(id: Int, request: ServerNoticePatchRequestDTO) -> String? {
+        lock.lock()
+        defer { lock.unlock() }
+        guard let index = records.firstIndex(where: { $0.summary.id == id }) else { return nil }
+        let old = records[index].summary
+        records[index].summary = NoticeSummaryDTO(
+            id: id, category: old.category, title: request.title,
+            summary: request.body.split(separator: "\n").first.map(String.init),
+            updatedAt: old.updatedAt, isPinned: request.pinned, isImportant: request.mustRead
+        )
+        records[index].body = request.body
+        lastPatchRequest = request
+        return json(serverFields(records[index], pinned: request.pinned))
     }
 
     /// POST /admin/notices — `{id}`. 예약이면 그 시각을 게시 시각으로, 임시 저장은 목록에서 빼요.
