@@ -22,6 +22,7 @@ extension ContractStep {
     /// "09.02 · 계약서 서명"
     var caption: String {
         guard let date else { return note }
+        guard !note.isEmpty else { return TSFormat.shortDate(date) }
         return "\(TSFormat.shortDate(date)) · \(note)"
     }
 }

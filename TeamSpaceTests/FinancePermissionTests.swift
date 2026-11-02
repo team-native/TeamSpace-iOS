@@ -28,12 +28,13 @@ final class FinancePermissionTests: XCTestCase {
 
         let summary = try XCTUnwrap(viewModel.state.value)
         XCTAssertFalse(viewModel.isAmountHidden)
-        XCTAssertEqual(summary.totalContractAmount, 28_400_000)
-        XCTAssertEqual(summary.totalPaidAmount, 19_860_000)
-        XCTAssertEqual(summary.totalUnpaidAmount, 8_540_000)
+        XCTAssertEqual(summary.totalContractAmount, 23_000_000, "수금 내역을 프로젝트별로 더해요")
+        XCTAssertEqual(summary.totalPaidAmount, 20_500_000)
+        XCTAssertEqual(summary.totalUnpaidAmount, 2_500_000)
         XCTAssertEqual(viewModel.visibleProjects.count, 4)
-        XCTAssertEqual(viewModel.hiddenCount, 5, "Figma: 외 5개 프로젝트 보기")
-        XCTAssertEqual(viewModel.visibleProjects.first?.paidPercent, 50)
+        XCTAssertEqual(viewModel.hiddenCount, 3)
+        XCTAssertEqual(viewModel.visibleProjects.first?.name, "관리자 도구 개발", "최근 수금일 순")
+        XCTAssertEqual(viewModel.visibleProjects.first?.paidPercent, 0)
     }
 
     func testFilterCompleted() async throws {
@@ -48,17 +49,13 @@ final class FinancePermissionTests: XCTestCase {
 
     // MARK: 04-8 권한 없음
 
-    func testMemberGetsMaskedAmounts() async throws {
+    func testMemberIsForbidden() async throws {
         let viewModel = try makeContainer(asFA: false).makeProjectAmountsViewModel(year: 2026, user: member)
 
         await viewModel.load()
 
-        let summary = try XCTUnwrap(viewModel.state.value)
         XCTAssertTrue(viewModel.isAmountHidden)
-        XCTAssertTrue(summary.isMasked, "서버가 금액을 null 로 보내요")
-        XCTAssertTrue(summary.projects.allSatisfy { $0.contractAmount == nil })
-        XCTAssertEqual(summary.monthNewContracts, 2)
-        XCTAssertEqual(summary.monthDeposits, 3)
+        guard case .forbidden = viewModel.state else { return XCTFail("서버는 재정 권한이 없으면 403: \(viewModel.state)") }
     }
 
     // MARK: 04-7 재정 제한 권한
@@ -70,7 +67,13 @@ final class FinancePermissionTests: XCTestCase {
 
         XCTAssertEqual(viewModel.scopeBadge, "일반 구성원 · 공개 요약")
         XCTAssertTrue(viewModel.canRequestAccess)
-        XCTAssertEqual(viewModel.state.value?.totalAmount, 48_300_000)
+        guard case .forbidden = viewModel.state else { return XCTFail("공개 요약 API 가 없어 403 이에요: \(viewModel.state)") }
+    }
+
+    func testAccessSummaryForFA() async throws {
+        let viewModel = try makeContainer(asFA: true).makeFinanceAccessViewModel(user: fa, year: 2026)
+        await viewModel.load()
+        XCTAssertEqual(viewModel.state.value?.totalAmount, 23_000_000)
         XCTAssertEqual(viewModel.latestCollected?.name, "BRIDGE")
     }
 
