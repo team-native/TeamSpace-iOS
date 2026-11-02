@@ -1,4 +1,5 @@
 import Foundation
+import UniformTypeIdentifiers
 
 final class NoticeRepositoryImpl: NoticeRepository, @unchecked Sendable {
     private let client: APIClient
@@ -25,19 +26,38 @@ final class NoticeRepositoryImpl: NoticeRepository, @unchecked Sendable {
         _ = try await request(Endpoint(method: .post, path: "notices/\(noticeId)/confirm"), as: IgnoredJSONValue.self)
     }
 
+    /// 첨부를 하나씩 `POST /uploads` 로 올린 뒤, 받은 id 를 붙여 `POST /admin/notices` 로 게시해요.
     func publish(_ draft: NoticeDraft, asDraft: Bool) async throws -> NoticeSummary {
-        let body = NoticePublishRequestDTO(
-            audience: draft.audience,
-            isImportant: draft.isImportant,
-            isPinned: draft.isPinned,
+        var attachmentIds: [String] = []
+        for attachment in draft.attachments {
+            attachmentIds.append(try await upload(attachment))
+        }
+        let body = ServerNoticeCreateRequestDTO(draft: draft, attachmentIds: attachmentIds, asDraft: asDraft)
+        let created = try await request(Endpoint(method: .post, path: "admin/notices", body: body), as: ServerIdResponseDTO.self)
+        guard let id = Int(created.id) else { throw AppError.unknown("공지 번호를 읽지 못했어요.") }
+        return NoticeSummary(
+            id: id,
+            category: NoticeCategory(serverKind: body.kind),
             title: draft.title,
-            body: draft.body,
-            attachments: draft.attachments.map { .init(fileName: $0.fileName, data: $0.data.base64EncodedString()) },
-            scheduledAt: draft.timing == .scheduled ? draft.scheduledAt : nil,
-            sendsPush: draft.sendsPush,
-            isDraft: asDraft
+            summary: ServerPostItemDTO.excerpt(of: draft.body),
+            updatedAt: body.publishAt ?? Date(),
+            isPinned: draft.isPinned,
+            isImportant: draft.isImportant
         )
-        return try await request(Endpoint(method: .post, path: "notices", body: body), as: NoticeSummaryDTO.self).toEntity()
+    }
+
+    /// POST /uploads — 10MB 이하 파일
+    private func upload(_ attachment: NoticeAttachment) async throws -> String {
+        let file = MultipartFile(
+            filename: attachment.fileName,
+            mimeType: Self.mimeType(of: attachment.fileName),
+            data: attachment.data
+        )
+        return try await request(Endpoint(method: .post, path: "uploads", file: file), as: ServerIdResponseDTO.self).id
+    }
+
+    static func mimeType(of fileName: String) -> String {
+        UTType(filenameExtension: (fileName as NSString).pathExtension)?.preferredMIMEType ?? "application/octet-stream"
     }
 
     private func request<Response: Decodable>(_ endpoint: Endpoint, as type: Response.Type) async throws -> Response {

@@ -28,7 +28,8 @@ struct NoticeDraft: Equatable, Sendable {
     static let titleLimit = 60
     static let bodyLimit = 5_000
     static let attachmentLimit = 5
-    static let attachmentByteLimit = 20 * 1_024 * 1_024
+    /// 서버 `POST /uploads` 는 10MB 까지 받아요.
+    static let attachmentByteLimit = 10 * 1_024 * 1_024
 
     var audience: NoticeAudience = .native
     var isImportant = true
