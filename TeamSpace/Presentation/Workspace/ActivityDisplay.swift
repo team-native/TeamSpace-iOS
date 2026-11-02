@@ -45,7 +45,8 @@ extension MyComment {
 
     /// "회의실 이용 경험을 나눠주세요 · 10.14 17:05\n좋아요 2 · 답글 1 · 공개 화면에는 익명으로 표시"
     var metaText: String {
-        let first = "\(postTitle) · \(TSFormat.shortDate(createdAt)) \(TSFormat.time(createdAt))"
+        let when = "\(TSFormat.shortDate(createdAt)) \(TSFormat.time(createdAt))"
+        let first = postTitle.isEmpty ? when : "\(postTitle) · \(when)"
         let display = isAnonymous ? "공개 화면에는 익명으로 표시" : "실명으로 표시"
         return "\(first)\n좋아요 \(likeCount) · 답글 \(replyCount) · \(display)"
     }

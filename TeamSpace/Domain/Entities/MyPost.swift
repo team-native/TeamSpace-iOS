@@ -16,7 +16,8 @@ struct MyPost: Equatable, Identifiable, Sendable {
 /// 07-10 내가 쓴 댓글
 struct MyComment: Equatable, Identifiable, Sendable {
     let id: Int
-    let postId: Int
+    /// 서버 활동 기록에 글 링크가 없으면 nil (눌러도 이동하지 않아요)
+    let postId: Int?
     let postTitle: String
     let body: String
     let createdAt: Date

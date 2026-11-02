@@ -255,18 +255,6 @@ final class MockApprovalStore: @unchecked Sendable {
         }
     }
 
-    private struct Envelope<T: Encodable>: Encodable {
-        let code: Int
-        let message: String
-        let data: T
-    }
-
-    /// 아직 옛 형식인 /documents · /workspace/documents 응답
-    private func encode<T: Encodable>(_ data: T, message: String = "조회 성공") -> String {
-        let encoded = (try? JSONEncoder().encode(Envelope(code: 200, message: message, data: data))) ?? Data()
-        return String(decoding: encoded, as: UTF8.self)
-    }
-
     private static func json(_ object: [String: Any]) -> String {
         guard let data = try? JSONSerialization.data(withJSONObject: object, options: [.sortedKeys]) else { return "{}" }
         return String(decoding: data, as: UTF8.self)

@@ -212,16 +212,41 @@ final class WorkspaceRepositoryImpl: WorkspaceRepository, @unchecked Sendable {
         return nil
     }
 
+    /// GET /me/summary
     func fetchActivitySummary() async throws -> ActivitySummary {
-        try await request(Endpoint(method: .get, path: "workspace/activity"), as: ActivitySummaryDTO.self).toEntity()
+        try await request(Endpoint(method: .get, path: "me/summary"), as: ServerMeSummaryDTO.self).toActivitySummary()
     }
 
+    /// 내가 쓴 글 GET /posts?mine=true · 내가 쓴 댓글 GET /me/activity 중 comment
     func fetchMyPosts() async throws -> MyPosts {
-        try await request(Endpoint(method: .get, path: "workspace/posts"), as: MyPostsResponseDTO.self).toEntity()
+        async let posts = fetchPages(path: "posts", query: [URLQueryItem(name: "mine", value: "true")], as: ServerPostItemDTO.self)
+        async let activity = fetchPages(path: "me/activity", query: [], as: ServerActivityItemDTO.self)
+        return try await MyPosts(
+            posts: posts.map { $0.toMyPost() }.sorted { $0.createdAt > $1.createdAt },
+            comments: activity.compactMap { $0.toComment() }.sorted { $0.createdAt > $1.createdAt }
+        )
     }
 
+    /// GET /proposals 중 내 것 — 서버에 내 제안만 보는 필터가 없어요.
     func fetchMyProposals() async throws -> [MyProposal] {
-        try await request(Endpoint(method: .get, path: "workspace/proposals"), as: MyProposalListResponseDTO.self).toEntity()
+        try await fetchPages(path: "proposals", query: [], as: ServerProposalDTO.self)
+            .filter(\.mine)
+            .map { $0.toMyProposal() }
+    }
+
+    /// `{items, nextCursor}` 를 100건씩 끝까지 (최대 5페이지)
+    private func fetchPages<Item: Decodable>(path: String, query: [URLQueryItem], as type: Item.Type) async throws -> [Item] {
+        var items: [Item] = []
+        var cursor: String?
+        for _ in 0..<5 {
+            var queryItems = query + [URLQueryItem(name: "limit", value: "100")]
+            if let cursor { queryItems.append(URLQueryItem(name: "cursor", value: cursor)) }
+            let page = try await request(Endpoint(method: .get, path: path, queryItems: queryItems), as: CursorPageDTO<Item>.self)
+            items += page.items
+            guard let next = page.nextCursor else { break }
+            cursor = next
+        }
+        return items
     }
 
     func fetchProfile() async throws -> MyProfile {

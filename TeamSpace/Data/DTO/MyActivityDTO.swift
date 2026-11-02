@@ -1,90 +1,65 @@
 import Foundation
 
-/// GET /workspace/activity · /workspace/posts · /workspace/proposals 응답의 `data`
-/// 명세서에 없는 API 라 Figma 07-10 ~ 07-12 기준으로 정했습니다. (백엔드와 맞춰야 함)
-struct ActivitySummaryDTO: Decodable {
-    let unreadNotificationCount: Int
-    let submittedDocumentCount: Int
-    let postCount: Int
-    let inquiryCount: Int
+/// GET /me/activity 의 한 항목 — `{id, kind, title, createdAt, href}` (TeamSpace-backend develop `space.my_activity`)
+/// kind: approval · post · comment · inquiry · proposal · todo · application · event_rsvp
+struct ServerActivityItemDTO: Decodable {
+    let id: Int
+    let kind: String
+    let title: String
+    let createdAt: Date?
+    let href: String
 
-    func toEntity() -> ActivitySummary {
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decodeIntOrString(forKey: .id)
+        kind = (try? container.decodeIfPresent(String.self, forKey: .kind)) ?? ""
+        title = (try? container.decodeIfPresent(String.self, forKey: .title)) ?? ""
+        createdAt = (try? container.decodeIfPresent(String.self, forKey: .createdAt)).flatMap { $0.flatMap(ServerDate.parse) }
+        href = (try? container.decodeIfPresent(String.self, forKey: .href)) ?? ""
+    }
+
+    private enum CodingKeys: String, CodingKey { case id, kind, title, createdAt, href }
+
+    /// 07-10 내가 쓴 댓글 — 서버는 댓글 내용(title)만 줘서 글 제목 · 좋아요 · 답글 수는 비어요. 글 id 는 href 끝 숫자.
+    func toComment() -> MyComment? {
+        guard kind == "comment" else { return nil }
+        let postId = href.split(separator: "/").last.flatMap { Int($0) }
+        return MyComment(
+            id: id, postId: postId, postTitle: "", body: title, createdAt: createdAt ?? Date(timeIntervalSince1970: 0),
+            isAnonymous: false, likeCount: 0, replyCount: 0
+        )
+    }
+}
+
+extension ServerMeSummaryDTO {
+    /// 07-12 내 활동 숫자
+    func toActivitySummary() -> ActivitySummary {
         ActivitySummary(
-            unreadNotificationCount: unreadNotificationCount,
-            submittedDocumentCount: submittedDocumentCount,
-            postCount: postCount,
-            inquiryCount: inquiryCount
+            unreadNotificationCount: unreadNotifications,
+            submittedDocumentCount: submittedApprovals,
+            postCount: myPosts,
+            inquiryCount: myInquiries
         )
     }
 }
 
-struct MyPostsResponseDTO: Decodable {
-    let posts: [PostDTO]
-    let comments: [CommentDTO]
-
-    struct PostDTO: Decodable {
-        let id: Int
-        let title: String
-        let createdAt: Date
-        let isAnonymous: Bool
-        let likeCount: Int
-        let commentCount: Int
-        let viewCount: Int
-        let attachmentCount: Int
-    }
-
-    struct CommentDTO: Decodable {
-        let id: Int
-        let postId: Int
-        let postTitle: String
-        let body: String
-        let createdAt: Date
-        let isAnonymous: Bool
-        let likeCount: Int
-        let replyCount: Int
-    }
-
-    func toEntity() -> MyPosts {
-        MyPosts(
-            posts: posts.map {
-                MyPost(
-                    id: $0.id, title: $0.title, createdAt: $0.createdAt, isAnonymous: $0.isAnonymous,
-                    likeCount: $0.likeCount, commentCount: $0.commentCount, viewCount: $0.viewCount,
-                    attachmentCount: $0.attachmentCount
-                )
-            },
-            comments: comments.map {
-                MyComment(
-                    id: $0.id, postId: $0.postId, postTitle: $0.postTitle, body: $0.body, createdAt: $0.createdAt,
-                    isAnonymous: $0.isAnonymous, likeCount: $0.likeCount, replyCount: $0.replyCount
-                )
-            }
+extension ServerPostItemDTO {
+    /// 07-10 내가 쓴 글
+    func toMyPost() -> MyPost {
+        MyPost(
+            id: id, title: title, createdAt: createdAt, isAnonymous: anonymous, likeCount: likes,
+            commentCount: commentCount, viewCount: views, attachmentCount: attachmentCount
         )
     }
 }
 
-struct MyProposalListResponseDTO: Decodable {
-    let list: [ProposalDTO]
-
-    struct ProposalDTO: Decodable {
-        let id: Int
-        let category: String
-        let title: String
-        let body: String
-        let authorName: String
-        let createdAt: Date
-        let status: ProposalStatus
-        let recommendCount: Int
-        let commentCount: Int
-    }
-
-    func toEntity() -> [MyProposal] {
-        list.map {
-            MyProposal(
-                id: $0.id, category: $0.category, title: $0.title, body: $0.body, authorName: $0.authorName,
-                createdAt: $0.createdAt, status: $0.status, recommendCount: $0.recommendCount,
-                commentCount: $0.commentCount
-            )
-        }
+extension ServerProposalDTO {
+    /// 07-11 내가 쓴 제안
+    func toMyProposal() -> MyProposal {
+        MyProposal(
+            id: id, category: category, title: title, body: body, authorName: anonymous ? "익명" : (author ?? ""),
+            createdAt: createdAt, status: ProposalStatus(serverValue: status), recommendCount: recommendCount,
+            commentCount: commentCount
+        )
     }
 }
