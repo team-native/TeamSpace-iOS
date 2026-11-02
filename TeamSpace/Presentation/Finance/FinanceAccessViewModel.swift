@@ -33,10 +33,15 @@ final class FinanceAccessViewModel {
             .max { $0.collectedAt < $1.collectedAt }
     }
 
+    /// 공개 요약이면 연도 구분 없는 누적 합계예요.
+    var totalTitle: String {
+        state.value?.contracts.isEmpty == false ? "\(String(year))년 누적 수주 · 표본" : "누적 수주"
+    }
+
     func load() async {
         if state.value == nil { state = .loading }
         do {
-            state = .loaded(try await fetchContractLedgerUseCase.execute(year: year))
+            state = .loaded(try await fetchContractLedgerUseCase.executeOrPublic(year: year))
         } catch AppError.forbidden {
             state = .forbidden
         } catch {

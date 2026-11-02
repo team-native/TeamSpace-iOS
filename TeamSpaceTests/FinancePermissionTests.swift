@@ -67,7 +67,38 @@ final class FinancePermissionTests: XCTestCase {
 
         XCTAssertEqual(viewModel.scopeBadge, "일반 구성원 · 공개 요약")
         XCTAssertTrue(viewModel.canRequestAccess)
-        guard case .forbidden = viewModel.state else { return XCTFail("공개 요약 API 가 없어 403 이에요: \(viewModel.state)") }
+        let ledger = try XCTUnwrap(viewModel.state.value, "수금 내역 대신 요약의 누적 수주를 보여줘요")
+        XCTAssertEqual(ledger.totalAmount, 23_000_000)
+        XCTAssertTrue(ledger.contracts.isEmpty)
+        XCTAssertNil(viewModel.latestCollected, "개별 수주는 비공개")
+        XCTAssertEqual(viewModel.totalTitle, "누적 수주")
+    }
+
+    // MARK: 04-1 구성원도 요약을 봐요
+
+    func testMemberSeesOverview() async throws {
+        let container = try makeContainer(asFA: false)
+        let viewModel = container.makeFinanceViewModel(user: member)
+
+        await viewModel.load()
+
+        let overview = try XCTUnwrap(viewModel.state.value, "서버 /finance/summary 는 모두에게 열려 있어요")
+        XCTAssertEqual(overview.availableAmount, 3_560_000)
+        XCTAssertEqual(overview.income.amount, 7_260_000)
+        XCTAssertFalse(viewModel.canViewDetail)
+    }
+
+    func testOverviewOfPastMonthUsesServerMonth() async throws {
+        let viewModel = try makeContainer(asFA: false).makeFinanceViewModel(user: member)
+        await viewModel.load()
+        let calendar = Calendar.current
+        let previous = try XCTUnwrap(calendar.date(byAdding: .month, value: -1, to: viewModel.selectedMonth))
+
+        await viewModel.selectMonth(previous)
+
+        let overview = try XCTUnwrap(viewModel.state.value)
+        XCTAssertEqual(overview.income.amount, 7_260_000 * 80 / 96 / 10_000 * 10_000, "month=YYYY-MM 로 그 달 수입")
+        XCTAssertEqual(overview.expense.amount, 3_480_000 * 46 / 50 / 10_000 * 10_000)
     }
 
     func testAccessSummaryForFA() async throws {
@@ -75,6 +106,7 @@ final class FinancePermissionTests: XCTestCase {
         await viewModel.load()
         XCTAssertEqual(viewModel.state.value?.totalAmount, 23_000_000)
         XCTAssertEqual(viewModel.latestCollected?.name, "BRIDGE")
+        XCTAssertEqual(viewModel.totalTitle, "2026년 누적 수주 · 표본")
     }
 
     func testFAHasNoRequestButton() throws {

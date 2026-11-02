@@ -31,7 +31,8 @@ enum MockFinanceFixture {
     private static let expenseHeights = [26, 30, 34, 38, 40, 46, 50]
 
     /// GET /finance/summary — 이번 달까지 7개월 흐름
-    static func summary(now: Date = Date(), calendar: Calendar = .current) -> String {
+    /// `month` 가 "YYYY-MM" 이면 그 달 수입 · 지출, 재정 권한이 없으면 수금 내역 · 공지 · 풀 메모를 빼요. (서버 develop)
+    static func summary(now: Date = Date(), month selected: String? = nil, isFA: Bool = true, calendar: Calendar = .current) -> String {
         let end = calendar.startOfMonth(for: now)
         let flow: [[String: Any]] = (0..<7).compactMap { index in
             guard let month = calendar.date(byAdding: .month, value: index - 6, to: end) else { return nil }
@@ -44,12 +45,18 @@ enum MockFinanceFixture {
         }
         let year = calendar.component(.year, from: now)
         let month = calendar.component(.month, from: now)
-        return json([
-            "period": "\(year)년 \(String(format: "%02d", month))월",
+        let current = String(format: "%04d-%02d", year, month)
+        let target = selected ?? current
+        let row = flow.first { $0["month"] as? String == target }
+        let revenue = target == current ? 7_260_000 : (row?["income"] as? Int ?? 0)
+        let expense = target == current ? 3_480_000 : (row?["expense"] as? Int ?? 0)
+        var result: [String: Any] = [
+            "period": "\(target.prefix(4))년 \(target.suffix(2))월",
+            "month": target,
             "demo": false,
             "lastSyncedAt": ISO8601DateFormatter().string(from: now),
             "summary": [
-                "available": 3_560_000, "monthlyRevenue": 7_260_000, "monthlyExpense": 3_480_000,
+                "available": 3_560_000, "monthlyRevenue": revenue, "monthlyExpense": expense,
                 "externalReceipts": receipts.reduce(0) { $0 + $1.amount }, "reserveBalance": 2_670_000
             ],
             "pools": [
@@ -57,11 +64,16 @@ enum MockFinanceFixture {
                 ["id": "reserve", "label": "적립풀", "amount": 2_670_000, "ratio": 30, "color": "#7c5cff", "note": "예비 자금"],
                 ["id": "dividend", "label": "배당풀", "amount": 2_670_000, "ratio": 30, "color": "#ff8a3d", "note": "참여자 배당"]
             ],
-            "flow": flow,
-            "receipts": receipts.map { receiptJSON($0, year: year, withId: false) },
-            "notices": [],
-            "member": ["email": "fa@gsm.hs.kr", "name": "김민준"]
-        ])
+            "flow": flow
+        ]
+        if isFA {
+            result["receipts"] = receipts.map { receiptJSON($0, year: year, withId: false) }
+            result["notices"] = [] as [Any]
+            result["member"] = ["email": "fa@gsm.hs.kr", "name": "김민준"]
+        } else {
+            result["pools"] = (result["pools"] as? [[String: Any]] ?? []).map { $0.filter { $0.key != "note" } }
+        }
+        return json(result)
     }
 
     /// GET /finance/receipts?from&to&cursor&limit — 최근 날짜 순, totals 는 기간 전체

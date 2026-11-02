@@ -59,7 +59,7 @@ struct FinanceAccessView: View {
         case .failed(let error):
             ErrorStateView(message: error.userMessage) { Task { await viewModel.load() } }
         case .loaded(let ledger):
-            PublicSummaryCard(year: viewModel.year, total: ledger.totalAmount, latest: viewModel.latestCollected)
+            PublicSummaryCard(title: viewModel.totalTitle, total: ledger.totalAmount, latest: viewModel.latestCollected)
         }
     }
 
@@ -79,7 +79,7 @@ struct FinanceAccessView: View {
 
 /// 구성원 공개 요약
 private struct PublicSummaryCard: View {
-    let year: Int
+    let title: String
     let total: Int
     let latest: FinanceContract?
 
@@ -89,7 +89,7 @@ private struct PublicSummaryCard: View {
                 .tsFont(.bodyBold)
                 .foregroundStyle(Color.tsInk)
             VStack(alignment: .leading, spacing: Spacing.xxs) {
-                Text("\(String(year))년 누적 수주 · 표본")
+                Text(title)
                     .tsFont(.caption)
                     .foregroundStyle(Color.tsInk2)
                 Text(TSFormat.won(total))

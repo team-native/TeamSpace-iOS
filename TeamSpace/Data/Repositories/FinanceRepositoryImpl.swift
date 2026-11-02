@@ -1,7 +1,7 @@
 import Foundation
 
 /// 재무 저장소 — TeamSpace-backend `/finance/summary` · `/finance/receipts` · `/finance/contracts/{project}`
-/// 서버는 재정 권한(Admin · FA · Leader)이 없으면 403 이에요.
+/// 요약(`/finance/summary`)은 모든 멤버가, 수금 · 계약은 재정 권한(Admin · FA · Leader)만 볼 수 있어요. (없으면 403)
 final class FinanceRepositoryImpl: FinanceRepository, @unchecked Sendable {
     private let client: APIClient
     private let calendar: Calendar
@@ -12,7 +12,11 @@ final class FinanceRepositoryImpl: FinanceRepository, @unchecked Sendable {
     }
 
     func fetchOverview(month: Date) async throws -> FinanceOverview {
-        try await fetchSummary().toOverview(month: month, calendar: calendar)
+        try await fetchSummary(month: month).toOverview(month: month, calendar: calendar)
+    }
+
+    func fetchPublicLedger(year: Int) async throws -> ContractLedger {
+        try await fetchSummary().toPublicLedger(year: year)
     }
 
     /// 서버 `flow` 에 없는 달은 0원으로 채워요.
@@ -91,8 +95,14 @@ final class FinanceRepositoryImpl: FinanceRepository, @unchecked Sendable {
         return ContractDetail(receipt: receipt, contract: contract)
     }
 
-    private func fetchSummary() async throws -> ServerFinanceSummaryDTO {
-        try await request(Endpoint(method: .get, path: "finance/summary"), as: ServerFinanceSummaryDTO.self)
+    /// `month` 를 주면 `month=YYYY-MM` — 그 달 수입 · 지출을 서버가 계산해요.
+    private func fetchSummary(month: Date? = nil) async throws -> ServerFinanceSummaryDTO {
+        var query: [URLQueryItem] = []
+        if let month {
+            let parts = calendar.dateComponents([.year, .month], from: month)
+            query.append(URLQueryItem(name: "month", value: String(format: "%04d-%02d", parts.year ?? 0, parts.month ?? 0)))
+        }
+        return try await request(Endpoint(method: .get, path: "finance/summary", queryItems: query), as: ServerFinanceSummaryDTO.self)
     }
 
     /// GET /finance/receipts?from=YYYY-01-01&to=YYYY-12-31 — 100건씩, 최대 5페이지. 합계는 첫 페이지 값.

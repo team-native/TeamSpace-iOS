@@ -10,7 +10,8 @@ import Foundation
 /// - GET /people · /people/{id}: Figma 03 팀원 예시 (MockMemberFixture, 서버 develop 형식, 조직도는 앱에서 묶음)
 /// - GET · POST /approvals · GET /approvals/{id} · POST approve · reject · cancel · comments:
 ///   Figma 05 결재 · 07-4 · 07-5 내 문서 예시 (MockApprovalStore, 서버 develop 형식, 처리 결과를 메모리에 기억)
-/// - GET /finance/summary · receipts · contracts/{project}: Figma 04 재무 (MockFinanceFixture, 서버 develop 형식, FA 아니면 403)
+/// - GET /finance/summary · public-summary: Figma 04 재무 요약 (MockFinanceFixture, 서버 develop 형식, 누구나 · FA 아니면 수금 내역 빠짐)
+/// - GET /finance/receipts · contracts/{project}: Figma 04 수금 · 계약 (FA 아니면 403)
 /// - GET /dashboard/home: Figma 02-1 홈 예시 (MockDashboardFixture, 서버 develop 형식, FA 만 finance)
 /// - GET /docs · /docs/{slug} · /docs/{slug}/history · POST /docs/{slug}/read: Figma 06 문서함 · 09 규칙 (MockDocStore, 서버 develop 형식)
 /// - GET /me/summary · /me/projects: Figma 07 내 공간 예시 (서버 develop 형식, 홈은 여러 API 를 조합)
@@ -637,17 +638,20 @@ struct MockTransport: HTTPTransport {
         }
     }
 
-    /// 04 재무 — GET /finance/summary · /finance/receipts · /finance/contracts/{project} (FA 토큰이 아니면 403)
+    /// 04 재무 — GET /finance/summary · /finance/receipts · /finance/contracts/{project} (요약은 누구나, 나머지는 FA 토큰이 아니면 403)
     private func financeRoute(_ request: URLRequest, path: String) throws -> (Data, HTTPURLResponse)? {
         guard request.httpMethod == "GET", let url = request.url else { return nil }
         let components = Array(url.pathComponents.drop(while: { $0 != "finance" }))
         guard components.first == "finance", components.count >= 2 else { return nil }
-        guard request.value(forHTTPHeaderField: "Authorization")?.contains(Self.faToken) == true else {
+        let isFA = request.value(forHTTPHeaderField: "Authorization")?.contains(Self.faToken) == true
+        if components.count == 2, ["summary", "public-summary"].contains(components[1]) {
+            let month = Self.query(of: request)["month"]
+            return try respond(request, status: 200, json: MockFinanceFixture.summary(month: month, isFA: isFA))
+        }
+        guard isFA else {
             return try respond(request, status: 403, json: MockFinanceFixture.forbidden)
         }
         switch (components[1], components.count) {
-        case ("summary", 2):
-            return try respond(request, status: 200, json: MockFinanceFixture.summary())
         case ("receipts", 2):
             return try respond(request, status: 200, json: MockFinanceFixture.receipts(query: Self.query(of: request)))
         case ("contracts", 3):
