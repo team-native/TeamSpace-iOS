@@ -360,6 +360,11 @@ struct MockTransport: HTTPTransport {
                 let json = boardStore.createComment(postId: id, request: dto)
             else { return try respond(request, status: 404, json: notFound) }
             return try respond(request, status: 201, json: json)
+        case ("POST", 5) where components[2] == "comments" && components[4] == "like":
+            guard let id = id, let commentId = Int(components[3]), let json = boardStore.toggleCommentLike(postId: id, commentId: commentId) else {
+                return try respond(request, status: 404, json: #"{"detail":"댓글을 찾을 수 없습니다."}"#)
+            }
+            return try respond(request, status: 200, json: json)
         case ("POST", 3) where components[2] == "like":
             guard let id = id, let json = boardStore.toggleLike(id: id) else { return try respond(request, status: 404, json: notFound) }
             return try respond(request, status: 200, json: json)

@@ -45,6 +45,12 @@ final class BoardRepositoryImpl: BoardRepository, @unchecked Sendable {
         return PostLike(isLiked: dto.liked, likeCount: dto.likes)
     }
 
+    func toggleCommentLike(postId: Int, commentId: Int) async throws -> PostLike {
+        let endpoint = Endpoint(method: .post, path: "posts/\(postId)/comments/\(commentId)/like")
+        let dto = try await request(endpoint, as: ServerLikeResponseDTO.self)
+        return PostLike(isLiked: dto.liked, likeCount: dto.likes)
+    }
+
     func report(postId: Int, reason: PostReportReason) async throws {
         let endpoint = Endpoint(
             method: .post,

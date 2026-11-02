@@ -10,6 +10,8 @@ final class PostDetailViewModel {
 
     private(set) var state: ViewState<PostDetail> = .idle
     private(set) var isLiking = false
+    /// 공감 요청 중인 댓글 (연속 탭 막기)
+    private(set) var likingCommentIds: Set<Int> = []
     private(set) var isDeleted = false
     var isMorePresented = false
     var isReportPresented = false
@@ -65,6 +67,20 @@ final class PostDetailViewModel {
             state = .loaded(try await togglePostLikeUseCase.execute(detail))
         } catch {
             AppLog.record(error, context: "board.post.like")
+            errorMessage = error.userMessage
+        }
+    }
+
+    /// 10-3b 댓글 공감 — 서버 결과로 그 댓글의 하트 · 수를 바꿔요.
+    func toggleCommentLike(_ commentId: Int) async {
+        guard detail != nil, !likingCommentIds.contains(commentId) else { return }
+        likingCommentIds.insert(commentId)
+        defer { likingCommentIds.remove(commentId) }
+        do {
+            guard let current = detail else { return }
+            state = .loaded(try await togglePostLikeUseCase.execute(current, commentId: commentId))
+        } catch {
+            AppLog.record(error, context: "board.comment.like")
             errorMessage = error.userMessage
         }
     }
