@@ -123,9 +123,13 @@ struct InquiryComposeContext: Hashable {
     /// 14-5 접근 불가 "NativeOps에 권한 문의"
     static let accessRequest = InquiryComposeContext(department: .nativeOps, title: "[권한 문의] ACCESS-403")
 
-    /// 11-4 "이 답변에 후속 문의하기" · 11-7 "다시 문의하기"
+    /// 11-4 "이 답변에 후속 문의하기"는 같은 문의에 추가 메시지로, 11-7 "다시 문의하기"는 새 문의로 보내요.
     static func followUp(_ inquiry: InquirySummary) -> InquiryComposeContext {
-        InquiryComposeContext(department: inquiry.department, title: "[후속] \(inquiry.title)", followUpOf: inquiry.id)
+        InquiryComposeContext(
+            department: inquiry.department,
+            title: "[후속] \(inquiry.title)",
+            followUpOf: inquiry.status == .answered ? inquiry.id : nil
+        )
     }
 }
 

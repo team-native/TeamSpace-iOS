@@ -57,6 +57,9 @@ struct InquiryDetailView: View {
             if let reply = detail.inquiry.reply {
                 InquiryReplyCard(reply: reply, isRejection: detail.inquiry.status == .rejected)
             }
+            if !detail.followUps.isEmpty {
+                InquiryFollowUpCard(followUps: detail.followUps)
+            }
             if let reference = detail.reference {
                 InquiryReferenceCard(reference: reference) { onNavigate(reference.route) }
             }

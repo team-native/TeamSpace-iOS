@@ -69,6 +69,15 @@ struct InquiryDetail: Equatable, Sendable {
     let inquiry: InquirySummary
     let history: [InquiryHistory]
     let reference: InquiryReference?
+    /// 답변 뒤에 이어서 보낸 추가 메시지 (오래된 순)
+    var followUps: [InquiryFollowUp] = []
+}
+
+/// 11-4 추가 메시지 — 서버 `replies` 한 건 (익명 문의 작성자는 "익명")
+struct InquiryFollowUp: Equatable, Sendable {
+    let text: String
+    let author: String
+    let sentAt: Date
 }
 
 /// 11-2 문의 · 건의 작성 내용

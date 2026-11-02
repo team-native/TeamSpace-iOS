@@ -21,7 +21,7 @@ import Foundation
 /// - GET · PATCH /me: Figma 07-13 (MockProfileStore, 서버 develop 형식, 저장 내용 기억)
 /// - /projects/~ · /applications/~: Figma 08 (MockProjectStore, 신청 · 결과 등록 기억)
 /// - /proposals/~: Figma 12 운영 제안 (MockProposalStore, 제안 · 추천 · 댓글 기억)
-/// - /inquiries/~: Figma 11 익명 문의 · 담당자 받은함 (MockInquiryStore, 제출 · 배정 · 답변 기억)
+/// - /inquiries/~: Figma 11 익명 문의 · 담당자 받은함 (MockInquiryStore, 제출 · 추가 메시지 · 배정 · 답변 기억)
 /// - /notices/~: Figma 10-5 ~ 10-7 공지 (MockNoticeStore, 확인 · 게시 기억)
 /// - /posts/~: Figma 10 팀 게시판 (MockBoardStore, 글 · 댓글 · 공감 · 신고 · 삭제 기억)
 /// - GET /search: Figma 13 통합 검색 (MockSearchFixture)
@@ -408,7 +408,7 @@ struct MockTransport: HTTPTransport {
         return try respond(request, status: 201, json: boardStore.noticeStore.publish(dto))
     }
 
-    /// 11 문의 — GET · POST /inquiries (서버 develop 형식)
+    /// 11 문의 — GET · POST /inquiries · POST /inquiries/{id}/comments (서버 develop 형식)
     private func inquiryRoute(_ request: URLRequest, components: [String]) throws -> (Data, HTTPURLResponse)? {
         switch (request.httpMethod ?? "", components.count) {
         case ("GET", 1):
@@ -424,6 +424,18 @@ struct MockTransport: HTTPTransport {
                 types.contains(dto.type), !dto.dept.isEmpty, !dto.title.isEmpty, !dto.body.isEmpty
             else { return try respond(request, status: 422, json: #"{"detail":"입력한 정보를 다시 확인해 주세요."}"#) }
             return try respond(request, status: 201, json: inquiryStore.submit(dto))
+        case ("POST", 3) where components[2] == "comments":
+            guard
+                let id = Int(components[1]), let body = request.httpBody,
+                let dto = try? JSONDecoder().decode(ServerInquiryCommentRequestDTO.self, from: body)
+            else { return try respond(request, status: 422, json: #"{"detail":"입력한 정보를 다시 확인해 주세요."}"#) }
+            guard !dto.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                return try respond(request, status: 400, json: #"{"detail":"메시지를 입력해주세요."}"#)
+            }
+            guard let json = inquiryStore.comment(id: id, text: dto.text) else {
+                return try respond(request, status: 404, json: #"{"detail":"문의를 찾을 수 없습니다."}"#)
+            }
+            return try respond(request, status: 201, json: json)
         default:
             return nil
         }

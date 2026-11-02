@@ -107,6 +107,42 @@ final class InquiryTests: XCTestCase {
         XCTAssertEqual(detail.detail?.history.map(\.note), ["NativeOps에 전달"])
     }
 
+    func testFollowUpIsAddedToSameInquiry() async throws {
+        let container = makeContainer()
+        let detail = container.makeInquiryDetailViewModel(inquiryId: 42)
+        await detail.load()
+        let inquiry = try XCTUnwrap(detail.detail?.inquiry)
+        let before = container.makeMyInquiriesViewModel()
+        await before.load()
+        let countBefore = before.inquiries.count
+
+        let compose = container.makeInquiryComposeViewModel(context: .followUp(inquiry))
+        compose.draft.body = "예약 기준에 주말도 포함되나요?"
+        await compose.submit()
+
+        XCTAssertEqual(compose.submitted?.id, 42, "새 문의가 아니라 같은 문의예요")
+        XCTAssertNil(compose.errorMessage)
+        let mine = container.makeMyInquiriesViewModel()
+        await mine.load()
+        XCTAssertEqual(mine.inquiries.count, countBefore, "문의 수는 그대로")
+
+        let reloaded = container.makeInquiryDetailViewModel(inquiryId: 42)
+        await reloaded.load()
+        XCTAssertEqual(reloaded.detail?.followUps.map(\.text), ["예약 기준에 주말도 포함되나요?"])
+    }
+
+    func testInquiryRepliesDecoding() throws {
+        let json = #"""
+        {"id":"3","dept":"NativeOps","title":"문의","body":"본문","anonymous":true,"status":"답변 완료",
+         "steps":["2026-10-01T09:00:00+09:00","",""],"answer":null,
+         "replies":[{"text":"추가로 궁금해요","at":"2026-10-03T10:00:00+09:00","who":"익명"},{"text":""}]}
+        """#
+        let dto = try JSONCoder.makeDecoder().decode(ServerInquiryDTO.self, from: Data(json.utf8))
+        let detail = dto.toDetail()
+        XCTAssertEqual(detail.followUps.map(\.text), ["추가로 궁금해요"], "빈 메시지는 빼요")
+        XCTAssertEqual(detail.followUps.first?.author, "익명")
+    }
+
     func testComposeContexts() async throws {
         let container = makeContainer()
         let detail = container.makeInquiryDetailViewModel(inquiryId: 42)
@@ -117,6 +153,12 @@ final class InquiryTests: XCTestCase {
         XCTAssertTrue(followUp.isFollowUp)
         XCTAssertEqual(followUp.draft.title, "[후속] 회의실 예약 기준을 정해 주세요")
         XCTAssertEqual(followUp.draft.followUpOf, 42)
+
+        let retry = InquirySummary(
+            id: 7, department: .fa, title: "반려된 문의", body: "", isAnonymous: true,
+            createdAt: Date(), status: .rejected, reply: nil
+        )
+        XCTAssertNil(InquiryComposeContext.followUp(retry).followUpOf, "반려된 문의는 새 문의로 다시 접수해요")
 
         let access = container.makeInquiryComposeViewModel(context: InquiryComposeContext(department: .fa, title: "권한"))
         access.draft.isAnonymous = false
