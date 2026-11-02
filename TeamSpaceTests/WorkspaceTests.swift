@@ -121,6 +121,26 @@ final class WorkspaceTests: XCTestCase {
         XCTAssertNil(viewModel.newProjectName)
     }
 
+    func testServerTodoDecodingAndApprovalTodoStaysLocal() async throws {
+        let json = #"{"items":[{"id":"7","title":"QA","dueDate":"2026-10-20","projectName":"Book-on","category":"프로젝트 업무","status":"미완료","completedAt":null,"createdAt":"2026-10-19T09:00:00.123456"},{"id":"approval:11","title":"인원 지원 요청 검토","status":"미완료","category":"결재","sourceType":"approval","sourceId":"11","createdAt":"2026-10-19T09:00:00"},{"id":"8","title":"회의","dueAt":"2026-10-21T15:00:00+09:00","category":"일정","status":"완료","completedAt":"2026-10-21T16:00:00+09:00"}],"nextCursor":null}"#
+        let items = try JSONCoder.makeDecoder().decode(CursorPageDTO<ServerTodoDTO>.self, from: Data(json.utf8)).items.compactMap { $0.toEntity() }
+
+        XCTAssertEqual(items.map(\.id), [7, -11, 8], "결재 할 일은 결재 id 를 음수로")
+        XCTAssertEqual(items[0].linkKind, .checklist)
+        XCTAssertFalse(items[0].hasTime, "날짜만 있으면 시간 없음")
+        XCTAssertEqual(items[1].linkKind, .approval)
+        XCTAssertEqual(items[1].linkedId, 11)
+        XCTAssertTrue(items[2].hasTime)
+        XCTAssertEqual(items[2].status, .done)
+
+        let toggled = try await makeContainer().toggleTodoUseCase.execute(items[1])
+        XCTAssertEqual(toggled.status, .done, "결재 할 일은 서버에 보내지 않고 화면에서만 체크해요")
+
+        let request = ServerTodoCreateRequestDTO(TodoDraft(title: "정리", dueAt: Date(), projectName: nil, linkKind: .manual))
+        XCTAssertEqual(request.category, "개인 업무")
+        XCTAssertEqual(request.dueDate.count, 10, "YYYY-MM-DD")
+    }
+
     func testTodoMetaText() {
         let now = date(2026, 10, 16, 12)
         let checklist = TodoItem(

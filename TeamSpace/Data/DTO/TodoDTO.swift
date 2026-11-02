@@ -1,10 +1,6 @@
 import Foundation
 
-/// GET /workspace/todos 응답의 `data`
-/// 명세서에 응답 예시가 없어 Figma 07-2 기준으로 정했습니다. (백엔드와 맞춰야 함)
-struct TodoListResponseDTO: Decodable {
-    let list: [TodoDTO]
-}
+/// 목 서버(MockTodoStore)가 기억하는 할 일 모양 — 응답은 서버 형식(ServerTodoDTO)으로 바꿔 내보내요.
 
 struct TodoDTO: Codable {
     let id: Int
@@ -34,24 +30,4 @@ struct TodoDTO: Codable {
             completedAt: completedAt
         )
     }
-}
-
-/// POST /workspace/todos 요청 바디
-struct TodoCreateRequestDTO: Codable {
-    let title: String
-    let dueAt: Date
-    let projectName: String?
-    let linkKind: String
-
-    init(_ draft: TodoDraft) {
-        title = draft.title
-        dueAt = draft.dueAt
-        projectName = draft.projectName
-        linkKind = draft.linkKind.rawValue
-    }
-}
-
-/// PATCH /workspace/todos/{todoId} 요청 바디
-struct TodoUpdateRequestDTO: Codable {
-    let status: String
 }
