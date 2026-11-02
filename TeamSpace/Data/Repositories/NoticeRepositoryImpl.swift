@@ -7,17 +7,22 @@ final class NoticeRepositoryImpl: NoticeRepository, @unchecked Sendable {
         self.client = client
     }
 
-    func fetchNotices() async throws -> [NoticeSummary] {
-        try await request(Endpoint(method: .get, path: "notices"), as: NoticeListResponseDTO.self).list.map { $0.toEntity() }
+    func fetchNotices(cursor: String?, limit: Int) async throws -> CursorPage<NoticeSummary> {
+        var query = [URLQueryItem(name: "limit", value: String(limit))]
+        if let cursor { query.append(URLQueryItem(name: "cursor", value: cursor)) }
+        let page = try await request(
+            Endpoint(method: .get, path: "notices", queryItems: query),
+            as: CursorPageDTO<ServerNoticeItemDTO>.self
+        )
+        return CursorPage(items: page.items.map { $0.toEntity() }, nextCursor: page.nextCursor)
     }
 
     func fetchNotice(id: Int) async throws -> NoticeDetail {
-        try await request(Endpoint(method: .get, path: "notices/\(id)"), as: NoticeDetailDTO.self).toEntity()
+        try await request(Endpoint(method: .get, path: "notices/\(id)"), as: ServerNoticeItemDTO.self).toDetail()
     }
 
-    func acknowledge(noticeId: Int) async throws -> Date {
-        try await request(Endpoint(method: .post, path: "notices/\(noticeId)/acknowledge"), as: NoticeAcknowledgeResponseDTO.self)
-            .acknowledgedAt
+    func acknowledge(noticeId: Int) async throws {
+        _ = try await request(Endpoint(method: .post, path: "notices/\(noticeId)/confirm"), as: IgnoredJSONValue.self)
     }
 
     func publish(_ draft: NoticeDraft, asDraft: Bool) async throws -> NoticeSummary {

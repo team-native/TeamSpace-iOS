@@ -6,16 +6,16 @@ final class MockNoticeStore: @unchecked Sendable {
     private struct Record {
         var summary: NoticeSummaryDTO
         let authorName: String
-        let authorRole: String
         let body: String
-        var viewCount: Int
-        let linkedDocument: NoticeDetailDTO.LinkedDocument?
         let isDraft: Bool
     }
 
+    /// 목 서버 기준 전체 인원 (서버 `total`)
+    static let memberCount = 24
+
     private let lock = NSLock()
     private var records: [Record] = []
-    private var acknowledgedAt: [Int: Date] = [:]
+    private var confirmedIds: Set<Int> = []
 
     init(now: Date = Date()) {
         let today = Calendar.current.startOfDay(for: now)
@@ -28,24 +28,19 @@ final class MockNoticeStore: @unchecked Sendable {
         records = [
             Record(summary: summary(1, .notice, "10월 정기 회의는 4층 홈베이스에서 진행해요",
                                     "이번 달 Native 정기 회의 장소와 시간을 안내해요.", at(17), pinned: true, important: true),
-                   authorName: "안율", authorRole: "NativeOps", body: Self.meetingBody, viewCount: 64,
-                   linkedDocument: nil, isDraft: false),
+                   authorName: "안율", body: Self.meetingBody, isDraft: false),
             Record(summary: summary(41, .finance, "10월 프로젝트 정산 기준 안내",
                                     "수주 금액은 운영 · 적립 · 배당 풀로 나눠 관리해요.", at(1), important: true),
-                   authorName: "김민준", authorRole: "FA", body: Self.settlementBody, viewCount: 52,
-                   linkedDocument: .init(id: 2, title: "외주 수금 및 풀 배분 기준", category: "FINANCE"), isDraft: false),
+                   authorName: "김민준", body: Self.settlementBody, isDraft: false),
             Record(summary: summary(42, .rule, "외주 프로젝트 착수 전 체크리스트",
                                     "착수 전에 계약 · 인력 · 일정 확인 항목을 점검해요.", at(3)),
-                   authorName: "안율", authorRole: "NativeOps",
-                   body: "외주 프로젝트를 시작하기 전에 계약서, 인력 배정, 일정 공유를 꼭 확인해 주세요.", viewCount: 38,
-                   linkedDocument: .init(id: 1, title: "프로젝트 운영 원칙", category: "RULE"), isDraft: false),
+                   authorName: "안율",
+                   body: "외주 프로젝트를 시작하기 전에 계약서, 인력 배정, 일정 공유를 꼭 확인해 주세요.", isDraft: false),
             Record(summary: summary(43, .notice, "NativeLab 계약서 작성 가이드",
                                     "NativeLab 외주 계약서를 쓸 때 확인할 항목이에요.", at(8)),
-                   authorName: "김민준", authorRole: "FA", body: "계약서 양식은 문서함 템플릿을 사용해 주세요.", viewCount: 27,
-                   linkedDocument: nil, isDraft: false),
+                   authorName: "김민준", body: "계약서 양식은 문서함 템플릿을 사용해 주세요.", isDraft: false),
             Record(summary: summary(5, .notice, "추석 연휴 운영 안내", "연휴 기간에는 결재 처리가 늦어질 수 있어요.", at(20)),
-                   authorName: "안율", authorRole: "NativeOps", body: "연휴 기간에는 결재 처리가 늦어질 수 있어요. 급한 건은 미리 올려 주세요.",
-                   viewCount: 71, linkedDocument: nil, isDraft: false)
+                   authorName: "안율", body: "연휴 기간에는 결재 처리가 늦어질 수 있어요. 급한 건은 미리 올려 주세요.", isDraft: false)
         ]
     }
 
@@ -72,40 +67,63 @@ final class MockNoticeStore: @unchecked Sendable {
         records.filter { !$0.isDraft && $0.summary.updatedAt <= now }
     }
 
-    func summaries(ids: [Int]) -> [NoticeSummaryDTO] {
+    /// GET /notices — 서버(develop) 형식 `{items, nextCursor}`, 고정 → 최신순, 커서 `o:N`
+    /// `ids` 를 주면 그 순서대로 고정 공지로 돌려줘요. (게시판 고정 공지)
+    func serverItemsJSON(ids: [Int]? = nil, keyword: String? = nil, cursor: String? = nil, limit: Int = 20) -> String {
         lock.lock()
         defer { lock.unlock() }
-        let all = visible()
-        return ids.compactMap { id in all.first { $0.summary.id == id }?.summary }
-    }
-
-    /// GET /notices?pinned=true · ?q= — 서버(develop) 형식 `{items, nextCursor}`
-    func serverItemsJSON(ids: [Int]? = nil, keyword: String? = nil) -> String {
-        lock.lock()
-        defer { lock.unlock() }
-        var list = visible()
+        var list = visible().sorted { left, right in
+            if left.summary.isPinned != right.summary.isPinned { return left.summary.isPinned }
+            return left.summary.updatedAt > right.summary.updatedAt
+        }
         if let ids { list = ids.compactMap { id in list.first { $0.summary.id == id } } }
         if let keyword = keyword?.trimmingCharacters(in: .whitespacesAndNewlines), !keyword.isEmpty {
             list = list.filter {
                 $0.summary.title.localizedCaseInsensitiveContains(keyword) || $0.body.localizedCaseInsensitiveContains(keyword)
             }
         }
-        let rows: [[String: Any]] = list.map { record in
-            [
-                "id": String(record.summary.id),
-                "kind": Self.serverKind(record.summary.category),
-                "title": record.summary.title,
-                "body": record.summary.summary ?? record.body,
-                "author": record.authorName,
-                "createdAt": MockBoardStore.pythonISO(record.summary.updatedAt),
-                "pinned": ids != nil || record.summary.isPinned,
-                "mustRead": record.summary.isImportant,
-                "confirmed": 0, "total": 0, "confirmedByMe": acknowledgedAt[record.summary.id] != nil
-            ]
-        }
-        let object: [String: Any] = ["items": rows, "nextCursor": NSNull()]
-        let data = (try? JSONSerialization.data(withJSONObject: object, options: [.sortedKeys])) ?? Data()
-        return String(decoding: data, as: UTF8.self)
+        let start = cursor.flatMap { $0.hasPrefix("o:") ? Int($0.dropFirst(2)) : nil } ?? 0
+        let page = Array(list.dropFirst(start).prefix(limit))
+        let next: Any = start + limit < list.count ? "o:\(start + limit)" : NSNull()
+        let rows = page.map { serverFields($0, pinned: ids != nil || $0.summary.isPinned) }
+        return json(["items": rows, "nextCursor": next])
+    }
+
+    /// GET /notices/{id} — 서버 형식 (조회 수 · 작성자 역할 · 연결 문서 없음)
+    func detailJSON(id: Int) -> String? {
+        lock.lock()
+        defer { lock.unlock() }
+        guard let record = records.first(where: { $0.summary.id == id && !$0.isDraft }) else { return nil }
+        return json(serverFields(record, pinned: record.summary.isPinned))
+    }
+
+    /// POST /notices/{id}/confirm — `{id, confirmedByMe, confirmed}`
+    func confirm(id: Int) -> String? {
+        lock.lock()
+        defer { lock.unlock() }
+        guard records.contains(where: { $0.summary.id == id && !$0.isDraft }) else { return nil }
+        confirmedIds.insert(id)
+        return json(["id": String(id), "confirmedByMe": true, "confirmed": confirmedCount(id)])
+    }
+
+    private func confirmedCount(_ id: Int) -> Int {
+        confirmedIds.contains(id) ? 1 : 0
+    }
+
+    private func serverFields(_ record: Record, pinned: Bool) -> [String: Any] {
+        var fields: [String: Any] = [:]
+        fields["id"] = String(record.summary.id)
+        fields["kind"] = Self.serverKind(record.summary.category)
+        fields["title"] = record.summary.title
+        fields["body"] = record.body
+        fields["author"] = record.authorName
+        fields["createdAt"] = MockBoardStore.pythonISO(record.summary.updatedAt)
+        fields["pinned"] = pinned
+        fields["mustRead"] = record.summary.isImportant
+        fields["confirmed"] = confirmedCount(record.summary.id)
+        fields["total"] = Self.memberCount
+        fields["confirmedByMe"] = confirmedIds.contains(record.summary.id)
+        return fields
     }
 
     private static func serverKind(_ category: NoticeCategory) -> String {
@@ -116,34 +134,9 @@ final class MockNoticeStore: @unchecked Sendable {
         }
     }
 
-    /// GET /notices
-    func listJSON() -> String {
-        lock.lock()
-        defer { lock.unlock() }
-        return envelope(NoticeListResponseDTO(list: visible().map(\.summary)))
-    }
-
-    /// GET /notices/{id} — 볼 때마다 조회 수 +1
-    func detailJSON(id: Int) -> String? {
-        lock.lock()
-        defer { lock.unlock() }
-        guard let index = records.firstIndex(where: { $0.summary.id == id && !$0.isDraft }) else { return nil }
-        records[index].viewCount += 1
-        let record = records[index]
-        return envelope(NoticeDetailDTO(
-            notice: record.summary, authorName: record.authorName, authorRole: record.authorRole, body: record.body,
-            viewCount: record.viewCount, linkedDocument: record.linkedDocument, acknowledgedAt: acknowledgedAt[id]
-        ))
-    }
-
-    /// POST /notices/{id}/acknowledge
-    func acknowledge(id: Int) -> String? {
-        lock.lock()
-        defer { lock.unlock() }
-        guard records.contains(where: { $0.summary.id == id }) else { return nil }
-        let date = acknowledgedAt[id] ?? Date()
-        acknowledgedAt[id] = date
-        return envelope(NoticeAcknowledgeResponseDTO(acknowledgedAt: date))
+    private func json(_ object: [String: Any]) -> String {
+        let data = (try? JSONSerialization.data(withJSONObject: object, options: [.sortedKeys])) ?? Data()
+        return String(decoding: data, as: UTF8.self)
     }
 
     /// POST /notices — 예약이면 그 시각을 게시 시각으로 둬요.
@@ -157,8 +150,7 @@ final class MockNoticeStore: @unchecked Sendable {
             updatedAt: request.scheduledAt ?? Date(), isPinned: request.isPinned, isImportant: request.isImportant
         )
         records.append(Record(
-            summary: summary, authorName: "김민준", authorRole: "FA", body: request.body, viewCount: 0,
-            linkedDocument: nil, isDraft: request.isDraft
+            summary: summary, authorName: "김민준", body: request.body, isDraft: request.isDraft
         ))
         return envelope(summary)
     }

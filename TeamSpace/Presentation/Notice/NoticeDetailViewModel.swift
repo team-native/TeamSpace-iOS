@@ -22,7 +22,7 @@ final class NoticeDetailViewModel {
 
     var detail: NoticeDetail? { state.value }
 
-    var isAcknowledged: Bool { detail?.acknowledgedAt != nil }
+    var isAcknowledged: Bool { detail?.isAcknowledged == true }
 
     func load() async {
         if state.value == nil { state = .loading }

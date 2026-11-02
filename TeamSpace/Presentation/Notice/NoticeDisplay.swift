@@ -30,15 +30,22 @@ extension NoticeSummary {
 }
 
 extension NoticeDetail {
-    /// "김민준 · FA"
-    var authorText: String { "\(authorName) · \(authorRole)" }
+    /// "김민준 · FA" — 역할이 없으면 이름만
+    var authorText: String {
+        guard let role = authorRole, !role.isEmpty else { return authorName }
+        return "\(authorName) · \(role)"
+    }
 
-    /// "2026.10.10 · 조회 52"
-    var metaText: String { "\(TSFormat.fullDate(notice.updatedAt)) · 조회 \(viewCount)" }
+    /// "2026.10.10 · 조회 52" — 조회 수가 없으면 날짜만
+    var metaText: String {
+        let date = TSFormat.fullDate(notice.updatedAt)
+        return viewCount.map { "\(date) · 조회 \($0)" } ?? date
+    }
 
-    /// 아래 버튼 — "확인했어요" / "10.18 확인 완료"
+    /// 아래 버튼 — "확인했어요" / "10.18 확인 완료" / "확인 완료"
     var acknowledgeTitle: String {
-        acknowledgedAt.map { "\(TSFormat.shortDate($0)) 확인 완료" } ?? "확인했어요"
+        guard isAcknowledged else { return "확인했어요" }
+        return acknowledgedAt.map { "\(TSFormat.shortDate($0)) 확인 완료" } ?? "확인 완료"
     }
 }
 
