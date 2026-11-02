@@ -16,11 +16,13 @@ struct HomeProjectCard: View {
                             .foregroundStyle(Color.tsInk)
                             .lineLimit(1)
                         Spacer(minLength: Spacing.sm)
-                        TagChip(title: TSFormat.dDay(project.dueDate), tone: dDayTone(project.dueDate))
+                        if let dueDate = project.dueDate {
+                            TagChip(title: TSFormat.dDay(dueDate), tone: dDayTone(dueDate))
+                        }
                     }
                     TSProgressBar(percent: project.progress)
                     HStack {
-                        Text("팀원 \(project.memberCount)명 · 마감 \(TSFormat.monthDay(project.dueDate))")
+                        Text(project.dueDate.map { "팀원 \(project.memberCount)명 · 마감 \(TSFormat.monthDay($0))" } ?? "팀원 \(project.memberCount)명")
                         Spacer(minLength: 0)
                         Text("\(project.progress)%")
                     }
