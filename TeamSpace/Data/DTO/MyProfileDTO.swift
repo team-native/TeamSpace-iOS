@@ -1,27 +1,43 @@
 import Foundation
 
-/// GET · PATCH /workspace/profile 응답의 `data`
-/// 명세서에 없는 API 라 Figma 07-13 기준으로 정했습니다. (백엔드와 맞춰야 함)
-struct MyProfileDTO: Codable {
+/// GET · PATCH /me 응답 (TeamSpace-backend develop `shared.user_profile`)
+/// 소속은 `dept` 로 "Native · {dept}" 를 만들고, 한 줄 소개는 `bio` 예요.
+/// 미모티콘 배경색은 서버에 없어 `avatarBackground` 가 오면 읽고, 없으면 회색이에요.
+struct ServerProfileDTO: Decodable {
     let name: String
-    let affiliation: String
-    let intro: String
+    let dept: String
+    let bio: String
     let interests: [String]
     let avatarBackground: AvatarBackground
 
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        name = (try? container.decodeIfPresent(String.self, forKey: .name)) ?? ""
+        dept = (try? container.decodeIfPresent(String.self, forKey: .dept)) ?? ""
+        bio = (try? container.decodeIfPresent(String.self, forKey: .bio)) ?? ""
+        interests = (try? container.decodeIfPresent([String].self, forKey: .interests)) ?? []
+        let background = (try? container.decodeIfPresent(String.self, forKey: .avatarBackground)) ?? nil
+        avatarBackground = background.flatMap(AvatarBackground.init(rawValue:)) ?? .gray
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case name, dept, bio, interests, avatarBackground
+    }
+
     func toEntity() -> MyProfile {
-        MyProfile(name: name, affiliation: affiliation, intro: intro, interests: interests, avatarBackground: avatarBackground)
+        let affiliation = dept.isEmpty ? "Native" : "Native · \(dept)"
+        return MyProfile(name: name, affiliation: affiliation, intro: bio, interests: interests, avatarBackground: avatarBackground)
     }
 }
 
-/// PATCH /workspace/profile 요청 바디
-struct ProfileUpdateRequestDTO: Codable {
-    let intro: String
+/// PATCH /me 요청 — 바꾼 항목만 보내요. (`avatarBackground` 는 서버에 아직 없어요)
+struct ServerProfilePatchRequestDTO: Codable, Equatable {
+    let bio: String
     let interests: [String]
     let avatarBackground: String
 
     init(_ update: ProfileUpdate) {
-        intro = update.intro
+        bio = update.intro
         interests = update.interests
         avatarBackground = update.avatarBackground.rawValue
     }
