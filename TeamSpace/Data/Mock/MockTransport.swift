@@ -13,7 +13,7 @@ import Foundation
 /// - GET /finance/~: Figma 04 재무 예시 (MockFinanceFixture)
 /// - GET /dashboard/home: Figma 02-1 홈 예시 (MockDashboardFixture)
 /// - GET /library · /library/search: Figma 06 문서함 예시 (MockLibraryFixture)
-/// - GET /workspace/home · /workspace/projects: Figma 07 내 공간 예시 (MockWorkspaceFixture)
+/// - GET /workspace/home · /me/projects: Figma 07 내 공간 예시 (MockWorkspaceFixture, /me/projects 는 서버 develop 형식)
 /// - GET /workspace/documents · DELETE /documents/{id}: 07-4 · 07-5 (MockApprovalStore 의 내 결재)
 /// - GET · POST /todos · PATCH /todos/{id}: Figma 07-2 (MockTodoStore, 서버 develop 형식, 메모리에 기억)
 /// - GET /events · POST /events/{id}/rsvp: Figma 07-7 ~ 07-9 (MockScheduleStore, 서버 develop 형식, 참석 응답 기억)
@@ -229,6 +229,9 @@ struct MockTransport: HTTPTransport {
         let components = url.pathComponents.filter { $0 != "/" && $0 != MockTransport.baseURL.lastPathComponent }
         if components == ["me"] {
             return try profileRoute(request)
+        }
+        if components == ["me", "projects"], request.httpMethod == "GET" {
+            return try respond(request, status: 200, json: MockWorkspaceFixture.projects())
         }
         if components == ["search"], request.httpMethod == "GET" {
             let queryItems = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
@@ -623,8 +626,6 @@ struct MockTransport: HTTPTransport {
             return try respond(request, status: 200, json: MockActivityFixture.proposals())
         case ("GET", "documents"):
             return try respond(request, status: 200, json: approvalStore.myDocumentsJSON())
-        case ("GET", "projects"):
-            return try respond(request, status: 200, json: MockWorkspaceFixture.projects())
         default:
             return nil
         }

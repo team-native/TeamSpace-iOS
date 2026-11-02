@@ -176,8 +176,11 @@ final class WorkspaceTests: XCTestCase {
 
         XCTAssertEqual(viewModel.projects.map(\.name), ["Book-on", "Native 팀스페이스"])
         XCTAssertEqual(viewModel.projects.first?.initial, "B")
-        XCTAssertEqual(viewModel.projects.first?.periodText, "독서 기록 앱 · 07.01 – 11.30")
+        XCTAssertEqual(viewModel.projects.first?.periodText, "독서 기록 앱 · 2026.07 – 2026.11", "desc 의 기간을 읽어요")
+        XCTAssertEqual(viewModel.projects.last?.periodText, "내부 운영 플랫폼 · 12.04 오픈", "기간이 없으면 due")
+        XCTAssertEqual(viewModel.projects.last?.status, .inProgress, "마무리는 진행 중")
         XCTAssertEqual(ProjectRunStatus.inProgress.badgeTitle, "진행 중")
+        XCTAssertEqual(ProjectRunStatus(serverValue: "완료"), .completed)
     }
 
     // MARK: 07-4 내가 제출한 문서 · 07-5 임시 저장

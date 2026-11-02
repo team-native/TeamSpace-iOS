@@ -16,7 +16,7 @@ struct JoinedProject: Equatable, Identifiable, Sendable {
     let name: String
     /// 예) 독서 기록 앱
     let summary: String
-    let startDate: Date
-    let endDate: Date
+    /// 예) "2026.08 – 2026.11" · "11.20 납품" — 서버는 기간을 글로만 줘요.
+    let period: String?
     let status: ProjectRunStatus
 }

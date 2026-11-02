@@ -48,22 +48,15 @@ enum MockWorkspaceFixture {
         """
     }
 
-    /// GET /workspace/projects — Figma 07-6 참여 프로젝트
-    static func projects(now: Date = Date(), calendar: Calendar = .current) -> String {
-        let year = calendar.component(.year, from: now)
-        func day(_ month: Int, _ day: Int) -> String {
-            var components = DateComponents()
-            components.year = year
-            components.month = month
-            components.day = day
-            return ISO8601DateFormatter().string(from: calendar.date(from: components) ?? now)
-        }
-        return """
-        {"code":200,"message":"조회 성공","data":{"list":[
-          {"id":1,"name":"Book-on","summary":"독서 기록 앱","startDate":"\(day(7, 1))","endDate":"\(day(11, 30))",\
-        "status":"IN_PROGRESS"},
-          {"id":3,"name":"Native 팀스페이스","summary":"내부 운영 플랫폼","startDate":"\(day(7, 13))",\
-        "endDate":"\(day(12, 4))","status":"IN_PROGRESS"}]}}
+    /// GET /me/projects — `{id, ...프로젝트 payload}` 그대로
+    static func projects() -> String {
+        """
+        {"items":[
+          {"id":"1","slug":"book-on","name":"Book-on","desc":"독서 기록 앱 · 그린랩 외주 · 2026.07 – 2026.11","role":"iOS 리드",\
+        "progress":68,"status":"진행 중","tone":"blue","due":"11.20 납품","pm":"박도윤","memberIds":["1"]},
+          {"id":"3","name":"Native 팀스페이스","desc":"내부 운영 플랫폼","role":"PO","progress":85,"status":"마무리",\
+        "tone":"green","due":"12.04 오픈","pm":"김준표","memberIds":["1"]}
+        ],"nextCursor":null}
         """
     }
 }
