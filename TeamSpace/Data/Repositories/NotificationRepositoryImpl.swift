@@ -19,7 +19,15 @@ final class NotificationRepositoryImpl: NotificationRepository, @unchecked Senda
     }
 
     func markAsRead(id: Int) async throws {
-        let endpoint = Endpoint(method: .patch, path: "notifications/\(id)/read")
+        try await read(NotificationReadRequestDTO(id: String(id), all: false))
+    }
+
+    func markAllAsRead() async throws {
+        try await read(NotificationReadRequestDTO(id: nil, all: true))
+    }
+
+    private func read(_ body: NotificationReadRequestDTO) async throws {
+        let endpoint = Endpoint(method: .post, path: "notifications/read", body: body)
         do {
             _ = try await client.request(endpoint, as: NotificationReadResponseDTO.self)
         } catch NetworkError.emptyData {

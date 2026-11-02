@@ -104,8 +104,18 @@ final class NotificationCenterViewModel {
         await markAsRead(ids: [notification.id])
     }
 
+    /// 화면에 먼저 반영하고, 실패하면 되돌립니다.
     func markAllAsRead() async {
-        await markAsRead(ids: notifications.filter { !$0.isRead }.map(\.id))
+        let ids = Set(notifications.filter { !$0.isRead }.map(\.id))
+        guard !ids.isEmpty else { return }
+        apply(readIds: ids, isRead: true)
+        do {
+            try await markNotificationsReadUseCase.executeAll()
+        } catch {
+            AppLog.record(error, context: "notificationCenter.markAllAsRead")
+            apply(readIds: ids, isRead: false)
+            toastMessage = error.userMessage
+        }
     }
 
     /// 화면에 먼저 반영하고, 실패한 것만 되돌립니다.

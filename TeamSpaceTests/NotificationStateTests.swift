@@ -26,7 +26,8 @@ final class NotificationStateTests: XCTestCase {
         XCTAssertEqual(summary.read, 1)
         let items = viewModel.sections().flatMap(\.items)
         XCTAssertTrue(items.allSatisfy { $0.type == .rule })
-        XCTAssertNotNil(items.first?.effectiveAt, "규칙 알림은 시행일을 함께 받아요")
+        XCTAssertEqual(items.first?.deepLink, "/rules/project-principles", "웹 문서 경로를 앱 규칙 경로로 바꿔요")
+        XCTAssertNil(items.first?.effectiveAt, "서버에 시행일이 없어요")
     }
 
     // MARK: 02-3 문의 답변

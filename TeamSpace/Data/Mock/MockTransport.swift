@@ -5,7 +5,7 @@ import Foundation
 /// - 이메일 형식 오류 → 400 (errors[].reason)
 /// - 그 외 → 200 로그인 성공 (이메일이 `fa` 로 시작하면 FA 권한 → 04-9 금액이 보여요)
 /// - GET /users/me: Authorization 헤더가 없으면 401
-/// - GET /notifications · PATCH /notifications/{id}/read: 읽음 상태를 메모리에 기억
+/// - GET /notifications · POST /notifications/read: 읽음 상태를 메모리에 기억 (서버 develop 형식)
 /// - 계정 요청: 이메일이 `taken@` 으로 시작하면 409 (이미 요청됨)
 /// - GET /users · /users/{id} · /organization/tree: Figma 03 팀원 예시 (MockMemberFixture)
 /// - GET · POST /approvals · GET /approvals/{id} · POST approve · reject · cancel · comments:
@@ -70,7 +70,7 @@ struct MockTransport: HTTPTransport {
             return try accountRequest(request)
         case ("GET", "notifications"):
             return try notifications(request)
-        case ("PATCH", "read"):
+        case ("POST", "read") where request.url?.pathComponents.contains("notifications") == true:
             return try markRead(request)
         case ("POST", "refresh"):
             return try refresh(request)
@@ -140,12 +140,16 @@ struct MockTransport: HTTPTransport {
         return try respond(request, status: 200, json: String(decoding: try JSONEncoder().encode(payload), as: UTF8.self))
     }
 
+    /// `{ id }` 하나 또는 `{ all: true }` 전부 — 응답은 `{ updated: n }`
     private func markRead(_ request: URLRequest) throws -> (Data, HTTPURLResponse) {
-        let components = request.url?.pathComponents ?? []
-        guard components.count >= 2, let id = Int(components[components.count - 2]), notificationStore.markRead(id: id) else {
-            return try respond(request, status: 404, json: #"{"code":404,"message":"해당 알림을 찾을 수 없습니다."}"#)
+        let body = request.httpBody.flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] } ?? [:]
+        let all = body["all"] as? Bool ?? false
+        let id = (body["id"] as? String).flatMap(Int.init)
+        guard all || id != nil else {
+            return try respond(request, status: 400, json: #"{"detail":"id 또는 all=true를 지정해주세요."}"#)
         }
-        return try respond(request, status: 200, json: #"{"code":200,"message":"읽음 처리 완료","data":{"success":true,"updatedId":\#(id)}}"#)
+        let updated = notificationStore.markRead(id: all ? nil : id)
+        return try respond(request, status: 200, json: #"{"code":200,"message":"읽음 처리했습니다.","data":{"updated":\#(updated)}}"#)
     }
 
     /// 05 결재 · 07-4 · 07-5 내 문서 — /approvals/~ (서버 develop 형식)
@@ -166,7 +170,7 @@ struct MockTransport: HTTPTransport {
         if components == ["me", "summary"], request.httpMethod == "GET" {
             let todos = todoStore.summary()
             let summary: [String: Any] = [
-                "unreadNotifications": notificationStore.items().filter { !$0.isRead }.count,
+                "unreadNotifications": notificationStore.items().filter(\.unread).count,
                 "submittedApprovals": approvalStore.items(mine: true).count,
                 "myPosts": MockActivityFixture.postCount,
                 "myProposals": 3,
@@ -748,17 +752,18 @@ private struct MockNotificationPage: Encodable {
     }
 }
 
-/// Mock 알림 — Figma 02-2 · 02-3 · 02-4 알림 센터 예시 내용
+/// Mock 알림 — Figma 02-2 · 02-3 · 02-4 알림 센터 예시를 서버 develop 형식으로
+/// `{ id: "101", kind, sourceKind, title, createdAt, href, unread, action }` (본문 · 시행일은 서버에 없어요)
 private final class MockNotificationStore: @unchecked Sendable {
     struct Item: Encodable {
-        let id: Int
-        let type: String
+        let id: String
+        let kind: String
+        let sourceKind: String
         let title: String
-        let message: String
-        let deepLink: String?
-        var isRead: Bool
         let createdAt: String
-        var effectiveAt: String?
+        let href: String
+        var unread: Bool
+        var action = false
     }
 
     private let lock = NSLock()
@@ -767,32 +772,18 @@ private final class MockNotificationStore: @unchecked Sendable {
     init(now: Date = Date()) {
         let formatter = ISO8601DateFormatter()
         func ago(_ seconds: TimeInterval) -> String { formatter.string(from: now.addingTimeInterval(-seconds)) }
-        func later(days: Double) -> String { formatter.string(from: now.addingTimeInterval(days * 86_400)) }
+        func item(_ id: Int, _ kind: String, _ title: String, _ href: String, unread: Bool, _ seconds: TimeInterval, action: Bool = false) -> Item {
+            Item(id: String(id), kind: kind, sourceKind: kind, title: title, createdAt: ago(seconds), href: href, unread: unread, action: action)
+        }
         storage = [
-            Item(id: 101, type: "APPROVAL", title: "새 결재 요청이 도착했어요",
-                 message: "이시우 님이 Book-on 프로젝트 인력 지원(iOS 1명)을 요청했어요.",
-                 deepLink: "/approvals/12", isRead: false, createdAt: ago(30)),
-            Item(id: 102, type: "FINANCE", title: "외주 입금이 확인됐어요",
-                 message: "BRIDGE · iOS 앱 프로토타입  +3,600,000원",
-                 deepLink: "/finance", isRead: false, createdAt: ago(32 * 60)),
-            Item(id: 103, type: "SCHEDULE", title: "디자인 리뷰 시간이 바뀌었어요",
-                 message: "10월 14일(화) 14:00 → 15:00 · 온라인",
-                 deepLink: nil, isRead: false, createdAt: ago(2 * 3_600)),
-            Item(id: 107, type: "INQUIRY_ANSWER", title: "내 문의에 답변이 도착했어요",
-                 message: "활동 보고서 제출 기한은 다음 주 금요일까지 연장했어요. 자세한 내용은 공식 답변을 확인해 주세요.",
-                 deepLink: "/inquiries/42", isRead: false, createdAt: ago(3 * 3_600)),
-            Item(id: 104, type: "RULE", title: "프로젝트 운영 원칙이 개정됐어요",
-                 message: "제안 검토 기한이 3주에서 2주로 바뀌어요. 시행 전에 달라진 조항을 확인해 주세요!",
-                 deepLink: "/rules/1", isRead: false, createdAt: ago(1 * 86_400), effectiveAt: later(days: 5)),
-            Item(id: 108, type: "RULE", title: "프로젝트 문서 분류 안내",
-                 message: "문서 분류 기준이 정리됐어요.",
-                 deepLink: "/rules", isRead: true, createdAt: ago(6 * 86_400), effectiveAt: ago(2 * 86_400)),
-            Item(id: 105, type: "NOTICE", title: "10월 정기 회의 장소 안내",
-                 message: "이번 달 회의는 4층 홈베이스에서 진행해요.",
-                 deepLink: "/notices/1", isRead: true, createdAt: ago(4 * 86_400)),
-            Item(id: 106, type: "APPROVAL_RESULT", title: "비용 승인 요청이 승인됐어요",
-                 message: "Book-on 테스트 기기 구매 · 420,000원",
-                 deepLink: "/documents/55", isRead: true, createdAt: ago(5 * 86_400))
+            item(101, "내 업무", "이시우님이 'Book-on 인력 지원' 결재를 요청했어요", "/inhouse/requests/12", unread: true, 30, action: true),
+            item(102, "재정", "BRIDGE iOS 앱 프로토타입 3,600,000원이 입금됐어요", "/inhouse/finance/receipts", unread: true, 32 * 60),
+            item(103, "일정", "디자인 리뷰 시간이 10.14 (화) 15:00로 바뀌었어요", "/inhouse/my/calendar", unread: true, 2 * 3_600),
+            item(107, "내 업무", "문의에 답변이 등록됐어요.", "/inhouse/community/inquiry?id=42", unread: true, 3 * 3_600),
+            item(104, "공지", "'프로젝트 운영 원칙'이 개정됐어요", "/inhouse/documents/project-principles", unread: true, 86_400),
+            item(108, "공지", "프로젝트 문서 분류 안내", "/inhouse/documents", unread: false, 6 * 86_400),
+            item(105, "공지", "10월 정기 회의 장소 안내", "/inhouse/community/notices/1", unread: false, 4 * 86_400),
+            item(106, "내 업무", "'Book-on 테스트 기기 구매' 결재가 승인됐어요", "/inhouse/requests/55", unread: false, 5 * 86_400)
         ]
     }
 
@@ -802,11 +793,15 @@ private final class MockNotificationStore: @unchecked Sendable {
         return storage
     }
 
-    func markRead(id: Int) -> Bool {
+    /// id 가 nil 이면 전부 — 바뀐 개수를 돌려줘요.
+    func markRead(id: Int?) -> Int {
         lock.lock()
         defer { lock.unlock() }
-        guard let index = storage.firstIndex(where: { $0.id == id }) else { return false }
-        storage[index].isRead = true
-        return true
+        var updated = 0
+        for index in storage.indices where id == nil || storage[index].id == id.map(String.init) {
+            storage[index].unread = false
+            updated += 1
+        }
+        return updated
     }
 }

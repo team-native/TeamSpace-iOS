@@ -9,7 +9,6 @@ struct MarkNotificationsReadUseCase {
     }
 
     /// 여러 개를 읽음 처리하고, 성공한 ID 만 돌려줍니다.
-    /// TODO: 명세서에 '모두 읽음' API 가 없어 개별 API 를 순서대로 호출 — 일괄 API 생기면 교체
     func execute(ids: [Int]) async -> (succeeded: [Int], failure: Error?) {
         var succeeded: [Int] = []
         var lastError: Error?
@@ -22,5 +21,10 @@ struct MarkNotificationsReadUseCase {
             }
         }
         return (succeeded, lastError)
+    }
+
+    /// 모두 읽음 — 서버에 한 번만 보내요.
+    func executeAll() async throws {
+        try await notificationRepository.markAllAsRead()
     }
 }
