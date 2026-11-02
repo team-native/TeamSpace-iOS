@@ -1,9 +1,12 @@
 import Foundation
 
 /// GET /finance/summary (TeamSpace-backend `workflows.finance_summary`, 프런트 `InhouseData`)
-/// 서버는 이번 달 기준으로만 계산하고, 지난 달은 `flow` 로 알 수 있어요.
+/// `month=YYYY-MM` 을 보내면 그 달 기준으로 계산하고, 없으면 이번 달이에요. 지난 달은 `flow` 로도 알 수 있어요.
+/// 재정 권한이 없으면 `receipts` 가 빠져서 와요.
 struct ServerFinanceSummaryDTO: Decodable {
     let period: String?
+    /// 서버가 계산한 달 "2026-10"
+    let month: String?
     let demo: Bool
     let lastSyncedAt: Date?
     let summary: Numbers
@@ -32,11 +35,12 @@ struct ServerFinanceSummaryDTO: Decodable {
         }
     }
 
-    private enum CodingKeys: String, CodingKey { case period, demo, lastSyncedAt, summary, pools, flow, receipts }
+    private enum CodingKeys: String, CodingKey { case period, month, demo, lastSyncedAt, summary, pools, flow, receipts }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         period = try? container.decodeIfPresent(String.self, forKey: .period)
+        month = try? container.decodeIfPresent(String.self, forKey: .month)
         demo = (try? container.decodeIfPresent(Bool.self, forKey: .demo)) ?? false
         lastSyncedAt = (try? container.decodeIfPresent(String.self, forKey: .lastSyncedAt)).flatMap { ServerDate.parse($0) }
         summary = try container.decode(Numbers.self, forKey: .summary)
@@ -47,7 +51,10 @@ struct ServerFinanceSummaryDTO: Decodable {
 
     /// 04-1 — 이번 달이 아니면 `flow` 의 그 달 수입 · 지출로 바꿔 보여줘요.
     func toOverview(month: Date, now: Date = Date(), calendar: Calendar = .current) -> FinanceOverview {
-        let isCurrent = calendar.isDate(month, equalTo: now, toGranularity: .month)
+        // 서버가 그 달로 계산해 줬으면 summary 를, 아니면 flow 의 그 달 값을 써요.
+        let serverMonth = self.month.flatMap { ServerFinanceFlowDTO.monthDate($0, calendar: calendar) }
+        let isCurrent = serverMonth.map { calendar.isDate($0, equalTo: month, toGranularity: .month) }
+            ?? calendar.isDate(month, equalTo: now, toGranularity: .month)
         let flows = monthlyFlows(calendar: calendar)
         let selected = flows.first { calendar.isDate($0.month, equalTo: month, toGranularity: .month) }
         let previousMonth = calendar.date(byAdding: .month, value: -1, to: month) ?? month
@@ -117,6 +124,11 @@ struct ServerFinanceFlowDTO: Decodable {
     }
 
     func monthDate(calendar: Calendar) -> Date? {
+        Self.monthDate(month, calendar: calendar)
+    }
+
+    /// "2026-10" → 10월 1일
+    static func monthDate(_ month: String, calendar: Calendar) -> Date? {
         let parts = month.prefix(7).split(separator: "-").compactMap { Int($0) }
         guard parts.count == 2 else { return nil }
         return calendar.date(from: DateComponents(year: parts[0], month: parts[1], day: 1))
@@ -153,6 +165,13 @@ struct ServerReceiptDTO: Decodable {
             id: id, name: client, title: project, amount: amount, collectedAt: day,
             status: isCollected ? .collected : .scheduled
         )
+    }
+}
+
+extension ServerFinanceSummaryDTO {
+    /// 04-7 구성원 공개 요약 — 수금 내역을 볼 수 없어 누적 수주 합계만 보여줘요.
+    func toPublicLedger(year: Int) -> ContractLedger {
+        ContractLedger(year: year, totalAmount: summary.externalReceipts, contracts: [])
     }
 }
 
