@@ -14,6 +14,8 @@ final class MockInquiryStore: @unchecked Sendable {
         var assignee: String?
         /// 추가 메시지 `{text, at, who}`
         var replies: [(text: String, at: Date, who: String)] = []
+        /// 작성자가 해결됨으로 바꾼 시각
+        var resolvedAt: Date?
     }
 
     /// 11-5 · 11-6 — Mock 담당자는 NativeOps 소속이에요.
@@ -175,6 +177,15 @@ final class MockInquiryStore: @unchecked Sendable {
         return json(["text": text, "at": MockBoardStore.pythonISO(now), "who": who])
     }
 
+    /// POST /inquiries/{id}/resolve — 내 문의만 (아니면 nil → 404)
+    func resolve(id: Int, now: Date = Date()) -> String? {
+        lock.lock()
+        defer { lock.unlock() }
+        guard let index = records.firstIndex(where: { $0.summary.id == id && $0.isMine }) else { return nil }
+        records[index].resolvedAt = now
+        return json(["id": String(id), "status": "해결됨"])
+    }
+
     /// 서버가 저장하는 문의 payload 모양 — steps 는 [접수, 검토, 답변] 시각 (안 된 단계는 "")
     private static func serverFields(_ record: Record) -> [String: Any] {
         let summary = record.summary
@@ -188,7 +199,8 @@ final class MockInquiryStore: @unchecked Sendable {
         fields["title"] = summary.title
         fields["body"] = summary.body
         fields["anonymous"] = summary.isAnonymous
-        fields["status"] = summary.status.serverValue
+        fields["status"] = record.resolvedAt == nil ? summary.status.serverValue : "해결됨"
+        if let resolvedAt = record.resolvedAt { fields["resolvedAt"] = MockBoardStore.pythonISO(resolvedAt) }
         fields["steps"] = [stepAt([.received]), stepAt([.reviewing]), stepAt([.answered, .rejected])]
         fields["replies"] = record.replies.map { ["text": $0.text, "at": MockBoardStore.pythonISO($0.at), "who": $0.who] }
         fields["author"] = summary.isAnonymous ? "익명" : record.authorName ?? "알 수 없음"

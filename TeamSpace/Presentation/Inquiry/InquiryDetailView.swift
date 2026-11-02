@@ -26,19 +26,37 @@ struct InquiryDetailView: View {
                 .padding(.bottom, Spacing.sm)
                 .background(Color.tsBackground)
         }
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            if let title = viewModel.followUpTitle, let inquiry = viewModel.detail?.inquiry {
-                Button(title) { onNavigate(.inquiryCompose(.followUp(inquiry))) }
-                    .buttonStyle(.tsSecondary)
-                    .padding(.horizontal, Spacing.screen)
-                    .padding(.vertical, Spacing.md)
-                    .background(Color.tsBackground)
-            }
-        }
+        .safeAreaInset(edge: .bottom, spacing: 0) { bottomBar }
         .background(Color.tsBackground.ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)
         .task { await viewModel.load() }
         .refreshable { await viewModel.load() }
+        .tsToast($viewModel.toastMessage)
+        .alert(viewModel.errorMessage ?? "", isPresented: Binding(
+            get: { viewModel.errorMessage != nil },
+            set: { if !$0 { viewModel.errorMessage = nil } }
+        )) {
+            Button("확인", role: .cancel) {}
+        }
+    }
+
+    /// 답변 완료 → 해결됐어요 · 후속 문의 / 반려 → 다시 문의하기
+    @ViewBuilder
+    private var bottomBar: some View {
+        if let inquiry = viewModel.detail?.inquiry, let title = viewModel.followUpTitle {
+            VStack(spacing: Spacing.sm) {
+                if viewModel.canResolve {
+                    Button("해결됐어요") { Task { await viewModel.resolve() } }
+                        .buttonStyle(.tsPrimary)
+                        .disabled(viewModel.isResolving)
+                }
+                Button(title) { onNavigate(.inquiryCompose(.followUp(inquiry))) }
+                    .buttonStyle(.tsSecondary)
+            }
+            .padding(.horizontal, Spacing.screen)
+            .padding(.vertical, Spacing.md)
+            .background(Color.tsBackground)
+        }
     }
 
     @ViewBuilder
@@ -56,6 +74,9 @@ struct InquiryDetailView: View {
             InquiryHistoryCard(history: detail.history)
             if let reply = detail.inquiry.reply {
                 InquiryReplyCard(reply: reply, isRejection: detail.inquiry.status == .rejected)
+            }
+            if let resolvedText = viewModel.resolvedText {
+                InfoBanner(message: resolvedText, icon: .checkCircle, style: .muted)
             }
             if !detail.followUps.isEmpty {
                 InquiryFollowUpCard(followUps: detail.followUps)

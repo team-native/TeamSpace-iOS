@@ -20,6 +20,10 @@ final class InquiryRepositoryImpl: InquiryRepository, @unchecked Sendable {
         return item.toDetail()
     }
 
+    func resolve(inquiryId: Int) async throws {
+        _ = try await request(Endpoint(method: .post, path: "inquiries/\(inquiryId)/resolve"), as: IgnoredJSONValue.self)
+    }
+
     /// 답변받은 문의의 후속 문의는 같은 문의에 추가 메시지로(POST /inquiries/{id}/comments), 나머지는 새 문의로 접수해요.
     func submit(_ draft: InquiryDraft) async throws -> InquirySummary {
         if let original = draft.followUpOf {

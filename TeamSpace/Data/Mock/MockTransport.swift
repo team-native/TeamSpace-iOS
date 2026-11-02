@@ -428,7 +428,7 @@ struct MockTransport: HTTPTransport {
         return try respond(request, status: 201, json: boardStore.noticeStore.publish(dto))
     }
 
-    /// 11 문의 — GET · POST /inquiries · POST /inquiries/{id}/comments (서버 develop 형식)
+    /// 11 문의 — GET · POST /inquiries · POST /inquiries/{id}/comments · resolve (서버 develop 형식)
     private func inquiryRoute(_ request: URLRequest, components: [String]) throws -> (Data, HTTPURLResponse)? {
         switch (request.httpMethod ?? "", components.count) {
         case ("GET", 1):
@@ -456,6 +456,11 @@ struct MockTransport: HTTPTransport {
                 return try respond(request, status: 404, json: #"{"detail":"문의를 찾을 수 없습니다."}"#)
             }
             return try respond(request, status: 201, json: json)
+        case ("POST", 3) where components[2] == "resolve":
+            guard let id = Int(components[1]), let json = inquiryStore.resolve(id: id) else {
+                return try respond(request, status: 404, json: #"{"detail":"문의를 찾을 수 없습니다."}"#)
+            }
+            return try respond(request, status: 200, json: json)
         default:
             return nil
         }

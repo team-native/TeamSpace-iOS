@@ -14,7 +14,8 @@ struct FetchInquiryDetailUseCase {
             inquiry: detail.inquiry,
             history: detail.history.sorted { $0.occurredAt < $1.occurredAt },
             reference: detail.reference,
-            followUps: detail.followUps.sorted { $0.sentAt < $1.sentAt }
+            followUps: detail.followUps.sorted { $0.sentAt < $1.sentAt },
+            resolvedAt: detail.resolvedAt
         )
     }
 }

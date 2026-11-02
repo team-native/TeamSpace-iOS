@@ -9,6 +9,8 @@ protocol InquiryRepository: Sendable {
     func fetchInquiry(id: Int) async throws -> InquiryDetail
     /// POST /inquiries — 11-2 문의 제출 · 답변받은 문의의 후속 문의는 POST /inquiries/{id}/comments
     func submit(_ draft: InquiryDraft) async throws -> InquirySummary
+    /// POST /inquiries/{inquiryId}/resolve — 작성자가 해결됨으로 바꿔요.
+    func resolve(inquiryId: Int) async throws
     /// GET /admin/inquiries — 11-5 담당 부서 받은함
     func fetchInbox() async throws -> InquiryInbox
     /// 11-6 검토 화면 — 서버에 상세 경로가 없어 GET /admin/inquiries 에서 찾아요.

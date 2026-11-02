@@ -143,6 +143,51 @@ final class InquiryTests: XCTestCase {
         XCTAssertEqual(detail.followUps.first?.author, "익명")
     }
 
+    // MARK: 11-4 해결됐어요 (POST /inquiries/{id}/resolve)
+
+    func testResolveAnsweredInquiry() async throws {
+        let container = makeContainer()
+        let viewModel = container.makeInquiryDetailViewModel(inquiryId: 42)
+        await viewModel.load()
+        XCTAssertTrue(viewModel.canResolve)
+        XCTAssertNil(viewModel.resolvedText)
+
+        await viewModel.resolve()
+        XCTAssertNil(viewModel.errorMessage)
+        XCTAssertEqual(viewModel.detail?.isResolved, true)
+        XCTAssertFalse(viewModel.canResolve, "한 번 해결하면 버튼이 사라져요")
+        XCTAssertEqual(viewModel.toastMessage, "해결됨으로 표시했어요")
+        XCTAssertEqual(viewModel.followUpTitle, "이 답변에 후속 문의하기", "해결해도 후속 문의는 보낼 수 있어요")
+        XCTAssertTrue(viewModel.resolvedText?.hasSuffix("해결됨으로 표시했어요") == true)
+
+        let reopened = container.makeInquiryDetailViewModel(inquiryId: 42)
+        await reopened.load()
+        XCTAssertEqual(reopened.detail?.isResolved, true, "다시 열어도 해결됨")
+        XCTAssertEqual(reopened.detail?.inquiry.status, .answered, "해결됨은 답변 완료 목록에 그대로 있어요")
+    }
+
+    func testResolveHiddenBeforeAnswer() async {
+        let container = makeContainer()
+        for id in [41, 43, 44] {
+            let viewModel = container.makeInquiryDetailViewModel(inquiryId: id)
+            await viewModel.load()
+            XCTAssertFalse(viewModel.canResolve, "답변 전 · 반려 문의는 해결할 수 없어요 (\(id))")
+            await viewModel.resolve()
+            XCTAssertEqual(viewModel.detail?.isResolved, false)
+        }
+    }
+
+    func testResolvedInquiryDecoding() throws {
+        let json = #"{"id":"7","dept":"NativeOps","title":"t","body":"b","anonymous":true,"status":"해결됨","steps":["2026-11-01T09:00:00+09:00","","2026-11-02T10:00:00+09:00"],"answer":{"who":"양지우","at":"2026-11-02T10:00:00+09:00","text":"a"},"resolvedAt":"2026-11-03T08:00:00+09:00"}"#
+        let dto = try JSONCoder.makeDecoder().decode(ServerInquiryDTO.self, from: Data(json.utf8))
+        let detail = dto.toDetail()
+        XCTAssertEqual(detail.inquiry.status, .answered)
+        XCTAssertEqual(detail.resolvedAt, ServerDate.parse("2026-11-03T08:00:00+09:00"))
+
+        let legacy = #"{"id":"8","dept":"NativeOps","title":"t","body":"b","status":"답변 완료","steps":[]}"#
+        XCTAssertNil(try JSONCoder.makeDecoder().decode(ServerInquiryDTO.self, from: Data(legacy.utf8)).toDetail().resolvedAt)
+    }
+
     func testComposeContexts() async throws {
         let container = makeContainer()
         let detail = container.makeInquiryDetailViewModel(inquiryId: 42)
