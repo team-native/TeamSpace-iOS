@@ -370,6 +370,10 @@ final class DIContainer {
         CreatePostUseCase(boardRepository: boardRepository, postDraftRepository: postDraftRepository)
     }
 
+    var updatePostUseCase: UpdatePostUseCase {
+        UpdatePostUseCase(boardRepository: boardRepository)
+    }
+
     var postDraftUseCase: PostDraftUseCase {
         PostDraftUseCase(postDraftRepository: postDraftRepository)
     }
@@ -758,8 +762,13 @@ extension DIContainer {
         )
     }
 
-    func makePostComposeViewModel() -> PostComposeViewModel {
-        PostComposeViewModel(createPostUseCase: createPostUseCase, postDraftUseCase: postDraftUseCase)
+    func makePostComposeViewModel(editing: PostDetail? = nil) -> PostComposeViewModel {
+        PostComposeViewModel(
+            createPostUseCase: createPostUseCase,
+            postDraftUseCase: postDraftUseCase,
+            updatePostUseCase: updatePostUseCase,
+            editing: editing
+        )
     }
 
     func makeCommentComposeViewModel(postId: Int, userName: String) -> CommentComposeViewModel {

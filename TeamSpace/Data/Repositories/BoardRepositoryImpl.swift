@@ -64,6 +64,18 @@ final class BoardRepositoryImpl: BoardRepository, @unchecked Sendable {
         try await send(Endpoint(method: .delete, path: "posts/\(id)"))
     }
 
+    /// 분류 · 제목 · 본문 · 익명 · 댓글 정책만 보내요. `attachments` 를 빼면 서버가 사진을 그대로 둬요.
+    func updatePost(id: Int, _ draft: PostDraft) async throws {
+        let body = ServerPostPatchRequestDTO(
+            category: (draft.category ?? .free).serverValue ?? "자유",
+            title: draft.title,
+            body: draft.body,
+            anonymous: draft.isAnonymous,
+            anonComments: draft.commentPolicy == .anonymous
+        )
+        try await send(Endpoint(method: .patch, path: "posts/\(id)", body: body))
+    }
+
     /// 사진을 한 장씩 `POST /uploads` 로 올린 뒤, 받은 id 를 붙여 글을 써요.
     /// 서버는 `{id}` 만 돌려줘서 완료 화면에 쓸 글 정보는 보낸 값으로 채워요.
     func createPost(_ draft: PostDraft, images: [Data]) async throws -> PostSummary {

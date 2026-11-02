@@ -1,7 +1,7 @@
 import Foundation
 import Observation
 
-/// 10-2 게시글 작성 · 10-9 게시 완료
+/// 10-2 게시글 작성 · 10-9 게시 완료 · 내 글 수정 (PATCH /posts/{id})
 @Observable
 @MainActor
 final class PostComposeViewModel {
@@ -19,14 +19,28 @@ final class PostComposeViewModel {
     /// 임시 저장한 글을 불러왔는지
     private(set) var didRestoreDraft = false
     var errorMessage: String?
+    /// 고치는 글 id — 있으면 새 글 대신 같은 글을 고쳐요.
+    let editingPostId: Int?
+    /// 수정을 마쳤는지 (화면을 닫아요)
+    private(set) var didUpdate = false
 
     private let createPostUseCase: CreatePostUseCase
     private let postDraftUseCase: PostDraftUseCase
+    private let updatePostUseCase: UpdatePostUseCase?
 
-    init(createPostUseCase: CreatePostUseCase, postDraftUseCase: PostDraftUseCase) {
+    init(
+        createPostUseCase: CreatePostUseCase,
+        postDraftUseCase: PostDraftUseCase,
+        updatePostUseCase: UpdatePostUseCase? = nil,
+        editing: PostDetail? = nil
+    ) {
         self.createPostUseCase = createPostUseCase
         self.postDraftUseCase = postDraftUseCase
-        if let saved = postDraftUseCase.fetch() {
+        self.updatePostUseCase = updatePostUseCase
+        editingPostId = editing?.post.id
+        if let editing {
+            draft = PostDraft(editing: editing)
+        } else if let saved = postDraftUseCase.fetch() {
             draft = saved
             didRestoreDraft = true
         }
@@ -51,7 +65,14 @@ final class PostComposeViewModel {
     /// 사진 칸 옆 "2 / 5"
     var imageCountText: String { "\(attachments.count) / \(PostDraft.imageLimit)" }
 
-    var publishTitle: String { draft.isAnonymous ? "익명으로 게시하기" : "실명으로 게시하기" }
+    var isEditing: Bool { editingPostId != nil }
+
+    var screenTitle: String { isEditing ? "글 수정" : "글쓰기" }
+
+    var publishTitle: String {
+        if isEditing { return "수정 완료" }
+        return draft.isAnonymous ? "익명으로 게시하기" : "실명으로 게시하기"
+    }
 
     var canPublish: Bool {
         !isSubmitting
@@ -103,6 +124,16 @@ final class PostComposeViewModel {
         guard canPublish else { return }
         isSubmitting = true
         defer { isSubmitting = false }
+        if let postId = editingPostId, let updatePostUseCase {
+            do {
+                try await updatePostUseCase.execute(postId: postId, draft)
+                didUpdate = true
+            } catch {
+                AppLog.record(error, context: "board.post.update")
+                errorMessage = error.userMessage
+            }
+            return
+        }
         do {
             publishedPost = try await createPostUseCase.execute(draft, images: attachments.map(\.data))
         } catch {

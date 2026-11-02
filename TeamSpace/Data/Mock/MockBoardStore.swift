@@ -313,6 +313,25 @@ final class MockBoardStore: @unchecked Sendable {
     }
 
     /// DELETE /posts/{id} — 내 글만 지워져요.
+    /// PATCH /posts/{id} — 없으면 nil, 내 글이 아니면 false. 사진 · 공감 · 댓글 수는 그대로예요.
+    func update(id: Int, request: ServerPostPatchRequestDTO) -> Bool? {
+        lock.lock()
+        defer { lock.unlock() }
+        guard let index = posts.firstIndex(where: { $0.id == id }) else { return nil }
+        let old = posts[index]
+        guard old.isMine else { return false }
+        posts[index] = PostSummaryDTO(
+            id: id, category: PostCategory(serverValue: request.category), title: request.title,
+            excerpt: ServerPostItemDTO.excerpt(of: request.body),
+            authorName: request.anonymous ? nil : Self.me.name, authorRole: request.anonymous ? nil : old.authorRole,
+            isAnonymous: request.anonymous, createdAt: old.createdAt, likeCount: old.likeCount,
+            commentCount: old.commentCount, viewCount: old.viewCount, hasImage: old.hasImage, isMine: true
+        )
+        bodies[id] = request.body
+        policies[id] = request.anonComments ? .anonymous : .realName
+        return true
+    }
+
     func delete(id: Int) -> Bool {
         lock.lock()
         defer { lock.unlock() }

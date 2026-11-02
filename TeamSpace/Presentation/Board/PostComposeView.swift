@@ -22,7 +22,11 @@ struct PostComposeView: View {
                 PostAuthorModeSection(viewModel: viewModel)
                 PostCategorySection(selection: viewModel.draft.category) { viewModel.draft.category = $0 }
                 PostTextSection(viewModel: viewModel)
-                PostImageSection(viewModel: viewModel)
+                if viewModel.isEditing {
+                    InfoBanner(message: "사진은 그대로 두고 글만 고쳐요.", icon: .infoCircle, style: .muted)
+                } else {
+                    PostImageSection(viewModel: viewModel)
+                }
                 PostCommentPolicySection(selection: viewModel.draft.commentPolicy) { viewModel.draft.commentPolicy = $0 }
             }
             .padding(.horizontal, Spacing.screen)
@@ -30,13 +34,15 @@ struct PostComposeView: View {
         }
         .scrollDismissesKeyboard(.interactively)
         .safeAreaInset(edge: .top, spacing: 0) {
-            TSNavigationBar(title: "글쓰기", onBack: { dismiss() }) {
-                Button("임시 저장") {
-                    viewModel.saveDraft()
-                    dismiss()
+            TSNavigationBar(title: viewModel.screenTitle, onBack: { dismiss() }) {
+                if !viewModel.isEditing {
+                    Button("임시 저장") {
+                        viewModel.saveDraft()
+                        dismiss()
+                    }
+                    .tsFont(.footnoteBold)
+                    .foregroundStyle(Color.tsPrimary)
                 }
-                .tsFont(.footnoteBold)
-                .foregroundStyle(Color.tsPrimary)
             }
             .padding(.horizontal, Spacing.screen)
             .padding(.bottom, Spacing.sm)
@@ -53,6 +59,9 @@ struct PostComposeView: View {
         .background(Color.tsBackground.ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)
         .modifier(PostComposeAlerts(viewModel: viewModel, onClose: { dismiss() }, onShowPost: showPost))
+        .onChange(of: viewModel.didUpdate) { _, didUpdate in
+            if didUpdate { dismiss() }
+        }
     }
 
     /// 10-9 "게시글 보기" — 작성 화면을 닫은 뒤 상세를 열어요.

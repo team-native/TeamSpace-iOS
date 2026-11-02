@@ -22,6 +22,8 @@ protocol BoardRepository: Sendable {
     func deletePost(id: Int) async throws
     /// POST /posts — 10-2 게시 (사진은 JPG · PNG 데이터)
     func createPost(_ draft: PostDraft, images: [Data]) async throws -> PostSummary
+    /// PATCH /posts/{postId} — 내 글 수정 (사진은 그대로 둬요)
+    func updatePost(id: Int, _ draft: PostDraft) async throws
     /// POST /posts/{postId}/comments — 10-4 댓글 등록
     func createComment(postId: Int, draft: CommentDraft) async throws -> PostComment
 }

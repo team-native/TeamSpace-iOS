@@ -46,6 +46,8 @@ final class PostDetailViewModel {
     /// 내 글은 신고 대신 삭제
     var canReport: Bool { detail.map { !$0.post.isMine } ?? false }
     var canDelete: Bool { detail?.post.isMine ?? false }
+    /// 내 글만 고칠 수 있어요. (PATCH /posts/{id})
+    var canEdit: Bool { detail?.post.isMine ?? false }
 
     func load() async {
         if state.value == nil { state = .loading }

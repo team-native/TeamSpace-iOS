@@ -213,6 +213,84 @@ final class BoardTests: XCTestCase {
     }
 
     /// 10-3b 댓글 공감 — 누르면 빨간 하트 · +1, 다시 누르면 원래대로. 다시 불러와도 수가 남아요.
+    // MARK: 내 글 수정 (PATCH /posts/{id})
+
+    func testEditMyPostPrefillsAndUpdates() async throws {
+        let container = makeContainer()
+        let detailViewModel = container.makePostDetailViewModel(postId: 31)
+        await detailViewModel.load()
+        let detail = try XCTUnwrap(detailViewModel.detail)
+        XCTAssertTrue(detailViewModel.canEdit)
+
+        let compose = container.makePostComposeViewModel(editing: detail)
+        XCTAssertTrue(compose.isEditing)
+        XCTAssertFalse(compose.didRestoreDraft)
+        XCTAssertEqual(compose.draft.title, detail.post.title)
+        XCTAssertEqual(compose.draft.body, detail.body)
+        XCTAssertEqual(compose.draft.isAnonymous, detail.post.isAnonymous)
+        XCTAssertEqual(compose.publishTitle, "수정 완료")
+        XCTAssertEqual(compose.screenTitle, "글 수정")
+
+        compose.draft.title = "  고친 제목  "
+        compose.draft.body = "고친 본문이에요."
+        compose.draft.category = .question
+        await compose.publish()
+        XCTAssertTrue(compose.didUpdate)
+        XCTAssertNil(compose.errorMessage)
+        XCTAssertNil(compose.publishedPost, "새 글 완료 알림은 띄우지 않아요")
+
+        await detailViewModel.load()
+        XCTAssertEqual(detailViewModel.detail?.post.title, "고친 제목")
+        XCTAssertEqual(detailViewModel.detail?.body, "고친 본문이에요.")
+        XCTAssertEqual(detailViewModel.detail?.post.category, .question)
+        XCTAssertEqual(detailViewModel.detail?.post.likeCount, detail.post.likeCount, "공감 수는 그대로")
+    }
+
+    func testEditKeepsSavedDraftUntouched() async throws {
+        let container = makeContainer()
+        let newPost = container.makePostComposeViewModel()
+        newPost.draft.title = "임시 글"
+        XCTAssertTrue(newPost.saveDraft())
+
+        let detailViewModel = container.makePostDetailViewModel(postId: 28)
+        await detailViewModel.load()
+        let compose = container.makePostComposeViewModel(editing: try XCTUnwrap(detailViewModel.detail))
+        XCTAssertNotEqual(compose.draft.title, "임시 글", "수정은 임시 저장을 불러오지 않아요")
+        await compose.publish()
+        XCTAssertTrue(compose.didUpdate)
+        XCTAssertEqual(container.makePostComposeViewModel().draft.title, "임시 글", "임시 저장은 남아 있어요")
+    }
+
+    func testCannotEditOthersPost() async throws {
+        let container = makeContainer()
+        let detailViewModel = container.makePostDetailViewModel(postId: 41)
+        await detailViewModel.load()
+        let detail = try XCTUnwrap(detailViewModel.detail)
+        XCTAssertFalse(detailViewModel.canEdit)
+
+        let compose = container.makePostComposeViewModel(editing: detail)
+        await compose.publish()
+        XCTAssertFalse(compose.didUpdate)
+        XCTAssertEqual(compose.errorMessage, "작성자만 게시글을 수정할 수 있습니다.")
+    }
+
+    func testEditRejectsEmptyTitle() async throws {
+        let container = makeContainer()
+        let detailViewModel = container.makePostDetailViewModel(postId: 31)
+        await detailViewModel.load()
+        let compose = container.makePostComposeViewModel(editing: try XCTUnwrap(detailViewModel.detail))
+        compose.draft.title = "   "
+        XCTAssertFalse(compose.canPublish)
+        await compose.publish()
+        XCTAssertFalse(compose.didUpdate)
+    }
+
+    func testPostPatchBodyOmitsAttachments() throws {
+        let dto = ServerPostPatchRequestDTO(category: "질문", title: "t", body: "b", anonymous: true, anonComments: false)
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(dto)) as? [String: Any])
+        XCTAssertEqual(Set(json.keys), ["category", "title", "body", "anonymous", "anonComments"])
+    }
+
     func testCommentLikeToggles() async throws {
         let container = makeContainer()
         let viewModel = container.makePostDetailViewModel(postId: 41)

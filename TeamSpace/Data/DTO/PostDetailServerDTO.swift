@@ -91,6 +91,15 @@ struct ServerPostCreateRequestDTO: Codable {
     var status = "published"
 }
 
+/// PATCH /posts/{id} 요청 — 바꿀 값만 보내요. (사진 · 상태는 그대로)
+struct ServerPostPatchRequestDTO: Codable {
+    let category: String
+    let title: String
+    let body: String
+    let anonymous: Bool
+    let anonComments: Bool
+}
+
 /// POST /posts/{id}/comments 요청
 struct ServerCommentCreateRequestDTO: Codable {
     let text: String
