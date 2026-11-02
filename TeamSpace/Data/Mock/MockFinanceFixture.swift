@@ -1,165 +1,109 @@
 import Foundation
 
-/// 재무 API 가짜 응답 — Figma 04 재무 예시 내용
-/// 고른 달마다 숫자가 조금씩 달라지게 만들어 기간 선택(04-4)을 확인할 수 있게 합니다.
+/// Mock 재무 — 서버 `/finance/summary` · `/finance/receipts` · `/finance/contracts/{project}` 형식 (Figma 04 예시 숫자)
+/// 서버처럼 재정 권한(FA 토큰)이 없으면 403 이에요.
 enum MockFinanceFixture {
-    /// 달마다 다른 배수 (10월 = 1.0 → Figma 숫자 그대로)
-    static func scale(for month: Date, calendar: Calendar = .current) -> Double {
-        let value = calendar.component(.month, from: month)
-        return 1.0 - Double((10 - value + 12) % 12) * 0.06
-    }
+    static let forbidden = #"{"detail":"재정 정보 열람 권한이 없습니다."}"#
 
-    /// GET /finance/projects — Figma 04-9 예시. FA 토큰이 아니면 금액을 null 로 가립니다. (04-8)
-    static func projects(yearText: String?, isFA: Bool, now: Date = Date()) -> String {
-        let year = yearText.flatMap(Int.init) ?? Calendar.current.component(.year, from: now)
-        let rows: [(String, String, Int, Int)] = [
-            ("예약 서비스 앱 UI 제작", "IN_PROGRESS", 4_200_000, 2_100_000),
-            ("학과 행사 웹페이지", "IN_PROGRESS", 1_600_000, 800_000),
-            ("모바일 앱 유지보수", "IN_PROGRESS", 5_400_000, 2_700_000),
-            ("브랜드 소개 랜딩페이지", "COMPLETED", 8_720_000, 8_720_000),
-            ("동아리 행사 굿즈 디자인", "COMPLETED", 2_000_000, 2_000_000),
-            ("교내 설문 웹앱", "COMPLETED", 1_500_000, 1_500_000),
-            ("스타트업 IR 자료 디자인", "COMPLETED", 1_800_000, 1_800_000),
-            ("카페 주문 키오스크 UI", "IN_PROGRESS", 1_680_000, 240_000),
-            ("지역 축제 안내 페이지", "IN_PROGRESS", 1_500_000, 0)
-        ]
-        func amount(_ value: Int) -> String { isFA ? String(value) : "null" }
-        let list = rows.enumerated().map { index, row in
-            #"{"id":\#(index + 1),"name":"\#(row.0)","status":"\#(row.1)","contractAmount":\#(amount(row.2)),"paidAmount":\#(amount(row.3))}"#
-        }.joined(separator: ",")
-        let total = rows.reduce(0) { $0 + $1.2 }
-        let paid = rows.reduce(0) { $0 + $1.3 }
-        return """
-        {"code":200,"message":"조회 성공","data":{"year":\(year),"yearCount":\(rows.count),\
-        "totalContractAmount":\(amount(total)),"totalPaidAmount":\(amount(paid)),\
-        "monthNewContracts":2,"monthDeposits":3,"list":[\(list)]}}
-        """
-    }
-
-    /// GET /finance/flows — Figma 04-5 막대 높이 비율 그대로 (마지막 달 = 7,260,000 / 3,480,000)
-    static func flows(toText: String?, countText: String?, now: Date = Date()) -> String {
-        let calendar = Calendar.current
-        let end = calendar.startOfMonth(for: toText.flatMap(FinanceMonthParameter.date(from:)) ?? now)
-        let incomeHeights = [40, 52, 48, 66, 72, 80, 96]
-        let expenseHeights = [26, 30, 34, 38, 40, 46, 50]
-        let count = min(max(countText.flatMap(Int.init) ?? 7, 1), incomeHeights.count)
-        let formatter = ISO8601DateFormatter()
-        let items = (0..<count).compactMap { index -> String? in
-            let offset = index - (count - 1)
-            guard let month = calendar.date(byAdding: .month, value: offset, to: end) else { return nil }
-            let heightIndex = incomeHeights.count - count + index
-            let income = 7_260_000 * incomeHeights[heightIndex] / 96 / 10_000 * 10_000
-            let expense = 3_480_000 * expenseHeights[heightIndex] / 50 / 10_000 * 10_000
-            return #"{"month":"\#(formatter.string(from: month))","income":\#(income),"expense":\#(expense)}"#
-        }
-        return #"{"code":200,"message":"조회 성공","data":{"list":[\#(items.joined(separator: ","))]}}"#
-    }
-
-    static func overview(monthText: String?, now: Date = Date()) -> String {
-        let month = monthText.flatMap(FinanceMonthParameter.date(from:)) ?? now
-        let ratio = scale(for: month)
-        func amount(_ value: Int) -> Int { Int((Double(value) * ratio / 10_000).rounded()) * 10_000 }
-        let formatter = ISO8601DateFormatter()
-        let collected = amount(8_900_000)
-        return """
-        {"code":200,"message":"조회 성공","data":{
-          "month":"\(formatter.string(from: month))",
-          "collectedAmount":\(collected),
-          "isDemo":true,
-          "pools":[{"kind":"OPERATION","ratio":40,"amount":\(collected * 4 / 10)},
-                   {"kind":"RESERVE","ratio":30,"amount":\(collected * 3 / 10)},
-                   {"kind":"DIVIDEND","ratio":30,"amount":\(collected * 3 / 10)}],
-          "availableAmount":\(collected * 4 / 10),
-          "changeRate":\(String(format: "%.1f", 12.8 * ratio)),
-          "income":{"amount":\(amount(7_260_000)),"note":"외주 프로젝트 3건"},
-          "expense":{"amount":\(amount(3_480_000)),"note":"운영비 포함 8건"},
-          "updatedAt":"\(formatter.string(from: now))"
-        }}
-        """
-    }
-
-    // MARK: 04-2 · 04-3 수주 · 수금
-
-    private struct ContractRow {
+    struct Receipt {
         let id: Int
-        let name: String
-        let title: String
+        let client: String
+        let project: String
         let amount: Int
         let month: Int
         let day: Int
         let isCollected: Bool
     }
 
-    private static let contracts: [ContractRow] = [
-        ContractRow(id: 1, name: "BRIDGE", title: "iOS 앱 프로토타입", amount: 3_600_000, month: 10, day: 18, isCollected: true),
-        ContractRow(id: 2, name: "MOTION", title: "브랜드 웹 구축", amount: 2_800_000, month: 10, day: 12, isCollected: true),
-        ContractRow(id: 3, name: "CAMPUS", title: "관리자 도구 개발", amount: 2_500_000, month: 10, day: 29, isCollected: false),
-        ContractRow(id: 4, name: "ORBIT", title: "사내 대시보드", amount: 4_200_000, month: 9, day: 27, isCollected: true),
-        ContractRow(id: 5, name: "PLANT", title: "커머스 리뉴얼", amount: 3_100_000, month: 9, day: 14, isCollected: true),
-        ContractRow(id: 6, name: "HELLO", title: "온보딩 앱 MVP", amount: 5_000_000, month: 8, day: 30, isCollected: true),
-        ContractRow(id: 7, name: "NOTE", title: "노트 앱 디자인", amount: 1_800_000, month: 8, day: 11, isCollected: true)
+    /// Figma 04-3 수금 내역 (올해 8 ~ 10월)
+    static let receipts: [Receipt] = [
+        Receipt(id: 7, client: "CAMPUS", project: "관리자 도구 개발", amount: 2_500_000, month: 10, day: 29, isCollected: false),
+        Receipt(id: 1, client: "BRIDGE", project: "iOS 앱 프로토타입", amount: 3_600_000, month: 10, day: 18, isCollected: true),
+        Receipt(id: 2, client: "MOTION", project: "브랜드 웹 구축", amount: 2_800_000, month: 10, day: 12, isCollected: true),
+        Receipt(id: 4, client: "ORBIT", project: "사내 대시보드", amount: 4_200_000, month: 9, day: 27, isCollected: true),
+        Receipt(id: 5, client: "PLANT", project: "커머스 리뉴얼", amount: 3_100_000, month: 9, day: 14, isCollected: true),
+        Receipt(id: 6, client: "HELLO", project: "온보딩 앱 MVP", amount: 5_000_000, month: 8, day: 30, isCollected: true),
+        Receipt(id: 3, client: "NOTE", project: "노트 앱 디자인", amount: 1_800_000, month: 8, day: 11, isCollected: true)
     ]
 
-    /// 한국 시간 기준 날짜 문자열 (예: 2026-10-18T10:00:00+09:00)
-    private static func dateText(year: Int, month: Int, day: Int) -> String {
-        String(format: "%04d-%02d-%02dT10:00:00+09:00", year, month, day)
+    /// 04-5 막대 높이 비율 (마지막 달 = 7,260,000 / 3,480,000)
+    private static let incomeHeights = [40, 52, 48, 66, 72, 80, 96]
+    private static let expenseHeights = [26, 30, 34, 38, 40, 46, 50]
+
+    /// GET /finance/summary — 이번 달까지 7개월 흐름
+    static func summary(now: Date = Date(), calendar: Calendar = .current) -> String {
+        let end = calendar.startOfMonth(for: now)
+        let flow: [[String: Any]] = (0..<7).compactMap { index in
+            guard let month = calendar.date(byAdding: .month, value: index - 6, to: end) else { return nil }
+            let parts = calendar.dateComponents([.year, .month], from: month)
+            return [
+                "month": String(format: "%04d-%02d", parts.year ?? 0, parts.month ?? 0),
+                "income": 7_260_000 * incomeHeights[index] / 96 / 10_000 * 10_000,
+                "expense": 3_480_000 * expenseHeights[index] / 50 / 10_000 * 10_000
+            ]
+        }
+        let year = calendar.component(.year, from: now)
+        let month = calendar.component(.month, from: now)
+        return json([
+            "period": "\(year)년 \(String(format: "%02d", month))월",
+            "demo": false,
+            "lastSyncedAt": ISO8601DateFormatter().string(from: now),
+            "summary": [
+                "available": 3_560_000, "monthlyRevenue": 7_260_000, "monthlyExpense": 3_480_000,
+                "externalReceipts": receipts.reduce(0) { $0 + $1.amount }, "reserveBalance": 2_670_000
+            ],
+            "pools": [
+                ["id": "operation", "label": "운영풀", "amount": 3_560_000, "ratio": 40, "color": "#3182f6", "note": "운영 자금"],
+                ["id": "reserve", "label": "적립풀", "amount": 2_670_000, "ratio": 30, "color": "#7c5cff", "note": "예비 자금"],
+                ["id": "dividend", "label": "배당풀", "amount": 2_670_000, "ratio": 30, "color": "#ff8a3d", "note": "참여자 배당"]
+            ],
+            "flow": flow,
+            "receipts": receipts.map { receiptJSON($0, year: year, withId: false) },
+            "notices": [],
+            "member": ["email": "fa@gsm.hs.kr", "name": "김민준"]
+        ])
     }
 
-    private static func contractJSON(_ row: ContractRow, year: Int) -> String {
-        let status = row.isCollected ? "COLLECTED" : "SCHEDULED"
-        return """
-        {"id":\(row.id),"name":"\(row.name)","title":"\(row.title)","amount":\(row.amount),\
-        "collectedAt":"\(dateText(year: year, month: row.month, day: row.day))",\
-        "status":"\(status)"}
-        """
+    /// GET /finance/receipts?from&to&cursor&limit — 최근 날짜 순, totals 는 기간 전체
+    static func receipts(query: [String: String], now: Date = Date(), calendar: Calendar = .current) -> String {
+        let year = query["from"].flatMap { Int($0.prefix(4)) } ?? calendar.component(.year, from: now)
+        let offset = query["cursor"].flatMap(Int.init) ?? 0
+        let limit = query["limit"].flatMap(Int.init) ?? 20
+        let page = Array(receipts.dropFirst(offset).prefix(limit))
+        let paid = receipts.filter(\.isCollected).reduce(0) { $0 + $1.amount }
+        let total = receipts.reduce(0) { $0 + $1.amount }
+        return json([
+            "items": page.map { receiptJSON($0, year: year, withId: true) },
+            "nextCursor": offset + limit < receipts.count ? String(offset + limit) as Any : NSNull(),
+            "totals": ["totalOrder": total, "paid": paid, "pending": total - paid, "overdue": 0]
+        ])
     }
 
-    static func ledger(yearText: String?, now: Date = Date()) -> String {
-        let year = yearText.flatMap(Int.init) ?? Calendar.current.component(.year, from: now)
-        let list = contracts.map { contractJSON($0, year: year) }.joined(separator: ",")
-        return """
-        {"code":200,"message":"조회 성공","data":{"year":\(year),"totalAmount":48300000,"list":[\(list)]}}
-        """
+    /// GET /finance/contracts/{project} — 프런트 `CONTRACTS[project]` 형식. iOS 앱 프로토타입만 등록돼 있어요.
+    static func contract(project: String, now: Date = Date(), calendar: Calendar = .current) -> String? {
+        guard project == "iOS 앱 프로토타입" else { return nil }
+        let year = calendar.component(.year, from: now)
+        return json([
+            "project": project, "projectId": "1", "pm": "이시우 · PM", "signed": "\(year).09.02",
+            "total": 3_600_000, "collected": 3_600_000, "step": 6,
+            "stepDates": ["08.20", "08.27", "09.02 계약서 서명", "09.05 킥오프", "10.10 최종 산출물 전달", "10.18"],
+            "staff": "iOS 2 · Design 1 · Backend 1 · PM 1", "split": "운영 60% · 적립 30% · 배당 10%",
+            "file": "BRIDGE 계약서.pdf"
+        ])
     }
 
-    static func contractDetail(id: Int, now: Date = Date()) -> String? {
-        guard let row = contracts.first(where: { $0.id == id }) else { return nil }
-        let year = Calendar.current.component(.year, from: now)
-        let steps = [
-            ("계약", 9, 2, "계약서 서명", true),
-            ("착수", 9, 5, "킥오프 미팅", true),
-            ("납품", 10, 10, "최종 산출물 전달", row.isCollected),
-            ("입금 완료", row.month, row.day, TSFormatMock.won(row.amount), row.isCollected)
+    private static func receiptJSON(_ row: Receipt, year: Int, withId: Bool) -> [String: Any] {
+        var item: [String: Any] = [
+            "client": row.client, "project": row.project, "amount": row.amount,
+            "status": row.isCollected ? "입금 완료" : "입금 대기",
+            "date": String(format: "%04d-%02d-%02d", year, row.month, row.day)
         ]
-        let stepJSON = steps.enumerated().map { index, step in
-            "{\"id\":\(index + 1),\"title\":\"\(step.0)\",\"date\":\"\(dateText(year: year, month: step.1, day: step.2))\"," +
-            "\"note\":\"\(step.3)\",\"isDone\":\(step.4)}"
-        }.joined(separator: ",")
-        let clientName = row.id == 1 ? "클라이언트 브릿지랩스" : "클라이언트 " + row.name.capitalized
-        let amountNote = (row.isCollected ? "입금 확인" : "입금 예정") + " · 부가세 별도"
-        return """
-        {"code":200,"message":"조회 성공","data":{
-          "contract":\(contractJSON(row, year: year)),
-          "category":"외주",
-          "clientName":"\(clientName)",
-          "amountNote":"\(amountNote)",
-          "steps":[\(stepJSON)],
-          "pools":[{"kind":"OPERATION","ratio":40,"amount":\(row.amount * 4 / 10)},
-                   {"kind":"RESERVE","ratio":30,"amount":\(row.amount * 3 / 10)},
-                   {"kind":"DIVIDEND","ratio":30,"amount":\(row.amount * 3 / 10)}],
-          "managerName":"이시우",
-          "memberCount":5,
-          "documentName":"\(row.name) 계약서.pdf"
-        }}
-        """
+        if withId { item["id"] = String(row.id) }
+        return item
     }
-}
 
-/// Mock 문자열용 금액 표기 (Presentation 의 TSFormat 에 의존하지 않도록 분리)
-private enum TSFormatMock {
-    static func won(_ value: Int) -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .decimal
-        return (formatter.string(from: NSNumber(value: value)) ?? String(value)) + "원"
+    private static func json(_ value: Any) -> String {
+        guard let data = try? JSONSerialization.data(withJSONObject: value, options: [.sortedKeys]) else { return "null" }
+        return String(decoding: data, as: UTF8.self)
     }
 }

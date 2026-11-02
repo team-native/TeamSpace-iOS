@@ -10,7 +10,7 @@ import Foundation
 /// - GET /users · /users/{id} · /organization/tree: Figma 03 팀원 예시 (MockMemberFixture)
 /// - GET · POST /approvals · GET /approvals/{id} · POST approve · reject · cancel · comments:
 ///   Figma 05 결재 · 07-4 · 07-5 내 문서 예시 (MockApprovalStore, 서버 develop 형식, 처리 결과를 메모리에 기억)
-/// - GET /finance/~: Figma 04 재무 예시 (MockFinanceFixture)
+/// - GET /finance/summary · receipts · contracts/{project}: Figma 04 재무 (MockFinanceFixture, 서버 develop 형식, FA 아니면 403)
 /// - GET /dashboard/home: Figma 02-1 홈 예시 (MockDashboardFixture)
 /// - GET /library · /library/search: Figma 06 문서함 예시 (MockLibraryFixture)
 /// - GET /me/summary · /me/projects: Figma 07 내 공간 예시 (서버 develop 형식, 홈은 여러 API 를 조합)
@@ -658,36 +658,26 @@ struct MockTransport: HTTPTransport {
         }
     }
 
-    /// 04 재무 — GET /finance/~
+    /// 04 재무 — GET /finance/summary · /finance/receipts · /finance/contracts/{project} (FA 토큰이 아니면 403)
     private func financeRoute(_ request: URLRequest, path: String) throws -> (Data, HTTPURLResponse)? {
-        guard
-            request.httpMethod == "GET",
-            let url = request.url,
-            url.pathComponents.contains("finance")
-        else { return nil }
-        let month = URLComponents(url: url, resolvingAgainstBaseURL: false)?
-            .queryItems?.first { $0.name == "month" }?.value
-        let query = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems
-        switch path {
-        case "overview":
-            return try respond(request, status: 200, json: MockFinanceFixture.overview(monthText: month))
-        case "flows":
-            let to = query?.first { $0.name == "to" }?.value
-            let count = query?.first { $0.name == "months" }?.value
-            return try respond(request, status: 200, json: MockFinanceFixture.flows(toText: to, countText: count))
-        case "projects":
-            let year = query?.first { $0.name == "year" }?.value
-            let isFA = request.value(forHTTPHeaderField: "Authorization")?.contains(Self.faToken) == true
-            return try respond(request, status: 200, json: MockFinanceFixture.projects(yearText: year, isFA: isFA))
-        case "contracts":
-            let year = query?.first { $0.name == "year" }?.value
-            return try respond(request, status: 200, json: MockFinanceFixture.ledger(yearText: year))
-        default:
-            guard url.deletingLastPathComponent().lastPathComponent == "contracts", let id = Int(path) else { return nil }
-            guard let json = MockFinanceFixture.contractDetail(id: id) else {
-                return try respond(request, status: 404, json: #"{"code":404,"message":"해당 수주를 찾을 수 없습니다."}"#)
+        guard request.httpMethod == "GET", let url = request.url else { return nil }
+        let components = Array(url.pathComponents.drop(while: { $0 != "finance" }))
+        guard components.first == "finance", components.count >= 2 else { return nil }
+        guard request.value(forHTTPHeaderField: "Authorization")?.contains(Self.faToken) == true else {
+            return try respond(request, status: 403, json: MockFinanceFixture.forbidden)
+        }
+        switch (components[1], components.count) {
+        case ("summary", 2):
+            return try respond(request, status: 200, json: MockFinanceFixture.summary())
+        case ("receipts", 2):
+            return try respond(request, status: 200, json: MockFinanceFixture.receipts(query: Self.query(of: request)))
+        case ("contracts", 3):
+            guard let json = MockFinanceFixture.contract(project: components[2]) else {
+                return try respond(request, status: 404, json: #"{"detail":"계약 정보를 찾을 수 없습니다."}"#)
             }
             return try respond(request, status: 200, json: json)
+        default:
+            return nil
         }
     }
 
