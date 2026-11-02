@@ -292,14 +292,19 @@ final class WorkspaceTests: XCTestCase {
     }
 
     func testScheduleDetailAndReminders() async {
+        // 리마인더는 서버에 없어 기기에 저장해요 — 이전 실행 값이 남지 않게 먼저 심어요.
+        ScheduleReminderStore().save([.dayBefore, .hourBefore], for: 2)
         let viewModel = makeContainer().makeScheduleDetailViewModel(scheduleId: 2)
 
         await viewModel.load()
 
         XCTAssertEqual(viewModel.detail?.event.title, "Native 전체 회의")
-        XCTAssertEqual(viewModel.detail?.agenda.count, 4)
-        XCTAssertEqual(viewModel.detail?.history.first?.title, "장소 변경", "최근 변경이 위로")
-        XCTAssertNotNil(viewModel.savedResponseText)
+        XCTAssertEqual(viewModel.detail?.agenda.count, 4, "agenda 의 \"14:00–14:20 제목\" 줄은 안건 시간표로")
+        XCTAssertEqual(viewModel.detail?.agenda.first?.title, "팀 운영 소식 공유")
+        XCTAssertEqual(viewModel.detail?.summary, "팀의 진행 상황을 나누고 다음 달에 함께할 일을 정해요.")
+        XCTAssertEqual(viewModel.detail?.agendaNote, "프로젝트별 공유 자료는 회의 전날까지 남겨주세요.")
+        XCTAssertEqual(viewModel.detail?.history, [], "서버에 변경 이력이 없어요")
+        XCTAssertEqual(viewModel.savedResponseText, "내 응답 저장됨", "서버는 응답 시각을 주지 않아요")
         XCTAssertEqual(ReminderTiming.summary(viewModel.detail?.reminders ?? []), "하루 전 · 1시간 전")
 
         viewModel.openReminderEditor()
@@ -309,6 +314,40 @@ final class WorkspaceTests: XCTestCase {
 
         XCTAssertEqual(viewModel.detail?.reminders, [.dayBefore, .tenMinutesBefore], "이른 순으로 저장")
         XCTAssertFalse(viewModel.isReminderEditorPresented)
+        XCTAssertEqual(ScheduleReminderStore().reminders(for: 2), [.dayBefore, .tenMinutesBefore], "기기에 남아요")
+    }
+
+    func testServerEventDecoding() throws {
+        let json = Data(#"""
+        {"items":[
+          {"id":"9","title":"해커톤","date":"2026-11-07","start":"10:00","end":"18:00","place":"3층 · 대회의실","host":"PMO","scope":"팀","rsvp":true,"myRsvp":"불참","rsvpCount":12},
+          {"id":10,"title":"멘토링","date":"2026-11-08","time":"11.08 (일) 19:00 – 20:30","kind":"프로젝트","rsvpCount":0},
+          {"id":"11","title":"종일 행사","date":"2026-11-09"},
+          {"id":"12","title":"날짜 없음"}
+        ],"nextCursor":null}
+        """#.utf8)
+        let page = try JSONCoder.makeDecoder().decode(CursorPageDTO<ServerEventDTO>.self, from: json)
+        let events = page.items.compactMap { $0.toEntity() }
+        var seoul = Calendar(identifier: .gregorian)
+        seoul.timeZone = TimeZone(identifier: "Asia/Seoul") ?? .current
+        func at(_ day: Int, _ hour: Int, _ minute: Int = 0) -> Date? {
+            seoul.date(from: DateComponents(year: 2026, month: 11, day: day, hour: hour, minute: minute))
+        }
+
+        XCTAssertEqual(events.count, 3, "날짜가 없는 일정은 달력에 놓을 수 없어 빼요")
+        XCTAssertEqual(events[0].scope, .team)
+        XCTAssertEqual(events[0].startsAt, at(7, 10))
+        XCTAssertEqual(events[0].endsAt, at(7, 18))
+        XCTAssertEqual(events[0].place, "3층")
+        XCTAssertEqual(events[0].placeDetail, "대회의실")
+        XCTAssertEqual(events[0].myResponse, .decline)
+        XCTAssertEqual(events[0].participantCount, 12)
+        XCTAssertEqual(events[1].scope, .personal, "프로젝트 일정은 개인 일정처럼 시트로 열어요")
+        XCTAssertEqual(events[1].startsAt, at(8, 19), "start 가 없으면 time 문자열에서 읽어요")
+        XCTAssertEqual(events[1].endsAt, at(8, 20, 30))
+        XCTAssertNil(events[1].myResponse)
+        XCTAssertEqual(events[2].startsAt, at(9, 0), "시간이 없으면 종일")
+        XCTAssertEqual(ScheduleResponse.attend.serverValue, "참석")
     }
 
     // MARK: 07-10 ~ 07-12 내 활동

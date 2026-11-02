@@ -16,7 +16,7 @@ import Foundation
 /// - GET /workspace/home · /workspace/projects: Figma 07 내 공간 예시 (MockWorkspaceFixture)
 /// - GET /workspace/documents · DELETE /documents/{id}: 07-4 · 07-5 (MockApprovalStore 의 내 결재)
 /// - GET · POST /todos · PATCH /todos/{id}: Figma 07-2 (MockTodoStore, 서버 develop 형식, 메모리에 기억)
-/// - /workspace/schedules/~: Figma 07-7 ~ 07-9 (MockScheduleStore, 참석 응답 · 리마인더 기억)
+/// - GET /events · POST /events/{id}/rsvp: Figma 07-7 ~ 07-9 (MockScheduleStore, 서버 develop 형식, 참석 응답 기억)
 /// - GET /workspace/activity · posts · proposals: Figma 07-10 ~ 07-12 (MockActivityFixture)
 /// - GET · PATCH /workspace/profile: Figma 07-13 (MockProfileStore, 저장 내용 기억)
 /// - /projects/~ · /applications/~: Figma 08 (MockProjectStore, 신청 · 결과 등록 기억)
@@ -37,7 +37,6 @@ struct MockTransport: HTTPTransport {
     /// 만료된 리프레시 토큰 — `/auth/refresh` 가 401
     static let expiredRefreshToken = "mock-expired-refresh-token"
     private static let unauthorizedDetail = #"{"detail":"유효하지 않거나 만료된 토큰입니다. 로그인해 주세요."}"#
-    private static let scheduleNotFound = #"{"code":404,"message":"해당 일정을 찾을 수 없습니다."}"#
 
     var latencyNanoseconds: UInt64 = 700_000_000
     private let notificationStore = MockNotificationStore()
@@ -262,6 +261,9 @@ struct MockTransport: HTTPTransport {
         if components.first == "todos" {
             return try todoRoute(request, components: components)
         }
+        if components.first == "events" {
+            return try eventRoute(request, components: components)
+        }
         if components.starts(with: ["admin", "inquiries"]) {
             return try adminInquiryRoute(request, components: Array(components.dropFirst(2)))
         }
@@ -440,6 +442,28 @@ struct MockTransport: HTTPTransport {
         }
     }
 
+    /// 07-7 · 07-8 일정 — GET /events?month= · POST /events/{id}/rsvp (서버 develop 형식)
+    private func eventRoute(_ request: URLRequest, components: [String]) throws -> (Data, HTTPURLResponse)? {
+        switch (request.httpMethod ?? "", components.count) {
+        case ("GET", 1):
+            let query = Self.query(of: request)
+            let limit = query["limit"].flatMap(Int.init) ?? 100
+            guard (1...200).contains(limit) else { return try respond(request, status: 422, json: #"{"detail":"limit 범위가 아니에요."}"#) }
+            return try respond(request, status: 200, json: scheduleStore.listJSON(month: query["month"], cursor: query["cursor"], limit: limit))
+        case ("POST", 3) where components[2] == "rsvp":
+            guard let id = Int(components[1]), let body = request.httpBody,
+                  let dto = try? JSONDecoder().decode(ServerRsvpRequestDTO.self, from: body),
+                  ["참석", "불참", "미정"].contains(dto.rsvp)
+            else { return try respond(request, status: 422, json: #"{"detail":"입력한 정보를 다시 확인해 주세요."}"#) }
+            guard let json = scheduleStore.rsvp(id: id, value: dto.rsvp) else {
+                return try respond(request, status: 404, json: #"{"detail":"일정을 찾을 수 없습니다."}"#)
+            }
+            return try respond(request, status: 200, json: json)
+        default:
+            return nil
+        }
+    }
+
     /// 07-2 할 일 — GET · POST /todos · PATCH /todos/{id} (서버 develop 형식)
     private func todoRoute(_ request: URLRequest, components: [String]) throws -> (Data, HTTPURLResponse)? {
         switch (request.httpMethod ?? "", components.count) {
@@ -562,35 +586,6 @@ struct MockTransport: HTTPTransport {
                 todayTodoTitles: summary.today,
                 completedTodoCount: summary.completed
             ))
-        case ("GET", "schedules"):
-            let month = URLComponents(url: url, resolvingAgainstBaseURL: false)?
-                .queryItems?.first { $0.name == "month" }?.value
-            return try respond(request, status: 200, json: scheduleStore.listJSON(monthText: month))
-        case ("GET", _) where parent == "schedules":
-            guard let id = Int(path), let json = scheduleStore.detailJSON(id: id) else {
-                return try respond(request, status: 404, json: Self.scheduleNotFound)
-            }
-            return try respond(request, status: 200, json: json)
-        case ("POST", "response"):
-            guard
-                let id = Int(parent),
-                let body = request.httpBody,
-                let dto = try? JSONCoder.makeDecoder().decode(ScheduleResponseRequestDTO.self, from: body),
-                let json = scheduleStore.respond(id: id, response: dto.response)
-            else {
-                return try respond(request, status: 404, json: Self.scheduleNotFound)
-            }
-            return try respond(request, status: 200, json: json)
-        case ("PATCH", "reminders"):
-            guard
-                let id = Int(parent),
-                let body = request.httpBody,
-                let dto = try? JSONCoder.makeDecoder().decode(ScheduleRemindersDTO.self, from: body),
-                let json = scheduleStore.updateReminders(id: id, values: dto.reminders)
-            else {
-                return try respond(request, status: 404, json: Self.scheduleNotFound)
-            }
-            return try respond(request, status: 200, json: json)
         case ("GET", "profile"):
             return try respond(request, status: 200, json: profileStore.json())
         case ("PATCH", "profile"):

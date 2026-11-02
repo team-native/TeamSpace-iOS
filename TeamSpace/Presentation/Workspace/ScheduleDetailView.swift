@@ -59,7 +59,9 @@ struct ScheduleDetailView: View {
             if let document = detail.relatedDocument {
                 ScheduleDocumentCard(document: document) { onNavigate(.comingSoon(title: document.title)) }
             }
-            ScheduleHistoryCard(history: detail.history, note: detail.historyNote)
+            if !detail.history.isEmpty {
+                ScheduleHistoryCard(history: detail.history, note: detail.historyNote)
+            }
             ScheduleReminderCard(reminders: detail.reminders, onEdit: { viewModel.openReminderEditor() })
             Text("이 화면은 전체 정기 활동이에요. 참여 프로젝트의 개별 일정 변경은 개인 업무 알림에서 확인해요.")
                 .tsFont(.caption)
