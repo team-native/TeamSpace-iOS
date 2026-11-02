@@ -114,6 +114,7 @@ final class MockBoardStore: @unchecked Sendable {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: now)
         var items = posts
+        if query["mine"] == "true" { items = items.filter(\.isMine) }
         if let category = query["category"] {
             items = items.filter { $0.category == PostCategory(serverValue: category) }
         }

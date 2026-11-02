@@ -31,11 +31,19 @@ final class WorkspaceTests: XCTestCase {
         await viewModel.load()
 
         let home = try XCTUnwrap(viewModel.state.value)
-        XCTAssertEqual(home.affiliation, "NativeLab / Design")
-        XCTAssertEqual(home.todo.todayCount, 2)
-        XCTAssertEqual(home.receivedApproval?.documentId, 11, "누르면 05 결재 상세가 열리는 문서")
-        XCTAssertEqual(home.projects.map(\.progress), [68, 80])
-        XCTAssertEqual(viewModel.upcomingSchedules.map(\.title), ["Book-on QA 점검", "Native 전체 회의"], "가까운 일정이 위로")
+        XCTAssertEqual(home.affiliation, "Native / Design", "GET /me 의 dept")
+        XCTAssertEqual(home.todo.todayCount, 2, "GET /me/summary 의 todos.today")
+        XCTAssertEqual(home.receivedApproval?.documentId, 11, "가장 최근에 받은 대기 결재 — 누르면 05 결재 상세")
+        XCTAssertEqual(home.receivedApproval?.waitingCount, 2)
+        XCTAssertEqual(home.submittedDocument?.documentId, 1, "가장 최근에 제출한 문서 (임시 저장 제외)")
+        XCTAssertEqual(home.submittedDocument?.currentApproverName, "안율")
+        XCTAssertEqual(home.projects.map(\.progress), [68, 85])
+        XCTAssertEqual(home.projects.first?.pmName, "박도윤")
+        XCTAssertEqual(home.records.proposalCount, 3, "GET /me/summary 의 myProposals")
+        XCTAssertNotNil(home.records.latestPost, "GET /posts?mine=true")
+        XCTAssertTrue(viewModel.upcomingSchedules.contains { $0.title == "Book-on QA 점검" })
+        XCTAssertTrue(home.schedules.allSatisfy { $0.startsAt >= Date().addingTimeInterval(-60) }, "지금 이후 일정만")
+        XCTAssertEqual(home.schedules.map(\.startsAt), home.schedules.map(\.startsAt).sorted(), "가까운 일정이 위로")
         XCTAssertEqual(viewModel.greeting, "옥물결 님, 오늘도 차근차근")
         XCTAssertEqual(user.workspaceRoleSummary, "일반 사용자 · 추가 운영 권한 없음")
     }
@@ -164,7 +172,7 @@ final class WorkspaceTests: XCTestCase {
 
         await viewModel.load()
 
-        XCTAssertEqual(viewModel.affiliation, "NativeLab / Design")
+        XCTAssertEqual(viewModel.affiliation, "Native / Design")
         XCTAssertEqual(viewModel.waitingApprovals.count, 2, "검토 대기 · 검토 중인 받은 결재만")
         XCTAssertEqual(viewModel.latestWaiting?.title, "Book-on 프로젝트 인력 지원", "가장 최근 요청이 위로")
     }

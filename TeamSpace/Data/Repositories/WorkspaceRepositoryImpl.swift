@@ -12,8 +12,118 @@ final class WorkspaceRepositoryImpl: WorkspaceRepository, @unchecked Sendable {
         self.reminderStore = reminderStore
     }
 
+    /// 07-1 — 서버에 홈 전용 응답이 없어 여러 API 를 함께 불러요.
+    /// 요약(/me/summary) · 내 정보(/me)만 필수고, 나머지는 실패하면 그 카드만 비워요.
     func fetchHome() async throws -> WorkspaceHome {
-        try await request(Endpoint(method: .get, path: "workspace/home"), as: WorkspaceHomeResponseDTO.self).toEntity()
+        async let summary = request(Endpoint(method: .get, path: "me/summary"), as: ServerMeSummaryDTO.self)
+        async let me = request(Endpoint(method: .get, path: "me"), as: ServerProfileDTO.self)
+        async let todos = try? fetchTodos()
+        async let notification = try? request(
+            Endpoint(method: .get, path: "notifications", queryItems: [URLQueryItem(name: "unread", value: "true"), URLQueryItem(name: "limit", value: "1")]),
+            as: CursorPageDTO<ServerNotificationPreviewDTO>.self
+        ).items.first
+        async let received = try? approvals(box: "received")
+        async let mine = try? approvals(box: "mine")
+        async let projects = try? fetchJoinedProjectRecords()
+        async let schedules = try? upcomingSchedules()
+        async let records = homeRecords()
+
+        let (summaryValue, meValue) = try await (summary, me)
+        let todayTitles = (await todos ?? []).filter { item in
+            item.status != .done && Calendar.current.isDateInToday(item.dueAt)
+        }.map(\.title)
+        let waiting = (await received ?? [])
+            .filter { $0.authorId != meValue.id && ApprovalStatus(serverValue: $0.status).isWaiting }
+            .sorted { ($0.date ?? .distantPast) > ($1.date ?? .distantPast) }
+        let submitted = (await mine ?? [])
+            .compactMap { $0.toMyDocument() }
+            .filter { $0.status != .draft && $0.status != .cancelled }
+            .max { $0.updatedAt < $1.updatedAt }
+        let preview = await notification
+        let recordsValue = await records
+
+        return WorkspaceHome(
+            affiliation: meValue.dept.isEmpty ? "Native" : "Native / \(meValue.dept)",
+            todo: WorkspaceTodoSummary(
+                todayCount: summaryValue.todos.today,
+                completedCount: summaryValue.todos.completed,
+                todayTitles: todayTitles
+            ),
+            notification: preview.map {
+                WorkspaceNotificationPreview(
+                    unreadCount: summaryValue.unreadNotifications,
+                    title: $0.title,
+                    subtitle: [$0.kind, $0.createdAt.map { "\(TSFormat.shortDate($0)) \(TSFormat.time($0))" } ?? ""]
+                        .filter { !$0.isEmpty }.joined(separator: " · ")
+                )
+            },
+            receivedApproval: waiting.first.map {
+                WorkspaceApprovalPreview(
+                    documentId: $0.id, waitingCount: waiting.count, title: $0.title,
+                    requesterName: $0.author, requestedAt: $0.date ?? Date()
+                )
+            },
+            submittedDocument: submitted.map {
+                WorkspaceSubmittedDocument(
+                    documentId: $0.id, title: $0.title, amount: $0.amount, submittedAt: $0.submittedAt ?? $0.updatedAt,
+                    status: $0.status, currentApproverName: $0.currentApprover?.name
+                )
+            },
+            projects: (await projects ?? []).map { $0.toWorkspaceProject() },
+            schedules: await schedules ?? [],
+            records: WorkspaceRecords(
+                latestPost: recordsValue.post,
+                proposalCount: summaryValue.myProposals,
+                latestProposal: recordsValue.proposal,
+                inquiries: recordsValue.inquiries
+            )
+        )
+    }
+
+    /// GET /approvals?box= 첫 페이지 (홈은 최근 것만 봐요)
+    private func approvals(box: String) async throws -> [ServerApprovalDTO] {
+        let query = [URLQueryItem(name: "box", value: box), URLQueryItem(name: "limit", value: "50")]
+        return try await request(Endpoint(method: .get, path: "approvals", queryItems: query), as: CursorPageDTO<ServerApprovalDTO>.self).items
+    }
+
+    private func fetchJoinedProjectRecords() async throws -> [ServerJoinedProjectDTO] {
+        try await request(Endpoint(method: .get, path: "me/projects"), as: CursorPageDTO<ServerJoinedProjectDTO>.self).items
+    }
+
+    /// 이번 달 · 다음 달 일정 중 지금 이후에 시작하는 것
+    private func upcomingSchedules(now: Date = Date()) async throws -> [WorkspaceSchedule] {
+        let next = Calendar(identifier: .gregorian).date(byAdding: .month, value: 1, to: now) ?? now
+        async let this = fetchEvents(month: now)
+        async let following = fetchEvents(month: next)
+        var seen = Set<Int>()
+        return try await (this + following)
+            .compactMap { $0.toWorkspaceSchedule() }
+            .filter { $0.startsAt >= now && seen.insert($0.id).inserted }
+            .sorted { $0.startsAt < $1.startsAt }
+    }
+
+    /// 내가 남긴 기록 — 최근 글(/posts?mine=true) · 최근 제안(/proposals 중 내 것) · 최근 문의 2건(/inquiries)
+    private func homeRecords() async -> (post: WorkspacePostPreview?, proposal: WorkspaceProposalPreview?, inquiries: [WorkspaceInquiryPreview]) {
+        async let posts = try? request(
+            Endpoint(method: .get, path: "posts", queryItems: [URLQueryItem(name: "mine", value: "true"), URLQueryItem(name: "limit", value: "1")]),
+            as: CursorPageDTO<ServerPostItemDTO>.self
+        ).items
+        async let proposals = try? request(
+            Endpoint(method: .get, path: "proposals", queryItems: [URLQueryItem(name: "limit", value: "100")]),
+            as: CursorPageDTO<ServerProposalDTO>.self
+        ).items
+        async let inquiries = try? request(
+            Endpoint(method: .get, path: "inquiries", queryItems: [URLQueryItem(name: "limit", value: "2")]),
+            as: CursorPageDTO<ServerInquiryDTO>.self
+        ).items
+        let post = await posts?.first.map { WorkspacePostPreview(title: $0.title, createdAt: $0.createdAt) }
+        let proposal = await proposals?.map { $0.toEntity() }.first { $0.isMine }.map {
+            WorkspaceProposalPreview(title: $0.title, status: $0.status, recommendCount: $0.recommendCount)
+        }
+        let inquiryPreviews = (await inquiries ?? []).map { $0.toEntity() }.prefix(2).map {
+            WorkspaceInquiryPreview(title: $0.title, status: $0.status)
+        }
+        return (post, proposal, Array(inquiryPreviews))
     }
 
     /// GET /me/projects — 서버가 한 번에 다 줘요 (`nextCursor` 는 항상 null)
