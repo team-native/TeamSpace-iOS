@@ -16,6 +16,8 @@ final class MockNoticeStore: @unchecked Sendable {
     private let lock = NSLock()
     private var records: [Record] = []
     private var confirmedIds: Set<Int> = []
+    /// 테스트에서 마지막 게시 요청을 확인할 때
+    private(set) var lastCreateRequest: ServerNoticeCreateRequestDTO?
 
     init(now: Date = Date()) {
         let today = Calendar.current.startOfDay(for: now)
@@ -139,24 +141,19 @@ final class MockNoticeStore: @unchecked Sendable {
         return String(decoding: data, as: UTF8.self)
     }
 
-    /// POST /notices — 예약이면 그 시각을 게시 시각으로 둬요.
-    func publish(_ request: NoticePublishRequestDTO) -> String {
+    /// POST /admin/notices — `{id}`. 예약이면 그 시각을 게시 시각으로, 임시 저장은 목록에서 빼요.
+    /// (서버 develop 은 status · publishAt 을 저장만 해요 — 백엔드 협의안대로 흉내 내요)
+    func publish(_ request: ServerNoticeCreateRequestDTO) -> String {
         lock.lock()
         defer { lock.unlock() }
         let id = (records.map(\.summary.id).max() ?? 0) + 1
         let summary = NoticeSummaryDTO(
-            id: id, category: .notice, title: request.title,
+            id: id, category: NoticeCategory(serverKind: request.kind), title: request.title,
             summary: request.body.split(separator: "\n").first.map(String.init),
-            updatedAt: request.scheduledAt ?? Date(), isPinned: request.isPinned, isImportant: request.isImportant
+            updatedAt: request.publishAt ?? Date(), isPinned: request.pinned, isImportant: request.mustRead
         )
-        records.append(Record(
-            summary: summary, authorName: "김민준", body: request.body, isDraft: request.isDraft
-        ))
-        return envelope(summary)
-    }
-
-    private func envelope<T: Encodable>(_ value: T) -> String {
-        let data = (try? JSONCoder.makeEncoder().encode(value)).map { String(decoding: $0, as: UTF8.self) } ?? "null"
-        return #"{"code":200,"message":"성공","data":\#(data)}"#
+        records.append(Record(summary: summary, authorName: "김민준", body: request.body, isDraft: request.status == .draft))
+        lastCreateRequest = request
+        return json(["id": String(id)])
     }
 }

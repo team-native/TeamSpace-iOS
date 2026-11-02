@@ -47,7 +47,7 @@ struct MockTransport: HTTPTransport {
     private let profileStore = MockProfileStore()
     private let projectStore = MockProjectStore()
     private let ruleStore = MockRuleStore()
-    private let boardStore = MockBoardStore()
+    let boardStore = MockBoardStore()
     private let inquiryStore = MockInquiryStore()
     private let proposalStore = MockProposalStore()
 
@@ -256,6 +256,9 @@ struct MockTransport: HTTPTransport {
         if components.first == "notices" {
             return try noticeRoute(request, components: components)
         }
+        if components == ["admin", "notices"], request.httpMethod == "POST" {
+            return try adminNoticeCreate(request)
+        }
         if components.first == "inquiries" {
             return try inquiryRoute(request, components: components)
         }
@@ -374,7 +377,7 @@ struct MockTransport: HTTPTransport {
         }
     }
 
-    /// 10-5 ~ 10-7 공지 — /notices · /notices/{id} · confirm (서버 develop 형식, 게시만 예전 형식)
+    /// 10-5 ~ 10-7 공지 — /notices · /notices/{id} · confirm (서버 develop 형식)
     private func noticeRoute(_ request: URLRequest, components: [String]) throws -> (Data, HTTPURLResponse)? {
         let store = boardStore.noticeStore
         let notFound = #"{"detail":"리소스를 찾을 수 없습니다."}"#
@@ -390,18 +393,24 @@ struct MockTransport: HTTPTransport {
         case ("GET", 2):
             guard let id = id, let json = store.detailJSON(id: id) else { return try respond(request, status: 404, json: notFound) }
             return try respond(request, status: 200, json: json)
-        case ("POST", 1):
-            guard
-                let body = request.httpBody,
-                let dto = try? JSONCoder.makeDecoder().decode(NoticePublishRequestDTO.self, from: body)
-            else { return try respond(request, status: 400, json: #"{"code":400,"message":"잘못된 요청입니다."}"#) }
-            return try respond(request, status: 201, json: store.publish(dto))
         case ("POST", 3) where components[2] == "confirm":
             guard let id = id, let json = store.confirm(id: id) else { return try respond(request, status: 404, json: notFound) }
             return try respond(request, status: 200, json: json)
         default:
             return nil
         }
+    }
+
+    /// POST /admin/notices — 서버처럼 kind · title · body 가 없으면 400
+    private func adminNoticeCreate(_ request: URLRequest) throws -> (Data, HTTPURLResponse) {
+        guard
+            let body = request.httpBody,
+            let dto = try? JSONCoder.makeDecoder().decode(ServerNoticeCreateRequestDTO.self, from: body)
+        else { return try respond(request, status: 422, json: #"{"detail":"잘못된 요청입니다."}"#) }
+        for (field, value) in [("kind", dto.kind), ("title", dto.title), ("body", dto.body)] where value.isEmpty {
+            return try respond(request, status: 400, json: #"{"detail":"\#(field) 항목은 필수입니다."}"#)
+        }
+        return try respond(request, status: 201, json: boardStore.noticeStore.publish(dto))
     }
 
     /// 11 문의 — /inquiries/mine · /inquiries/{id} · POST /inquiries

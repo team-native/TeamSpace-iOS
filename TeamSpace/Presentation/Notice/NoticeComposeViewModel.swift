@@ -36,10 +36,10 @@ final class NoticeComposeViewModel {
 
     var canAddAttachment: Bool { draft.attachments.count < NoticeDraft.attachmentLimit }
 
-    /// 첨부 추가 — 최대 5개 · 개당 20MB
+    /// 첨부 추가 — 최대 5개 · 개당 10MB
     func addAttachment(fileName: String, data: Data) {
         guard canAddAttachment, data.count <= NoticeDraft.attachmentByteLimit else {
-            errorMessage = "첨부는 최대 \(NoticeDraft.attachmentLimit)개, 개당 20MB까지 올릴 수 있어요."
+            errorMessage = "첨부는 최대 \(NoticeDraft.attachmentLimit)개, 개당 10MB까지 올릴 수 있어요."
             return
         }
         draft.attachments.append(NoticeAttachment(fileName: fileName, data: data))

@@ -8,6 +8,6 @@ protocol NoticeRepository: Sendable {
     func fetchNotice(id: Int) async throws -> NoticeDetail
     /// POST /notices/{noticeId}/confirm — 10-6 "확인했어요"
     func acknowledge(noticeId: Int) async throws
-    /// POST /notices — 10-7 게시 · 예약 게시 · 임시 저장 (서버 형식은 다음 작업에서 맞춰요)
+    /// POST /admin/notices — 10-7 게시 · 예약 게시 · 임시 저장 (첨부는 POST /uploads 먼저)
     func publish(_ draft: NoticeDraft, asDraft: Bool) async throws -> NoticeSummary
 }

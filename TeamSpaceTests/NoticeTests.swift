@@ -134,14 +134,47 @@ final class NoticeTests: XCTestCase {
         await compose.publish()
         XCTAssertTrue(compose.completionMessage?.hasSuffix("09:00에 예약 게시돼요.") == true)
 
+        let empty = container.makeNoticeComposeViewModel(user: fa)
+        empty.draft.title = "작성 중"
+        await empty.saveDraft()
+        XCTAssertEqual(empty.errorMessage, "body 항목은 필수입니다.", "서버는 임시 저장도 본문이 있어야 받아요")
+
         let draft = container.makeNoticeComposeViewModel(user: fa)
         draft.draft.title = "작성 중"
+        draft.draft.body = "아직 쓰는 중이에요."
         await draft.saveDraft()
         XCTAssertEqual(draft.completionMessage, "공지를 임시 저장했어요.")
 
         let list = container.makeNoticeListViewModel(user: fa)
         await list.load()
         XCTAssertFalse(list.notices.contains { $0.title == "예약 공지" || $0.title == "작성 중" })
+    }
+
+    func testPublishSendsServerShapeWithUploadedAttachments() async throws {
+        let tokenStorage = InMemoryTokenStorage()
+        let transport = MockTransport(latencyNanoseconds: 0)
+        let client = APIClient(baseURL: MockTransport.baseURL, transport: transport, tokenStorage: tokenStorage)
+        let repository = NoticeRepositoryImpl(client: client)
+        var draft = NoticeDraft(scheduledAt: Date().addingTimeInterval(86_400))
+        draft.title = "예약 공지"
+        draft.body = "내일 올라가요."
+        draft.isPinned = false
+        draft.timing = .scheduled
+        draft.sendsPush = false
+        draft.attachments = [NoticeAttachment(fileName: "안내.pdf", data: Data("%PDF-1.4".utf8))]
+
+        let summary = try await repository.publish(draft, asDraft: false)
+
+        let sent = try XCTUnwrap(transport.boardStore.noticeStore.lastCreateRequest)
+        XCTAssertEqual(sent.kind, "공지")
+        XCTAssertEqual(sent.status, .scheduled)
+        XCTAssertNotNil(sent.publishAt)
+        XCTAssertFalse(sent.pinned)
+        XCTAssertTrue(sent.mustRead)
+        XCTAssertFalse(sent.sendPush)
+        XCTAssertEqual(sent.attachments.count, 1, "첨부는 /uploads 로 먼저 올린 id 로 보내요")
+        XCTAssertEqual(summary.title, "예약 공지")
+        XCTAssertEqual(NoticeRepositoryImpl.mimeType(of: "안내.pdf"), "application/pdf")
     }
 
     func testPublishRules() async {
