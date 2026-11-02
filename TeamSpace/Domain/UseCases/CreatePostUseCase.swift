@@ -11,6 +11,17 @@ struct CreatePostUseCase {
     }
 
     func execute(_ draft: PostDraft, images: [Data]) async throws -> PostSummary {
+        let trimmed = try Self.validated(draft)
+        guard images.count <= PostDraft.imageLimit else {
+            throw AppError.invalidInput("사진은 최대 \(PostDraft.imageLimit)장까지 올릴 수 있어요.")
+        }
+        let post = try await boardRepository.createPost(trimmed, images: images)
+        postDraftRepository.clear()
+        return post
+    }
+
+    /// 분류 · 제목 · 본문 확인 (앞뒤 공백은 지워요) — 글 수정에도 같이 써요.
+    static func validated(_ draft: PostDraft) throws -> PostDraft {
         var trimmed = draft
         trimmed.title = draft.title.trimmingCharacters(in: .whitespacesAndNewlines)
         trimmed.body = draft.body.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -21,11 +32,6 @@ struct CreatePostUseCase {
         guard !trimmed.body.isEmpty, trimmed.body.count <= PostDraft.bodyLimit else {
             throw AppError.invalidInput("본문은 1~\(PostDraft.bodyLimit)자로 써 주세요.")
         }
-        guard images.count <= PostDraft.imageLimit else {
-            throw AppError.invalidInput("사진은 최대 \(PostDraft.imageLimit)장까지 올릴 수 있어요.")
-        }
-        let post = try await boardRepository.createPost(trimmed, images: images)
-        postDraftRepository.clear()
-        return post
+        return trimmed
     }
 }

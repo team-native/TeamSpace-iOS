@@ -344,6 +344,18 @@ struct MockTransport: HTTPTransport {
         case ("GET", 2):
             guard let id = id, let json = boardStore.detailJSON(id: id) else { return try respond(request, status: 404, json: notFound) }
             return try respond(request, status: 200, json: json)
+        case ("PATCH", 2):
+            guard let id = id, let body = request.httpBody, let dto = try? JSONDecoder().decode(ServerPostPatchRequestDTO.self, from: body) else {
+                return try respond(request, status: 422, json: #"{"detail":"잘못된 요청입니다."}"#)
+            }
+            switch boardStore.update(id: id, request: dto) {
+            case .none:
+                return try respond(request, status: 404, json: #"{"detail":"게시글을 찾을 수 없습니다."}"#)
+            case .some(false):
+                return try respond(request, status: 403, json: #"{"detail":"작성자만 게시글을 수정할 수 있습니다."}"#)
+            case .some(true):
+                return try respond(request, status: 200, json: #"{"id":"\#(id)","status":"published"}"#)
+            }
         case ("DELETE", 2):
             guard let id = id, boardStore.delete(id: id) else { return try respond(request, status: 403, json: forbidden) }
             return try respond(request, status: 200, json: #"{"code":200,"message":"삭제 완료","data":{"success":true}}"#)

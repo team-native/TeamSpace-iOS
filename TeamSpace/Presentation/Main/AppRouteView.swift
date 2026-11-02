@@ -31,7 +31,7 @@ struct AppRouteView: View {
             projectScreen
         case .rules, .ruleDetail, .ruleComparison:
             ruleScreen
-        case .board, .boardSearch, .postDetail, .postCompose, .commentCompose:
+        case .board, .boardSearch, .postDetail, .postCompose, .postEdit, .commentCompose:
             boardScreen
         case .notices, .noticeDetail, .noticeCompose:
             noticeScreen
@@ -215,6 +215,8 @@ struct AppRouteView: View {
             PostDetailView(viewModel: container.makePostDetailViewModel(postId: id), onNavigate: onNavigate)
         case .postCompose:
             PostComposeView(viewModel: container.makePostComposeViewModel(), onNavigate: onNavigate)
+        case .postEdit(let id):
+            PostEditView(viewModel: container.makePostDetailViewModel(postId: id), container: container, onNavigate: onNavigate)
         case .commentCompose(let postId):
             CommentComposeView(viewModel: container.makeCommentComposeViewModel(postId: postId, userName: user.name))
         default:

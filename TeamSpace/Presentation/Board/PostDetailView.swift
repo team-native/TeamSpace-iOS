@@ -35,7 +35,11 @@ struct PostDetailView: View {
         .safeAreaInset(edge: .bottom, spacing: 0) { commentBar }
         .background(Color.tsBackground.ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)
-        .modifier(PostDetailDialogs(viewModel: viewModel, onCopyLink: copyLink))
+        .modifier(PostDetailDialogs(
+            viewModel: viewModel,
+            onCopyLink: copyLink,
+            onEdit: { onNavigate(.postEdit(id: viewModel.postId)) }
+        ))
         .tsToast($viewModel.toastMessage)
         .task { await viewModel.load() }
         .refreshable { await viewModel.load() }
@@ -93,6 +97,7 @@ struct PostDetailView: View {
 private struct PostDetailDialogs: ViewModifier {
     @Bindable var viewModel: PostDetailViewModel
     let onCopyLink: () -> Void
+    let onEdit: () -> Void
 
     func body(content: Content) -> some View {
         content
@@ -100,6 +105,9 @@ private struct PostDetailDialogs: ViewModifier {
                 Button("링크 복사", action: onCopyLink)
                 if viewModel.canReport {
                     Button("신고하기") { Task { await viewModel.requestReport() } }
+                }
+                if viewModel.canEdit {
+                    Button("수정하기", action: onEdit)
                 }
                 if viewModel.canDelete {
                     Button("삭제하기", role: .destructive) { Task { await viewModel.delete() } }
