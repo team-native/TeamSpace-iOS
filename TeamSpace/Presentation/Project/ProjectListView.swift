@@ -4,11 +4,14 @@ import SwiftUI
 struct ProjectListView: View {
     @State private var viewModel: ProjectListViewModel
     private let onNavigate: (AppRoute) -> Void
+    /// Admin — 프로젝트 등록 버튼
+    private let canRegister: Bool
 
     @Environment(\.dismiss) private var dismiss
 
-    init(viewModel: ProjectListViewModel, onNavigate: @escaping (AppRoute) -> Void) {
+    init(viewModel: ProjectListViewModel, canRegister: Bool = false, onNavigate: @escaping (AppRoute) -> Void) {
         _viewModel = State(initialValue: viewModel)
+        self.canRegister = canRegister
         self.onNavigate = onNavigate
     }
 
@@ -32,7 +35,18 @@ struct ProjectListView: View {
         }
         .scrollDismissesKeyboard(.interactively)
         .safeAreaInset(edge: .top, spacing: 0) {
-            TSNavigationBar(title: "전체 프로젝트", onBack: { dismiss() })
+            TSNavigationBar(title: "전체 프로젝트", onBack: { dismiss() }) {
+                if canRegister {
+                    Button { onNavigate(.projectCompose) } label: {
+                        TSIcon.plus.sized(.base, weight: .bold)
+                            .foregroundStyle(Color.tsOnPrimary)
+                            .frame(width: 38, height: 38)
+                            .background(Color.tsPrimary, in: Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("프로젝트 등록")
+                }
+            }
                 .padding(.horizontal, Spacing.screen)
                 .padding(.bottom, Spacing.sm)
                 .background(Color.tsBackground)

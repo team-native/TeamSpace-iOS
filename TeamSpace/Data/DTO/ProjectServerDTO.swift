@@ -224,3 +224,55 @@ struct ServerApplyResultDTO: Decodable {
         applicationId = try container.decodeIntOrString(forKey: .applicationId)
     }
 }
+
+/// POST /admin/projects · PATCH /admin/projects/{id} 요청 — 프런트 `Project` 모양으로 보내요.
+/// desc 는 "설명 · 2026.08 – 2026.11", due 는 "11.30 마감" (목록이 읽는 형식과 같아요). 참여자 · 모집은 보내지 않아 그대로예요.
+struct ServerProjectWriteRequestDTO: Codable, Equatable {
+    let name: String
+    let desc: String
+    let pm: String
+    let dept: String
+    let status: String
+    let progress: Int
+    let due: String
+
+    init(_ draft: ProjectDraft, calendar: Calendar = .current) {
+        func month(_ date: Date) -> String {
+            String(format: "%04d.%02d", calendar.component(.year, from: date), calendar.component(.month, from: date))
+        }
+        name = draft.name
+        let period = "\(month(draft.startDate)) – \(month(draft.endDate))"
+        desc = draft.summary.isEmpty ? period : "\(draft.summary) · \(period)"
+        pm = draft.pmName
+        dept = draft.department
+        status = draft.status.serverValue
+        progress = draft.progress
+        due = String(format: "%02d.%02d ", calendar.component(.month, from: draft.endDate), calendar.component(.day, from: draft.endDate))
+            + (draft.status == .completed ? "완료" : "마감")
+    }
+}
+
+/// POST /admin/projects 응답 — `{ id, slug }`
+struct ServerProjectCreatedDTO: Decodable {
+    let id: String
+    let slug: String
+
+    private enum CodingKeys: String, CodingKey { case id, slug }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = String(try container.decodeIntOrString(forKey: .id))
+        slug = (try? container.decodeIfPresent(String.self, forKey: .slug)) ?? id
+    }
+}
+
+extension ProjectRunStatus {
+    /// 서버 상태 글자 — 예정 · 진행 중 · 완료
+    var serverValue: String {
+        switch self {
+        case .planned: return "예정"
+        case .completed: return "완료"
+        case .inProgress, .unknown: return "진행 중"
+        }
+    }
+}

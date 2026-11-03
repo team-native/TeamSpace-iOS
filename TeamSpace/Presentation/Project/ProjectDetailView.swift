@@ -6,12 +6,20 @@ struct ProjectDetailView: View {
     private let onNavigate: (AppRoute) -> Void
     /// PM · Admin — 08-7 지원자 검토 버튼
     private let canReviewApplicants: Bool
+    /// Admin — 프로젝트 수정 버튼
+    private let canEdit: Bool
 
     @Environment(\.dismiss) private var dismiss
 
-    init(viewModel: ProjectDetailViewModel, canReviewApplicants: Bool = false, onNavigate: @escaping (AppRoute) -> Void) {
+    init(
+        viewModel: ProjectDetailViewModel,
+        canReviewApplicants: Bool = false,
+        canEdit: Bool = false,
+        onNavigate: @escaping (AppRoute) -> Void
+    ) {
         _viewModel = State(initialValue: viewModel)
         self.canReviewApplicants = canReviewApplicants
+        self.canEdit = canEdit
         self.onNavigate = onNavigate
     }
 
@@ -24,7 +32,13 @@ struct ProjectDetailView: View {
             .padding(.bottom, Spacing.xxxl)
         }
         .safeAreaInset(edge: .top, spacing: 0) {
-            TSNavigationBar(title: "프로젝트", onBack: { dismiss() })
+            TSNavigationBar(title: "프로젝트", onBack: { dismiss() }) {
+                if canEdit, let id = viewModel.detail?.project.id {
+                    CircleIconButton(icon: .pencil, accessibilityLabel: "프로젝트 수정", background: .tsSurface, hasBorder: true) {
+                        onNavigate(.projectEdit(id: id))
+                    }
+                }
+            }
                 .padding(.horizontal, Spacing.screen)
                 .padding(.bottom, Spacing.sm)
                 .background(Color.tsBackground)

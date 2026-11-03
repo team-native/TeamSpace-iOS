@@ -351,6 +351,21 @@ struct MockTransport: HTTPTransport {
             guard !json.isEmpty else { return try respond(request, status: 422, json: #"{"detail":"공식 답변을 입력해주세요."}"#) }
             return try respond(request, status: 200, json: json)
         }
+        if components == ["admin", "projects"], request.httpMethod == "POST" {
+            guard let body = request.httpBody, let dto = try? JSONDecoder().decode(ServerProjectWriteRequestDTO.self, from: body),
+                  !dto.name.isEmpty
+            else { return try respond(request, status: 400, json: #"{"detail":"프로젝트 이름은 필수입니다."}"#) }
+            return try respond(request, status: 201, json: projectStore.create(dto))
+        }
+        if components.count == 3, components.starts(with: ["admin", "projects"]), request.httpMethod == "PATCH" {
+            guard let body = request.httpBody, let dto = try? JSONDecoder().decode(ServerProjectWriteRequestDTO.self, from: body) else {
+                return try respond(request, status: 422, json: #"{"detail":"잘못된 요청입니다."}"#)
+            }
+            guard let json = projectStore.update(id: components[2], request: dto) else {
+                return try respond(request, status: 404, json: #"{"detail":"프로젝트를 찾을 수 없습니다."}"#)
+            }
+            return try respond(request, status: 200, json: json)
+        }
         guard components.first == "projects" else { return nil }
         let notFound = #"{"detail":"프로젝트를 찾을 수 없습니다."}"#
         let projectId = components.count > 1 ? components[1] : nil
