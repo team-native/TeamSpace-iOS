@@ -28,14 +28,16 @@ struct ScheduleCalendarView: View {
         }
         .safeAreaInset(edge: .top, spacing: 0) {
             TSNavigationBar(title: "일정", onBack: { dismiss() }) {
-                Button { onNavigate(.comingSoon(title: "일정 추가")) } label: {
-                    TSIcon.plus.sized(.base, weight: .bold)
-                        .foregroundStyle(Color.tsOnPrimary)
-                        .frame(width: 38, height: 38)
-                        .background(Color.tsPrimary, in: Circle())
+                if viewModel.canAddSchedule {
+                    Button { onNavigate(.scheduleCompose) } label: {
+                        TSIcon.plus.sized(.base, weight: .bold)
+                            .foregroundStyle(Color.tsOnPrimary)
+                            .frame(width: 38, height: 38)
+                            .background(Color.tsPrimary, in: Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("일정 추가")
                 }
-                .buttonStyle(.plain)
-                .accessibilityLabel("일정 추가")
             }
             .padding(.horizontal, Spacing.screen)
             .padding(.bottom, Spacing.sm)

@@ -177,3 +177,32 @@ struct ServerEventRemindersDTO: Codable, Equatable {
             .filter(\.0).map(\.1)
     }
 }
+
+/// POST /admin/events 요청 — date "YYYY-MM-DD", start · end "HH:mm", scope 팀 · 프로젝트 · 개인
+struct ServerEventCreateRequestDTO: Codable, Equatable {
+    let title: String
+    let date: String
+    let start: String
+    let end: String
+    let scope: String
+    let place: String
+    let agenda: String
+    let rsvp: Bool
+
+    init(_ draft: ScheduleDraft, calendar: Calendar = .current) {
+        title = draft.title
+        let day = calendar.dateComponents([.year, .month, .day], from: draft.date)
+        date = String(format: "%04d-%02d-%02d", day.year ?? 0, day.month ?? 0, day.day ?? 0)
+        start = Self.time(draft.startsAt, calendar)
+        end = Self.time(draft.endsAt, calendar)
+        scope = draft.scope.rawValue
+        place = draft.place
+        agenda = draft.agenda
+        rsvp = draft.asksRSVP
+    }
+
+    static func time(_ date: Date, _ calendar: Calendar) -> String {
+        let parts = calendar.dateComponents([.hour, .minute], from: date)
+        return String(format: "%02d:%02d", parts.hour ?? 0, parts.minute ?? 0)
+    }
+}

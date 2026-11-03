@@ -152,6 +152,13 @@ final class WorkspaceRepositoryImpl: WorkspaceRepository, @unchecked Sendable {
         try await fetchEvents(month: month).compactMap { $0.toEntity() }
     }
 
+    func createSchedule(_ draft: ScheduleDraft) async throws -> Int {
+        let body = ServerEventCreateRequestDTO(draft)
+        let created = try await request(Endpoint(method: .post, path: "admin/events", body: body), as: ServerIdResponseDTO.self)
+        guard let id = Int(created.id) else { throw AppError.unknown("일정 번호를 읽지 못했어요.") }
+        return id
+    }
+
     /// GET /events/{id} + GET /events/{id}/reminders — 리마인더를 못 불러오면 꺼진 것으로 보여줘요.
     func fetchScheduleDetail(id: Int) async throws -> ScheduleEventDetail {
         async let remindersTask = fetchReminders(eventId: id)

@@ -657,10 +657,19 @@ extension DIContainer {
         DraftDocumentsViewModel(fetchMyDocumentsUseCase: fetchMyDocumentsUseCase, deleteDraftUseCase: deleteDraftUseCase)
     }
 
-    func makeScheduleCalendarViewModel() -> ScheduleCalendarViewModel {
+    func makeScheduleComposeViewModel(user: AuthUser, date: Date = Date()) -> ScheduleComposeViewModel {
+        ScheduleComposeViewModel(
+            user: user,
+            createScheduleUseCase: CreateScheduleUseCase(workspaceRepository: workspaceRepository),
+            date: date
+        )
+    }
+
+    func makeScheduleCalendarViewModel(user: AuthUser? = nil) -> ScheduleCalendarViewModel {
         ScheduleCalendarViewModel(
             fetchSchedulesUseCase: fetchSchedulesUseCase,
-            respondScheduleUseCase: respondScheduleUseCase
+            respondScheduleUseCase: respondScheduleUseCase,
+            canAddSchedule: user?.can(.manageEvents) == true
         )
     }
 

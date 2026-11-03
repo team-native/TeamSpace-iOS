@@ -55,6 +55,24 @@ final class MockScheduleStore: @unchecked Sendable {
     }
 
     /// GET /events?month=YYYY-MM — 그 달 일정, 날짜 · 시작 시간 · id 순
+    /// POST /admin/events — `{id}`. 날짜 · 시각 형식이 틀리면 nil (422)
+    func create(_ request: ServerEventCreateRequestDTO) -> String? {
+        lock.lock()
+        defer { lock.unlock() }
+        let parts = request.date.split(separator: "-").compactMap { Int($0) }
+        guard
+            parts.count == 3,
+            let day = calendar.date(from: DateComponents(year: parts[0], month: parts[1], day: parts[2])),
+            ScheduleScope(rawValue: request.scope) != nil
+        else { return nil }
+        let id = (events.map(\.id).max() ?? 0) + 1
+        events.append(Event(
+            id: id, scope: request.scope, title: request.title, day: day, start: request.start, end: request.end,
+            place: request.place, host: "관리자", agenda: request.agenda, rsvpCount: 0
+        ))
+        return json(["id": String(id)])
+    }
+
     func listJSON(month: String?, cursor: String?, limit: Int) -> String {
         lock.lock()
         defer { lock.unlock() }
