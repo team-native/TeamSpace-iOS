@@ -1,0 +1,42 @@
+import Foundation
+
+/// 가입 요청 목록 — Admin 만
+struct FetchSignupRequestsUseCase {
+    static let pageLimit = 100
+
+    private let signupRequestRepository: SignupRequestRepository
+
+    init(signupRequestRepository: SignupRequestRepository) {
+        self.signupRequestRepository = signupRequestRepository
+    }
+
+    func execute(user: AuthUser) async throws -> [SignupRequestItem] {
+        guard user.can(.approveSignups) else { throw AppError.forbidden("가입 요청은 관리자만 볼 수 있어요.") }
+        return try await signupRequestRepository.fetchSignupRequests(cursor: nil, limit: Self.pageLimit).items
+    }
+}
+
+/// 가입 요청 승인 — Admin 만, 검토 중인 요청만. 초기 비밀번호는 비우거나 8자 이상
+struct ApproveSignupRequestUseCase {
+    static let passwordMinLength = 8
+
+    private let signupRequestRepository: SignupRequestRepository
+
+    init(signupRequestRepository: SignupRequestRepository) {
+        self.signupRequestRepository = signupRequestRepository
+    }
+
+    func execute(_ request: SignupRequestItem, temporaryPassword: String, user: AuthUser) async throws -> SignupRequestItem {
+        guard user.can(.approveSignups) else { throw AppError.forbidden("가입 요청은 관리자만 승인할 수 있어요.") }
+        guard request.status == .reviewing else { throw AppError.invalidInput("이미 처리한 요청이에요.") }
+        let password = temporaryPassword.trimmingCharacters(in: .whitespaces)
+        guard password.isEmpty || password.count >= Self.passwordMinLength else {
+            throw AppError.invalidInput("초기 비밀번호는 \(Self.passwordMinLength)자 이상으로 정해 주세요.")
+        }
+        try await signupRequestRepository.approve(id: request.id, temporaryPassword: password.isEmpty ? nil : password)
+        var approved = request
+        approved.status = .approved
+        approved.approvedBy = user.name
+        return approved
+    }
+}

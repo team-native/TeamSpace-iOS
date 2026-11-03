@@ -50,6 +50,7 @@ struct MockTransport: HTTPTransport {
     let boardStore = MockBoardStore()
     private let inquiryStore = MockInquiryStore()
     private let proposalStore = MockProposalStore()
+    private let signupStore = MockSignupRequestStore()
 
     func send(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
         try await Task.sleep(nanoseconds: latencyNanoseconds)
@@ -287,6 +288,22 @@ struct MockTransport: HTTPTransport {
                 return try respond(request, status: 404, json: #"{"detail":"일정을 찾을 수 없습니다."}"#)
             }
             return try respond(request, status: 200, json: json)
+        }
+        if components == ["admin", "signup-requests"], request.httpMethod == "GET" {
+            return try respond(request, status: 200, json: signupStore.listJSON())
+        }
+        if components.count == 4, components.starts(with: ["admin", "signup-requests"]), components[3] == "approve", request.httpMethod == "POST" {
+            let password = request.httpBody.flatMap { try? JSONDecoder().decode(ServerSignupApproveRequestDTO.self, from: $0) }?.temporaryPassword
+            if let password, password.count < 8 {
+                return try respond(request, status: 400, json: #"{"detail":"초기 비밀번호는 8자 이상이어야 합니다."}"#)
+            }
+            switch signupStore.approve(id: Int(components[2]) ?? 0, temporaryPassword: password) {
+            case .approved(let json): return try respond(request, status: 200, json: json)
+            case .notFound: return try respond(request, status: 404, json: #"{"detail":"리소스를 찾을 수 없습니다."}"#)
+            case .duplicated: return try respond(request, status: 409, json: #"{"detail":"이메일이 이미 등록되었습니다."}"#)
+            case .needsPassword:
+                return try respond(request, status: 400, json: #"{"detail":"가입 요청에 비밀번호가 없으므로 초기 비밀번호가 필요합니다."}"#)
+            }
         }
         if components == ["admin", "reports"], request.httpMethod == "GET" {
             return try respond(request, status: 200, json: boardStore.reportsJSON(status: Self.query(of: request)["status"] ?? "PENDING"))
@@ -861,7 +878,7 @@ struct MockTransport: HTTPTransport {
         if dto.email.hasPrefix("taken@") {
             return try respond(request, status: 409, json: #"{"detail":"이미 등록된 이메일입니다."}"#)
         }
-        return try respond(request, status: 202, json: #"{"id":"12","status":"PENDING"}"#)
+        return try respond(request, status: 202, json: #"{"id":"\#(signupStore.create(dto))","status":"PENDING"}"#)
     }
 
     /// 서버 `REPORT_REASONS`
