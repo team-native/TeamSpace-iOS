@@ -105,6 +105,8 @@ private struct ReceivedApprovalRow: View {
 struct WorkspaceMenuList: View {
     /// 문의 담당자에게만 11-5 문의 받은함 줄을 보여줘요.
     var canAnswerInquiry = false
+    /// Admin 에게만 신고 관리 줄을 보여줘요.
+    var canHandleReports = false
     let onNavigate: (AppRoute) -> Void
 
     private var rows: [(title: String, route: AppRoute)] {
@@ -118,6 +120,9 @@ struct WorkspaceMenuList: View {
         ]
         if canAnswerInquiry {
             rows.append(("문의 받은함", .inquiryInbox))
+        }
+        if canHandleReports {
+            rows.append(("신고 관리", .reportList))
         }
         return rows
     }

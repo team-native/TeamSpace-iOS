@@ -23,8 +23,21 @@ final class MockBoardStore: @unchecked Sendable {
     private var policies: [Int: CommentPolicy] = [:]
     /// Mock 로그인 사용자 (07 내 공간과 같은 사람)
     private static let me = (name: "옥물결", role: "iOS")
-    /// 신고 접수 내역 (게시글 ID · 사유)
-    private var reports: [(postId: Int, reason: String)] = []
+    /// 신고 접수 내역 — 서버 `report` 레코드 모양 (대기 중 2건 · 반려 1건으로 시작)
+    private struct Report {
+        let id: Int
+        let postId: Int
+        let reason: String
+        let detail: String
+        var status = "PENDING"
+        var handledBy: String?
+        var handledAt: Date?
+    }
+    private var reports: [Report] = [
+        Report(id: 3, postId: 40, reason: "욕설·비하", detail: "특정 팀원을 놀리는 내용이에요."),
+        Report(id: 2, postId: 37, reason: "사실과 다른 내용", detail: ""),
+        Report(id: 1, postId: 18, reason: "도배·광고", detail: "같은 글이 반복돼요.", status: "반려", handledBy: "관리자", handledAt: nil)
+    ]
 
     init(now: Date = Date()) {
         self.now = now
@@ -308,8 +321,40 @@ final class MockBoardStore: @unchecked Sendable {
         lock.lock()
         defer { lock.unlock() }
         guard let post = posts.first(where: { $0.id == id }), !post.isMine else { return false }
-        reports.append((id, reason))
+        reports.insert(Report(id: (reports.map(\.id).max() ?? 0) + 1, postId: id, reason: reason, detail: ""), at: 0)
         return true
+    }
+
+    /// GET /admin/reports — status 가 비어 있으면 전체, 최신순
+    func reportsJSON(status: String?) -> String {
+        lock.lock()
+        defer { lock.unlock() }
+        let items = reports
+            .filter { status == nil || status == "" || $0.status == status }
+            .map { report -> [String: Any] in
+                var fields: [String: Any] = [
+                    "id": String(report.id), "postId": String(report.postId),
+                    "reason": report.reason, "detail": report.detail, "status": report.status
+                ]
+                if let handledBy = report.handledBy { fields["handledBy"] = handledBy }
+                if let handledAt = report.handledAt { fields["handledAt"] = Self.pythonISO(handledAt) }
+                return fields
+            }
+        return Self.json(["items": items, "nextCursor": NSNull()])
+    }
+
+    /// POST /admin/reports/{id}/decision — 숨김 · 삭제면 글이 목록 · 상세에서 사라져요. 없으면 nil
+    func decideReport(id: Int, decision: String) -> String? {
+        lock.lock()
+        defer { lock.unlock() }
+        guard let index = reports.firstIndex(where: { $0.id == id }) else { return nil }
+        if decision == "숨김" || decision == "삭제" {
+            posts.removeAll { $0.id == reports[index].postId }
+        }
+        reports[index].status = decision
+        reports[index].handledBy = "관리자"
+        reports[index].handledAt = Date()
+        return Self.json(["id": String(id), "status": decision])
     }
 
     /// DELETE /posts/{id} — 내 글만 지워져요.

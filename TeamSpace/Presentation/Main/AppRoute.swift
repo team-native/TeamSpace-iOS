@@ -71,6 +71,7 @@ enum AppRoute: Hashable {
     case inquiryCompose(InquiryComposeContext) // 11-2 문의 · 건의 작성 (11-3 접수 알림)
     case inquiryDetail(id: Int)          // 11-4 문의 상세 · 11-7 반려
     case inquiryInbox                    // 11-5 문의 담당자 받은함
+    case reportList                      // 신고 관리 (Admin, GET /admin/reports)
     case inquiryReview(id: Int)          // 11-6 문의 검토 · 공식 답변 작성
     // 12 운영 제안
     case proposals                       // 12-1b 운영 제안 목록

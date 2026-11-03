@@ -60,6 +60,25 @@ final class BoardRepositoryImpl: BoardRepository, @unchecked Sendable {
         try await send(endpoint)
     }
 
+    /// 서버 기본값이 PENDING 이라 전체를 볼 땐 `status=` 를 비워 보내요.
+    func fetchReports(pendingOnly: Bool, cursor: String?, limit: Int) async throws -> CursorPage<PostReportItem> {
+        var query = [
+            URLQueryItem(name: "status", value: pendingOnly ? "PENDING" : ""),
+            URLQueryItem(name: "limit", value: String(limit))
+        ]
+        if let cursor { query.append(URLQueryItem(name: "cursor", value: cursor)) }
+        let page = try await request(
+            Endpoint(method: .get, path: "admin/reports", queryItems: query),
+            as: CursorPageDTO<ServerReportItemDTO>.self
+        )
+        return CursorPage(items: page.items.map { $0.toEntity() }, nextCursor: page.nextCursor)
+    }
+
+    func decideReport(id: Int, decision: ReportDecision) async throws {
+        let body = ServerReportDecisionRequestDTO(decision: decision.rawValue, note: "")
+        try await send(Endpoint(method: .post, path: "admin/reports/\(id)/decision", body: body))
+    }
+
     func deletePost(id: Int) async throws {
         try await send(Endpoint(method: .delete, path: "posts/\(id)"))
     }
