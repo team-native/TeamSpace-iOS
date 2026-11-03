@@ -27,7 +27,7 @@ struct AppRouteView: View {
             workspaceScreen
         case .workspaceProfile, .workspaceSettings, .workspacePermissions, .passwordChange:
             accountScreen
-        case .projects, .projectDetail, .projectTimeline, .projectRecruitment, .myApplications, .applicantReview:
+        case .projects, .projectDetail, .projectCompose, .projectEdit, .projectTimeline, .projectRecruitment, .myApplications, .applicantReview:
             projectScreen
         case .rules, .ruleDetail, .ruleComparison:
             ruleScreen
@@ -181,8 +181,13 @@ struct AppRouteView: View {
             ProjectDetailView(
                 viewModel: container.makeProjectDetailViewModel(projectId: id),
                 canReviewApplicants: user.can(.manageProject),
+                canEdit: user.can(.registerProjects),
                 onNavigate: onNavigate
             )
+        case .projectCompose:
+            ProjectComposeView(viewModel: container.makeProjectComposeViewModel(user: user))
+        case .projectEdit(let id):
+            ProjectEditView(viewModel: container.makeProjectDetailViewModel(projectId: id), container: container, user: user)
         case .projectRecruitment(let id):
             RecruitmentView(viewModel: container.makeRecruitmentViewModel(projectId: id), onNavigate: onNavigate)
         case .myApplications:
@@ -192,7 +197,7 @@ struct AppRouteView: View {
         case .projectTimeline(let id):
             ProjectTimelineView(viewModel: container.makeProjectTimelineViewModel(projectId: id), onNavigate: onNavigate)
         default:
-            ProjectListView(viewModel: container.makeProjectListViewModel(), onNavigate: onNavigate)
+            ProjectListView(viewModel: container.makeProjectListViewModel(), canRegister: user.can(.registerProjects), onNavigate: onNavigate)
         }
     }
 

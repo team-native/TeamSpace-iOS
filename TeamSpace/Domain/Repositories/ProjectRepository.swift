@@ -21,4 +21,8 @@ protocol ProjectRepository: Sendable {
     func fetchApplicants(projectId: String) async throws -> ApplicantBoard
     /// POST /projects/{id}/applicants/{applicantId}/decision — 참여 확정 · 미선정 (서버에 없음)
     func decide(projectId: String, applicantId: Int, decision: ApplicantDecision, reason: String) async throws -> Applicant
+    /// POST /admin/projects — 프로젝트 등록 (Admin). 새 프로젝트 id(slug)를 돌려줘요.
+    func createProject(_ draft: ProjectDraft) async throws -> String
+    /// PATCH /admin/projects/{id} — 기본 정보 수정 (Admin). 참여자 · 모집은 그대로예요.
+    func updateProject(id: String, _ draft: ProjectDraft) async throws
 }

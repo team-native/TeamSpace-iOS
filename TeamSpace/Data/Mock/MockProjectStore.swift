@@ -78,6 +78,54 @@ final class MockProjectStore: @unchecked Sendable {
         return json(serverJSON(project))
     }
 
+    /// POST /admin/projects — 이름으로 slug 를 만들고 `{id, slug}` 를 돌려줘요. (PM 혼자 시작)
+    func create(_ request: ServerProjectWriteRequestDTO) -> String {
+        lock.lock()
+        defer { lock.unlock() }
+        let base = request.name.lowercased().filter { $0.isLetter || $0.isNumber || $0 == " " }
+            .split(separator: " ").joined(separator: "-")
+        var slug = base.isEmpty ? "project" : base
+        var suffix = 2
+        while projects.contains(where: { $0.id == slug }) {
+            slug = "\(base)-\(suffix)"
+            suffix += 1
+        }
+        projects.append(project(from: request, id: slug, memberCount: 1, openings: []))
+        return json(["id": String(100 + projects.count), "slug": slug])
+    }
+
+    /// PATCH /admin/projects/{id} — 보낸 항목만 바꾸고 참여자 · 모집은 그대로. 없으면 nil
+    func update(id: String, request: ServerProjectWriteRequestDTO) -> String? {
+        lock.lock()
+        defer { lock.unlock() }
+        guard let index = projects.firstIndex(where: { $0.id == id }) else { return nil }
+        let current = projects[index]
+        projects[index] = project(from: request, id: id, memberCount: current.memberCount, openings: current.openings)
+        return json(serverJSON(projects[index]))
+    }
+
+    /// 요청 desc("설명 · 2026.08 – 2026.11") · due("11.30 마감") 를 읽어 저장 모양으로 바꿔요.
+    private func project(
+        from request: ServerProjectWriteRequestDTO, id: String, memberCount: Int, openings: [ProjectOpeningDTO]
+    ) -> ProjectSummaryDTO {
+        let parts = request.desc.components(separatedBy: " · ")
+        let period = parts.last.flatMap { ServerProjectDTO.period($0, calendar: calendar) }
+        let summary = period == nil ? request.desc : parts.dropLast().joined(separator: " · ")
+        let start = period?.0 ?? now
+        let endYear = period?.1.map { calendar.component(.year, from: $0) }
+        let end = ServerProjectDTO.dueDate(request.due, year: endYear, calendar: calendar) ?? period?.1 ?? now
+        let status = switch request.status {
+        case "완료": "COMPLETED"
+        case "예정": "PLANNED"
+        default: "IN_PROGRESS"
+        }
+        return ProjectSummaryDTO(
+            id: id, name: request.name, summary: summary, department: request.dept, pmName: request.pm,
+            memberCount: memberCount, status: status, startDate: start, endDate: end, progress: request.progress,
+            openings: openings, resultNote: nil, updatedAt: Date()
+        )
+    }
+
     /// 참여 중인 프로젝트 id (GET /me/projects 와 같아요)
     var joinedProjectIds: [String] { Array(joinedIds).sorted() }
 

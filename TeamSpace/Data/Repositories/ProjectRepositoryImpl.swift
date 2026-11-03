@@ -31,6 +31,16 @@ final class ProjectRepositoryImpl: ProjectRepository, @unchecked Sendable {
         return project.toDetail(isJoined: mine.contains { $0.matches(project) })
     }
 
+    func createProject(_ draft: ProjectDraft) async throws -> String {
+        let body = ServerProjectWriteRequestDTO(draft)
+        return try await request(Endpoint(method: .post, path: "admin/projects", body: body), as: ServerProjectCreatedDTO.self).slug
+    }
+
+    func updateProject(id: String, _ draft: ProjectDraft) async throws {
+        let body = ServerProjectWriteRequestDTO(draft)
+        _ = try await request(Endpoint(method: .patch, path: "admin/projects/\(id)", body: body), as: EmptyResponseDTO.self)
+    }
+
     func fetchTimeline(projectId: String) async throws -> ProjectTimeline {
         try await request(Endpoint(method: .get, path: "projects/\(projectId)/schedule"), as: ProjectTimelineDTO.self).toEntity()
     }
