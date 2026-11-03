@@ -13,6 +13,8 @@ protocol WorkspaceRepository: Sendable {
     func deleteDraft(documentId: Int) async throws
     /// GET /events?month=yyyy-MM — 07-7 한 달 일정
     func fetchSchedules(month: Date) async throws -> [ScheduleEvent]
+    /// POST /admin/events — 일정 추가 (Admin), 만든 일정 id
+    func createSchedule(_ draft: ScheduleDraft) async throws -> Int
     /// GET /events/{id} · GET /events/{id}/reminders — 07-8 일정 상세
     func fetchScheduleDetail(id: Int) async throws -> ScheduleEventDetail
     /// POST /events/{id}/rsvp — 참석 · 불참 · 미정

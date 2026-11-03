@@ -14,17 +14,21 @@ final class ScheduleCalendarViewModel {
 
     private let fetchSchedulesUseCase: FetchSchedulesUseCase
     private let respondScheduleUseCase: RespondScheduleUseCase
+    /// 일정 추가 버튼 (Admin 만 — 서버 require_admin)
+    let canAddSchedule: Bool
     private let calendar: Calendar
     private let now: () -> Date
 
     init(
         fetchSchedulesUseCase: FetchSchedulesUseCase,
         respondScheduleUseCase: RespondScheduleUseCase,
+        canAddSchedule: Bool = false,
         calendar: Calendar = .current,
         now: @escaping () -> Date = { Date() }
     ) {
         self.fetchSchedulesUseCase = fetchSchedulesUseCase
         self.respondScheduleUseCase = respondScheduleUseCase
+        self.canAddSchedule = canAddSchedule
         self.calendar = calendar
         self.now = now
         let today = calendar.startOfDay(for: now())

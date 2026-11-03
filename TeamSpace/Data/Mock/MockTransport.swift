@@ -267,6 +267,18 @@ struct MockTransport: HTTPTransport {
         if components.first == "events" {
             return try eventRoute(request, components: components)
         }
+        if components == ["admin", "events"], request.httpMethod == "POST" {
+            guard let body = request.httpBody, let dto = try? JSONDecoder().decode(ServerEventCreateRequestDTO.self, from: body) else {
+                return try respond(request, status: 422, json: #"{"detail":"잘못된 요청입니다."}"#)
+            }
+            guard !dto.title.trimmingCharacters(in: .whitespaces).isEmpty else {
+                return try respond(request, status: 400, json: #"{"detail":"일정 제목을 입력해주세요."}"#)
+            }
+            guard let json = scheduleStore.create(dto) else {
+                return try respond(request, status: 422, json: #"{"detail":"date는 YYYY-MM-DD 형식이어야 합니다."}"#)
+            }
+            return try respond(request, status: 201, json: json)
+        }
         if components.starts(with: ["admin", "inquiries"]) {
             return try adminInquiryRoute(request, components: Array(components.dropFirst(2)))
         }
