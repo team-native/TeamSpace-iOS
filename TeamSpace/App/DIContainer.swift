@@ -781,6 +781,10 @@ extension DIContainer {
         )
     }
 
+    func makeRuleComposeViewModel(user: AuthUser, editing detail: RuleDetail? = nil) -> RuleComposeViewModel {
+        RuleComposeViewModel(user: user, saveRuleUseCase: SaveRuleUseCase(ruleRepository: ruleRepository), editing: detail)
+    }
+
     func makeBoardViewModel() -> BoardViewModel {
         BoardViewModel(fetchBoardUseCase: fetchBoardUseCase, fetchPostsUseCase: fetchPostsUseCase)
     }

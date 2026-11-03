@@ -351,6 +351,12 @@ struct MockTransport: HTTPTransport {
             guard !json.isEmpty else { return try respond(request, status: 422, json: #"{"detail":"공식 답변을 입력해주세요."}"#) }
             return try respond(request, status: 200, json: json)
         }
+        if components == ["admin", "docs"], request.httpMethod == "POST" {
+            guard let body = request.httpBody, let dto = try? JSONDecoder().decode(ServerDocWriteRequestDTO.self, from: body),
+                  !dto.slug.isEmpty, !dto.title.isEmpty
+            else { return try respond(request, status: 400, json: #"{"detail":"문서 slug와 제목은 필수입니다."}"#) }
+            return try respond(request, status: 200, json: docStore.save(dto, who: "관리자"))
+        }
         if components == ["admin", "projects"], request.httpMethod == "POST" {
             guard let body = request.httpBody, let dto = try? JSONDecoder().decode(ServerProjectWriteRequestDTO.self, from: body),
                   !dto.name.isEmpty

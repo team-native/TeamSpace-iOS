@@ -93,6 +93,9 @@ struct RuleDetail: Equatable, Sendable {
     var acknowledgedAt: Date?
     /// 09-3 변경 내역 — 최신 버전이 먼저
     var revisions: [RuleRevision] = []
+    /// 개정 화면을 채울 서버 원문 — 요약(copy) · 분류 글자(category)
+    var summaryText = ""
+    var categoryText = ""
 
     /// 09-4 "v1.2 → v1.3" 의 이전 버전
     var previousVersion: String? {

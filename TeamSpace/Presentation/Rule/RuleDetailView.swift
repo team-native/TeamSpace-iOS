@@ -9,7 +9,11 @@ struct RuleDetailView: View {
     @State private var isShowingRevisions = false
     @Environment(\.dismiss) private var dismiss
 
-    init(viewModel: RuleDetailViewModel, onNavigate: @escaping (AppRoute) -> Void) {
+    /// Admin — 규칙 개정 버튼
+    private let canEdit: Bool
+
+    init(viewModel: RuleDetailViewModel, canEdit: Bool = false, onNavigate: @escaping (AppRoute) -> Void) {
+        self.canEdit = canEdit
         _viewModel = State(initialValue: viewModel)
         self.onNavigate = onNavigate
     }
@@ -25,7 +29,13 @@ struct RuleDetailView: View {
             }
         }
         .safeAreaInset(edge: .top, spacing: 0) {
-            TSNavigationBar(title: "규칙", onBack: { dismiss() })
+            TSNavigationBar(title: "규칙", onBack: { dismiss() }) {
+                if canEdit, let detail = viewModel.detail {
+                    CircleIconButton(icon: .pencil, accessibilityLabel: "규칙 개정", background: .tsSurface, hasBorder: true) {
+                        onNavigate(.ruleEdit(id: detail.rule.id))
+                    }
+                }
+            }
                 .padding(.horizontal, Spacing.screen)
                 .padding(.bottom, Spacing.sm)
                 .background(Color.tsBackground)

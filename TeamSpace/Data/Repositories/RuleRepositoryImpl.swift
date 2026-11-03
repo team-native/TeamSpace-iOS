@@ -29,8 +29,15 @@ final class RuleRepositoryImpl: RuleRepository, @unchecked Sendable {
             rule: doc.toRuleSummary(isAcknowledged: acknowledgedAt != nil, revisionCount: revisions.count),
             articles: doc.articles(),
             acknowledgedAt: acknowledgedAt,
-            revisions: revisions
+            revisions: revisions,
+            summaryText: doc.copy ?? "",
+            categoryText: doc.category ?? ""
         )
+    }
+
+    func saveRule(_ draft: RuleDraft, slug: String) async throws -> String {
+        let body = ServerDocWriteRequestDTO(draft, slug: slug)
+        return try await loader.request(Endpoint(method: .post, path: "admin/docs", body: body), as: ServerDocSavedDTO.self).slug
     }
 
     func acknowledge(ruleId: String) async throws -> Date {
