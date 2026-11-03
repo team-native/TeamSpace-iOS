@@ -34,6 +34,7 @@ struct ProposalDetailView: View {
         .toolbar(.hidden, for: .navigationBar)
         .task { await viewModel.load() }
         .refreshable { await viewModel.load() }
+        .tsToast($viewModel.toastMessage)
         .alert(viewModel.errorMessage ?? "", isPresented: Binding(
             get: { viewModel.errorMessage != nil },
             set: { if !$0 { viewModel.errorMessage = nil } }
@@ -64,6 +65,9 @@ struct ProposalDetailView: View {
             ProposalStepsCard(detail: detail)
             if let answer = detail.answer {
                 ProposalAnswerCard(answer: answer)
+            }
+            if viewModel.canManage {
+                ProposalManageCard(viewModel: viewModel)
             }
             ProposalCommentsCard(comments: detail.comments)
         }

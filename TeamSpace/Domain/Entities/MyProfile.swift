@@ -28,6 +28,8 @@ struct MyProfile: Equatable, Sendable {
     var intro: String
     var interests: [String]
     var avatarBackground: AvatarBackground
+    /// 서버 `dept` (예: "NativeOps") — 운영 제안 담당 부서 확인에 써요.
+    var department: String = ""
 }
 
 /// 07-13 저장할 수 있는 항목

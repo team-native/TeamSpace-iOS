@@ -28,7 +28,7 @@ struct ServerProfileDTO: Decodable {
 
     func toEntity() -> MyProfile {
         let affiliation = dept.isEmpty ? "Native" : "Native · \(dept)"
-        return MyProfile(name: name, affiliation: affiliation, intro: bio, interests: interests, avatarBackground: avatarBackground)
+        return MyProfile(name: name, affiliation: affiliation, intro: bio, interests: interests, avatarBackground: avatarBackground, department: dept)
     }
 }
 

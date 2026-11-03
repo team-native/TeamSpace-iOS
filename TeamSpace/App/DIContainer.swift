@@ -446,6 +446,10 @@ final class DIContainer {
         AddProposalCommentUseCase(proposalRepository: proposalRepository)
     }
 
+    var manageProposalUseCase: ManageProposalUseCase {
+        ManageProposalUseCase(proposalRepository: proposalRepository)
+    }
+
     var createProposalUseCase: CreateProposalUseCase {
         CreateProposalUseCase(proposalRepository: proposalRepository, proposalDraftRepository: proposalDraftRepository)
     }
@@ -852,12 +856,15 @@ extension DIContainer {
         ProposalListViewModel(fetchProposalsUseCase: fetchProposalsUseCase)
     }
 
-    func makeProposalDetailViewModel(proposalId: Int) -> ProposalDetailViewModel {
+    func makeProposalDetailViewModel(proposalId: Int, user: AuthUser? = nil) -> ProposalDetailViewModel {
         ProposalDetailViewModel(
             proposalId: proposalId,
             fetchProposalDetailUseCase: fetchProposalDetailUseCase,
             toggleProposalRecommendUseCase: toggleProposalRecommendUseCase,
-            addProposalCommentUseCase: addProposalCommentUseCase
+            addProposalCommentUseCase: addProposalCommentUseCase,
+            user: user,
+            fetchProfileUseCase: fetchProfileUseCase,
+            manageProposalUseCase: manageProposalUseCase
         )
     }
 

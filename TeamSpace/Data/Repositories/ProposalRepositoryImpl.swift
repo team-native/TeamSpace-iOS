@@ -64,6 +64,12 @@ final class ProposalRepositoryImpl: ProposalRepository, @unchecked Sendable {
         )
     }
 
+    /// 응답 `{id, status, answer}` 은 쓰지 않고, 처리 뒤 상세를 다시 불러와요.
+    func manage(proposalId: Int, status: ProposalStatus, answer: String?) async throws {
+        let body = ServerProposalManageRequestDTO(status: status.serverValue, answer: answer)
+        _ = try await request(Endpoint(method: .patch, path: "admin/proposals/\(proposalId)", body: body), as: EmptyResponseDTO.self)
+    }
+
     private func request<Response: Decodable>(_ endpoint: Endpoint, as type: Response.Type) async throws -> Response {
         do {
             return try await client.request(endpoint, as: type)
