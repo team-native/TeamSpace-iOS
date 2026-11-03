@@ -21,7 +21,13 @@ struct ScheduleDetailView: View {
             .padding(.bottom, Spacing.xxxl)
         }
         .safeAreaInset(edge: .top, spacing: 0) {
-            TSNavigationBar(title: "Native 일정", onBack: { dismiss() })
+            TSNavigationBar(title: "Native 일정", onBack: { dismiss() }) {
+                if viewModel.canEdit, let id = viewModel.detail?.event.id {
+                    CircleIconButton(icon: .pencil, accessibilityLabel: "일정 수정", background: .tsSurface, hasBorder: true) {
+                        onNavigate(.scheduleEdit(id: id))
+                    }
+                }
+            }
                 .padding(.horizontal, Spacing.screen)
                 .padding(.bottom, Spacing.sm)
                 .background(Color.tsBackground)

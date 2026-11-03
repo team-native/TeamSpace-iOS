@@ -107,7 +107,10 @@ struct ServerEventDTO: Decodable {
             relatedDocument: nil,
             history: [],
             historyNote: nil,
-            reminders: reminders
+            reminders: reminders,
+            scopeText: scope ?? "",
+            agendaText: agenda ?? "",
+            asksRSVP: rsvpEnabled
         )
     }
 

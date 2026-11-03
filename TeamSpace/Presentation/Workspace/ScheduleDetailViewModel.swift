@@ -16,20 +16,26 @@ final class ScheduleDetailViewModel {
     private let fetchScheduleDetailUseCase: FetchScheduleDetailUseCase
     private let respondScheduleUseCase: RespondScheduleUseCase
     private let updateRemindersUseCase: UpdateRemindersUseCase
+    private let user: AuthUser?
 
     init(
         scheduleId: Int,
         fetchScheduleDetailUseCase: FetchScheduleDetailUseCase,
         respondScheduleUseCase: RespondScheduleUseCase,
-        updateRemindersUseCase: UpdateRemindersUseCase
+        updateRemindersUseCase: UpdateRemindersUseCase,
+        user: AuthUser? = nil
     ) {
         self.scheduleId = scheduleId
+        self.user = user
         self.fetchScheduleDetailUseCase = fetchScheduleDetailUseCase
         self.respondScheduleUseCase = respondScheduleUseCase
         self.updateRemindersUseCase = updateRemindersUseCase
     }
 
     var detail: ScheduleEventDetail? { state.value }
+
+    /// 일정 수정 (서버 `require_admin` — Admin 만)
+    var canEdit: Bool { detail != nil && user?.can(.manageEvents) == true }
 
     /// "내 응답 저장됨 · 10.16 09:20"
     var savedResponseText: String? {

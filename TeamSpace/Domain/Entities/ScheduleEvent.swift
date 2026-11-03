@@ -59,6 +59,10 @@ struct ScheduleEventDetail: Equatable, Sendable {
     let history: [ScheduleChange]
     let historyNote: String?
     var reminders: [ReminderTiming]
+    /// 일정 수정 화면을 채울 서버 원문 — 구분("팀" · "프로젝트" · "개인") · 안건 전체 · 참석 확인 여부
+    var scopeText = ""
+    var agendaText = ""
+    var asksRSVP = false
 }
 
 struct ScheduleAgendaItem: Equatable, Sendable {

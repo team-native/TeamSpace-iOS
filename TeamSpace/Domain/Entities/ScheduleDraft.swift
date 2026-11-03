@@ -30,4 +30,17 @@ struct ScheduleDraft: Equatable, Sendable {
         startsAt = calendar.date(bySettingHour: 14, minute: 0, second: 0, of: day) ?? day
         endsAt = calendar.date(bySettingHour: 15, minute: 0, second: 0, of: day) ?? day
     }
+
+    /// 일정 수정 — 상세 내용으로 채워요.
+    init(editing detail: ScheduleEventDetail, calendar: Calendar = .current) {
+        let event = detail.event
+        title = event.title
+        scope = ScheduleScope(rawValue: detail.scopeText) ?? (event.scope == .team ? .team : .personal)
+        date = calendar.startOfDay(for: event.startsAt)
+        startsAt = event.startsAt
+        endsAt = event.endsAt
+        place = [event.place, event.placeDetail ?? ""].filter { !$0.isEmpty }.joined(separator: " · ")
+        agenda = detail.agendaText
+        asksRSVP = detail.asksRSVP
+    }
 }

@@ -15,6 +15,8 @@ protocol WorkspaceRepository: Sendable {
     func fetchSchedules(month: Date) async throws -> [ScheduleEvent]
     /// POST /admin/events — 일정 추가 (Admin), 만든 일정 id
     func createSchedule(_ draft: ScheduleDraft) async throws -> Int
+    /// PATCH /admin/events/{id} — 일정 수정 (Admin)
+    func updateSchedule(id: Int, _ draft: ScheduleDraft) async throws
     /// GET /events/{id} · GET /events/{id}/reminders — 07-8 일정 상세
     func fetchScheduleDetail(id: Int) async throws -> ScheduleEventDetail
     /// POST /events/{id}/rsvp — 참석 · 불참 · 미정

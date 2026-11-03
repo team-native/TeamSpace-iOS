@@ -159,6 +159,12 @@ final class WorkspaceRepositoryImpl: WorkspaceRepository, @unchecked Sendable {
         return id
     }
 
+    /// 등록과 같은 항목을 모두 보내 덮어써요. 응답(`{id, ...payload}`)은 쓰지 않아요.
+    func updateSchedule(id: Int, _ draft: ScheduleDraft) async throws {
+        let body = ServerEventCreateRequestDTO(draft)
+        _ = try await request(Endpoint(method: .patch, path: "admin/events/\(id)", body: body), as: EmptyResponseDTO.self)
+    }
+
     /// GET /events/{id} + GET /events/{id}/reminders — 리마인더를 못 불러오면 꺼진 것으로 보여줘요.
     func fetchScheduleDetail(id: Int) async throws -> ScheduleEventDetail {
         async let remindersTask = fetchReminders(eventId: id)

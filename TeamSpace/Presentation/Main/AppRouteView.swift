@@ -23,7 +23,7 @@ struct AppRouteView: View {
         case .approvalDetail, .approvalCompose, .approvalEdit, .librarySearch, .templateDetail, .templateCompose:
             documentScreen
         case .workspaceDashboard, .workspaceTodos, .workspaceDocuments, .workspaceDrafts, .workspaceProjects, .workspaceProjectList,
-             .workspaceSchedules, .scheduleCompose, .workspaceScheduleDetail, .workspaceMyPosts, .workspaceMyProposals, .workspaceActivity:
+             .workspaceSchedules, .scheduleCompose, .scheduleEdit, .workspaceScheduleDetail, .workspaceMyPosts, .workspaceMyProposals, .workspaceActivity:
             workspaceScreen
         case .workspaceProfile, .workspaceSettings, .workspacePermissions, .passwordChange:
             accountScreen
@@ -139,8 +139,10 @@ struct AppRouteView: View {
             ScheduleCalendarView(viewModel: container.makeScheduleCalendarViewModel(user: user), onNavigate: onNavigate)
         case .scheduleCompose:
             ScheduleComposeView(viewModel: container.makeScheduleComposeViewModel(user: user))
+        case .scheduleEdit(let id):
+            ScheduleEditView(viewModel: container.makeScheduleDetailViewModel(scheduleId: id, user: user), container: container, user: user)
         case .workspaceScheduleDetail(let id):
-            ScheduleDetailView(viewModel: container.makeScheduleDetailViewModel(scheduleId: id), onNavigate: onNavigate)
+            ScheduleDetailView(viewModel: container.makeScheduleDetailViewModel(scheduleId: id, user: user), onNavigate: onNavigate)
         case .workspaceMyPosts:
             MyPostsView(viewModel: container.makeMyPostsViewModel(userName: user.name), onNavigate: onNavigate)
         case .workspaceMyProposals:

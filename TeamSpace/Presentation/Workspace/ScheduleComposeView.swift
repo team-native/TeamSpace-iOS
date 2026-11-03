@@ -53,8 +53,8 @@ struct ScheduleComposeView: View {
                     }
                     .tint(Color.tsPrimary)
                 }
-                InfoBanner(message: "등록하면 구성원에게 새 일정 알림이 가요.", style: .muted)
-                Button("일정 등록") { Task { await viewModel.submit() } }
+                InfoBanner(message: viewModel.noticeText, style: .muted)
+                Button(viewModel.submitTitle) { Task { await viewModel.submit() } }
                     .buttonStyle(.tsPrimaryLarge)
                     .disabled(!viewModel.canSubmit || viewModel.timeHint != nil)
             }
@@ -63,14 +63,14 @@ struct ScheduleComposeView: View {
         }
         .scrollDismissesKeyboard(.interactively)
         .safeAreaInset(edge: .top, spacing: 0) {
-            TSNavigationBar(title: "일정 추가", onBack: { dismiss() })
+            TSNavigationBar(title: viewModel.screenTitle, onBack: { dismiss() })
                 .padding(.horizontal, Spacing.screen)
                 .padding(.bottom, Spacing.sm)
                 .background(Color.tsBackground)
         }
         .background(Color.tsBackground.ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)
-        .alert("일정을 등록했어요", isPresented: $viewModel.didCreate) {
+        .alert(viewModel.completionTitle, isPresented: $viewModel.didCreate) {
             Button("확인") { dismiss() }
         }
         .alert(viewModel.errorMessage ?? "", isPresented: Binding(
