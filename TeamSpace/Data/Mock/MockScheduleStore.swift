@@ -7,17 +7,18 @@ import Foundation
 final class MockScheduleStore: @unchecked Sendable {
     private struct Event {
         let id: Int
-        let scope: String
-        let title: String
-        let day: Date
-        let start: String
-        let end: String
-        let place: String
+        var scope: String
+        var title: String
+        var day: Date
+        var start: String
+        var end: String
+        var place: String
         let host: String
-        let agenda: String
+        var agenda: String
         var rsvpCount: Int
         var myRsvp: String?
         var respondedAt: Date?
+        var rsvp = true
     }
 
     /// 일정별 내 리마인더 — 서버처럼 처음엔 모두 꺼져 있어요.
@@ -71,6 +72,27 @@ final class MockScheduleStore: @unchecked Sendable {
             place: request.place, host: "관리자", agenda: request.agenda, rsvpCount: 0
         ))
         return json(["id": String(id)])
+    }
+
+    /// PATCH /admin/events/{id} — 서버처럼 보낸 항목으로 덮어쓰고 `{id, ...payload}` 를 돌려줘요.
+    func update(id: Int, request: ServerEventCreateRequestDTO) -> String? {
+        lock.lock()
+        defer { lock.unlock() }
+        let parts = request.date.split(separator: "-").compactMap { Int($0) }
+        guard
+            let index = events.firstIndex(where: { $0.id == id }),
+            parts.count == 3,
+            let day = calendar.date(from: DateComponents(year: parts[0], month: parts[1], day: parts[2]))
+        else { return nil }
+        events[index].scope = request.scope
+        events[index].title = request.title
+        events[index].day = day
+        events[index].start = request.start
+        events[index].end = request.end
+        events[index].place = request.place
+        events[index].agenda = request.agenda
+        events[index].rsvp = request.rsvp
+        return json(fields(events[index]))
     }
 
     func listJSON(month: String?, cursor: String?, limit: Int) -> String {
@@ -130,7 +152,7 @@ final class MockScheduleStore: @unchecked Sendable {
             "place": event.place,
             "host": event.host,
             "agenda": event.agenda,
-            "rsvp": true,
+            "rsvp": event.rsvp,
             "myRsvp": event.myRsvp ?? NSNull(),
             "respondedAt": event.respondedAt.map { ISO8601DateFormatter().string(from: $0) } ?? NSNull(),
             "audience": event.scope == "팀" ? "전체" : "참여자",

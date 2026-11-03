@@ -279,6 +279,15 @@ struct MockTransport: HTTPTransport {
             }
             return try respond(request, status: 201, json: json)
         }
+        if components.count == 3, components.starts(with: ["admin", "events"]), request.httpMethod == "PATCH" {
+            guard let id = Int(components[2]), let body = request.httpBody,
+                  let dto = try? JSONDecoder().decode(ServerEventCreateRequestDTO.self, from: body)
+            else { return try respond(request, status: 422, json: #"{"detail":"잘못된 요청입니다."}"#) }
+            guard let json = scheduleStore.update(id: id, request: dto) else {
+                return try respond(request, status: 404, json: #"{"detail":"일정을 찾을 수 없습니다."}"#)
+            }
+            return try respond(request, status: 200, json: json)
+        }
         if components.starts(with: ["admin", "inquiries"]) {
             return try adminInquiryRoute(request, components: Array(components.dropFirst(2)))
         }

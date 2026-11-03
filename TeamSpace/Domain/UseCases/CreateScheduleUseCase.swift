@@ -11,6 +11,11 @@ struct CreateScheduleUseCase {
     @discardableResult
     func execute(_ draft: ScheduleDraft, user: AuthUser, calendar: Calendar = .current) async throws -> Int {
         guard user.can(.manageEvents) else { throw AppError.forbidden("일정은 관리자만 추가할 수 있어요.") }
+        return try await workspaceRepository.createSchedule(Self.validated(draft, calendar: calendar))
+    }
+
+    /// 제목 · 안건 길이 · 시각 순서를 확인하고 앞뒤 공백을 지워요. (수정과 같이 써요)
+    static func validated(_ draft: ScheduleDraft, calendar: Calendar = .current) throws -> ScheduleDraft {
         var trimmed = draft
         trimmed.title = draft.title.trimmingCharacters(in: .whitespacesAndNewlines)
         trimmed.place = draft.place.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -24,7 +29,7 @@ struct CreateScheduleUseCase {
         guard Self.minutes(trimmed.endsAt, calendar) > Self.minutes(trimmed.startsAt, calendar) else {
             throw AppError.invalidInput("끝나는 시각은 시작 시각보다 뒤로 정해 주세요.")
         }
-        return try await workspaceRepository.createSchedule(trimmed)
+        return trimmed
     }
 
     /// 하루 안의 분 (날짜는 따로 골라요)
