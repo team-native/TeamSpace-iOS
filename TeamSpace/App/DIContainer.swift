@@ -855,6 +855,14 @@ extension DIContainer {
         )
     }
 
+    func makeReportListViewModel(user: AuthUser) -> ReportListViewModel {
+        ReportListViewModel(
+            user: user,
+            fetchReportsUseCase: FetchReportsUseCase(boardRepository: boardRepository),
+            decideReportUseCase: DecideReportUseCase(boardRepository: boardRepository)
+        )
+    }
+
     func makeProposalListViewModel() -> ProposalListViewModel {
         ProposalListViewModel(fetchProposalsUseCase: fetchProposalsUseCase)
     }

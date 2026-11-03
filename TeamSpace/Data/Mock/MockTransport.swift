@@ -288,6 +288,19 @@ struct MockTransport: HTTPTransport {
             }
             return try respond(request, status: 200, json: json)
         }
+        if components == ["admin", "reports"], request.httpMethod == "GET" {
+            return try respond(request, status: 200, json: boardStore.reportsJSON(status: Self.query(of: request)["status"] ?? "PENDING"))
+        }
+        if components.count == 4, components.starts(with: ["admin", "reports"]), components[3] == "decision", request.httpMethod == "POST" {
+            let decision = request.httpBody.flatMap { try? JSONDecoder().decode(ServerReportDecisionRequestDTO.self, from: $0) }?.decision ?? ""
+            guard ["숨김", "삭제", "반려"].contains(decision) else {
+                return try respond(request, status: 422, json: #"{"detail":"처리 결과는 숨김, 삭제, 반려 중 하나여야 합니다."}"#)
+            }
+            guard let id = Int(components[2]), let json = boardStore.decideReport(id: id, decision: decision) else {
+                return try respond(request, status: 404, json: #"{"detail":"리소스를 찾을 수 없습니다."}"#)
+            }
+            return try respond(request, status: 200, json: json)
+        }
         if components.starts(with: ["admin", "inquiries"]) {
             return try adminInquiryRoute(request, components: Array(components.dropFirst(2)))
         }

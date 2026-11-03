@@ -18,6 +18,10 @@ protocol BoardRepository: Sendable {
     func toggleCommentLike(postId: Int, commentId: Int) async throws -> PostLike
     /// POST /posts/{postId}/reports — 10-10 신고
     func report(postId: Int, reason: PostReportReason) async throws
+    /// GET /admin/reports — 신고 관리 (Admin). pendingOnly 면 대기 중만
+    func fetchReports(pendingOnly: Bool, cursor: String?, limit: Int) async throws -> CursorPage<PostReportItem>
+    /// POST /admin/reports/{reportId}/decision — 숨김 · 삭제 · 반려
+    func decideReport(id: Int, decision: ReportDecision) async throws
     /// DELETE /posts/{postId} — 10-8 내 글 삭제
     func deletePost(id: Int) async throws
     /// POST /posts — 10-2 게시 (사진은 JPG · PNG 데이터)
