@@ -45,6 +45,10 @@ struct NoticeDetailView: View {
         .background(Color.tsBackground.ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)
         .task { await viewModel.load() }
+        .sheet(isPresented: $viewModel.isUnconfirmedPresented) {
+            NoticeUnconfirmedSheet(viewModel: viewModel)
+                .presentationDetents([.medium, .large])
+        }
         .onChange(of: viewModel.didAcknowledge) { _, done in
             if done { dismiss() }
         }
@@ -70,6 +74,11 @@ struct NoticeDetailView: View {
             ErrorStateView(message: error.userMessage, title: "내용을 불러오지 못했어요") { Task { await viewModel.load() } }
         case .loaded(let detail):
             NoticeDetailHeader(detail: detail)
+            if let receiptText = viewModel.receiptText {
+                NoticeReceiptCard(text: receiptText, progress: viewModel.receiptProgress) {
+                    Task { await viewModel.showUnconfirmed() }
+                }
+            }
             if let document = detail.linkedDocument {
                 NoticeLinkedDocumentCard(document: document) { onNavigate(document.route) }
             }

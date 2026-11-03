@@ -10,6 +10,8 @@ protocol NoticeRepository: Sendable {
     func acknowledge(noticeId: Int) async throws
     /// POST /admin/notices — 10-7 게시 · 예약 게시 · 임시 저장 (첨부는 POST /uploads 먼저)
     func publish(_ draft: NoticeDraft, asDraft: Bool) async throws -> NoticeSummary
+    /// GET /admin/notices/{noticeId}/unconfirmed — 아직 확인하지 않은 사람 (Admin 만)
+    func fetchUnconfirmed(noticeId: Int) async throws -> [NoticeUnconfirmedMember]
     /// PATCH /admin/notices/{noticeId} — 제목 · 본문 · 중요 · 고정 · 푸시만 고쳐요. (대상 · 첨부 · 게시 시점은 그대로)
     func update(noticeId: Int, _ draft: NoticeDraft) async throws
 }

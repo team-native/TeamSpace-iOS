@@ -245,6 +245,12 @@ struct MockTransport: HTTPTransport {
         if components == ["admin", "notices"], request.httpMethod == "POST" {
             return try adminNoticeCreate(request)
         }
+        if components.count == 4, components.starts(with: ["admin", "notices"]), components[3] == "unconfirmed", request.httpMethod == "GET" {
+            guard let id = Int(components[2]), let json = boardStore.noticeStore.unconfirmedJSON(id: id) else {
+                return try respond(request, status: 404, json: #"{"detail":"공지를 찾을 수 없습니다."}"#)
+            }
+            return try respond(request, status: 200, json: json)
+        }
         if components.count == 3, components.starts(with: ["admin", "notices"]), request.httpMethod == "PATCH" {
             guard
                 let id = Int(components[2]), let body = request.httpBody,
