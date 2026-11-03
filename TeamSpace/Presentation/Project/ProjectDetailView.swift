@@ -74,6 +74,12 @@ struct ProjectDetailView: View {
                         .buttonStyle(.tsSecondary)
                 }
             }
+            if canEdit {
+                Button(detail.project.openings.isEmpty ? "모집 자리 열기" : "모집 자리 관리") {
+                    onNavigate(.projectOpenings(id: detail.project.id))
+                }
+                .buttonStyle(.tsSecondary)
+            }
             ProjectRelatedCard(items: detail.relatedItems) { item in
                 switch item.kind {
                 case .schedule: onNavigate(.projectTimeline(id: detail.project.id))

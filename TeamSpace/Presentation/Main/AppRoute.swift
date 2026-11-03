@@ -49,6 +49,7 @@ enum AppRoute: Hashable {
     case projectDetail(id: String)        // 08-2 프로젝트 상세
     case projectCompose                   // 프로젝트 등록 (Admin, POST /admin/projects)
     case projectEdit(id: String)          // 프로젝트 수정 (Admin, PATCH /admin/projects/{id})
+    case projectOpenings(id: String)      // 모집 자리 관리 (Admin, PATCH /admin/projects/{id} openings)
     case projectTimeline(id: String)      // 08-8 프로젝트 일정과 변경 이력
     case projectRecruitment(id: String)   // 08-3 모집 공고 (08-4 신청 시트 · 08-5 완료)
     case myApplications                  // 08-6 내 참여 신청 현황
