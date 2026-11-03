@@ -107,6 +107,8 @@ struct WorkspaceMenuList: View {
     var canAnswerInquiry = false
     /// Admin 에게만 신고 관리 줄을 보여줘요.
     var canHandleReports = false
+    /// Admin 에게만 가입 요청 줄을 보여줘요.
+    var canApproveSignups = false
     let onNavigate: (AppRoute) -> Void
 
     private var rows: [(title: String, route: AppRoute)] {
@@ -123,6 +125,9 @@ struct WorkspaceMenuList: View {
         }
         if canHandleReports {
             rows.append(("신고 관리", .reportList))
+        }
+        if canApproveSignups {
+            rows.append(("가입 요청", .signupRequests))
         }
         return rows
     }

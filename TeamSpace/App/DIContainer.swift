@@ -21,6 +21,7 @@ final class DIContainer {
     private let noticeRepository: NoticeRepository
     private let inquiryRepository: InquiryRepository
     private let proposalRepository: ProposalRepository
+    private let signupRequestRepository: SignupRequestRepository
     private let searchRepository: SearchRepository
     private let boardRecentSearchRepository: RecentSearchRepository
     private let postDraftRepository: PostDraftRepository
@@ -63,6 +64,7 @@ final class DIContainer {
         self.noticeRepository = NoticeRepositoryImpl(client: apiClient)
         self.inquiryRepository = InquiryRepositoryImpl(client: apiClient)
         self.proposalRepository = ProposalRepositoryImpl(client: apiClient)
+        self.signupRequestRepository = SignupRequestRepositoryImpl(client: apiClient)
         self.searchRepository = SearchRepositoryImpl(client: apiClient)
         self.boardRecentSearchRepository = boardRecentSearchRepository
         self.postDraftRepository = postDraftRepository
@@ -852,6 +854,14 @@ extension DIContainer {
             assignInquiryUseCase: assignInquiryUseCase,
             replyInquiryUseCase: replyInquiryUseCase,
             fetchRulesUseCase: fetchRulesUseCase
+        )
+    }
+
+    func makeSignupRequestListViewModel(user: AuthUser) -> SignupRequestListViewModel {
+        SignupRequestListViewModel(
+            user: user,
+            fetchSignupRequestsUseCase: FetchSignupRequestsUseCase(signupRequestRepository: signupRequestRepository),
+            approveSignupRequestUseCase: ApproveSignupRequestUseCase(signupRequestRepository: signupRequestRepository)
         )
     }
 

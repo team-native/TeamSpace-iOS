@@ -45,6 +45,7 @@ struct WorkspaceMenuView: View {
                 WorkspaceMenuList(
                     canAnswerInquiry: viewModel.user.can(.answerInquiry),
                     canHandleReports: viewModel.user.can(.handleReports),
+                    canApproveSignups: viewModel.user.can(.approveSignups),
                     onNavigate: onNavigate
                 )
                 WorkspacePrivacyNote()
