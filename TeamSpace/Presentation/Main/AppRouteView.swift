@@ -263,7 +263,7 @@ struct AppRouteView: View {
     private var proposalScreen: some View {
         switch route {
         case .proposalDetail(let id):
-            ProposalDetailView(viewModel: container.makeProposalDetailViewModel(proposalId: id))
+            ProposalDetailView(viewModel: container.makeProposalDetailViewModel(proposalId: id, user: user))
         case .proposalCompose:
             ProposalComposeView(viewModel: container.makeProposalComposeViewModel(), onNavigate: onNavigate)
         default:

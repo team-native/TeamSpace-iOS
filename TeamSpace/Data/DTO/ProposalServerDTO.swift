@@ -153,6 +153,12 @@ struct ServerProposalCommentRequestDTO: Codable, Equatable {
     let anonymous: Bool
 }
 
+/// PATCH /admin/proposals/{id} 요청 — 답변이 없으면 `answer` 를 보내지 않아요. (답변이 있으면 서버가 반려가 아닌 한 답변 완료로 바꿔요)
+struct ServerProposalManageRequestDTO: Codable, Equatable {
+    let status: String
+    let answer: String?
+}
+
 /// POST /proposals 응답 `{id, status}`
 struct ServerProposalCreatedDTO: Decodable {
     let id: Int

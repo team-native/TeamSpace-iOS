@@ -288,6 +288,17 @@ struct MockTransport: HTTPTransport {
         if components.first == "proposals" {
             return try proposalRoute(request, components: components)
         }
+        if components.count == 3, components.starts(with: ["admin", "proposals"]), request.httpMethod == "PATCH" {
+            let states: Set<String> = ["접수", "검토 중", "협업 중", "답변 완료", "반려"]
+            guard let id = Int(components[2]), let body = request.httpBody,
+                  let dto = try? JSONDecoder().decode(ServerProposalManageRequestDTO.self, from: body), states.contains(dto.status)
+            else { return try respond(request, status: 422, json: #"{"detail":"운영 제안 상태가 올바르지 않습니다."}"#) }
+            guard let json = proposalStore.manage(id: id, request: dto) else {
+                return try respond(request, status: 404, json: #"{"detail":"리소스를 찾을 수 없습니다."}"#)
+            }
+            guard !json.isEmpty else { return try respond(request, status: 422, json: #"{"detail":"공식 답변을 입력해주세요."}"#) }
+            return try respond(request, status: 200, json: json)
+        }
         guard components.first == "projects" else { return nil }
         let notFound = #"{"detail":"프로젝트를 찾을 수 없습니다."}"#
         let projectId = components.count > 1 ? components[1] : nil

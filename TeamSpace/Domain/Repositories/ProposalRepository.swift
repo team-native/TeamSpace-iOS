@@ -12,4 +12,6 @@ protocol ProposalRepository: Sendable {
     func addComment(proposalId: Int, body: String, isAnonymous: Bool) async throws -> ProposalComment
     /// POST /proposals — 12-3 제안 올리기 (접수 상태로 시작)
     func create(_ draft: ProposalDraft) async throws -> ProposalSummary
+    /// PATCH /admin/proposals/{proposalId} — 담당 부서 · Admin 처리 (상태 · 공식 답변)
+    func manage(proposalId: Int, status: ProposalStatus, answer: String?) async throws
 }

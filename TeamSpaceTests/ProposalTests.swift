@@ -186,4 +186,86 @@ final class ProposalTests: XCTestCase {
         XCTAssertNotNil(restored.published)
         XCTAssertFalse(container.makeProposalComposeViewModel().didRestoreDraft, "올리면 임시 저장은 지워요")
     }
+
+    // MARK: 12-2c 담당자 처리 (PATCH /admin/proposals/{id})
+
+    private let admin = AuthUser(id: 9, name: "양지우", roles: [.admin])
+    private let member = AuthUser(id: 1, name: "옥물결", roles: [.member])
+
+    func testManageCardOnlyForAdminOrSameDepartment() async throws {
+        let container = makeContainer()
+        let other = container.makeProposalDetailViewModel(proposalId: 16, user: member)
+        await other.load()
+        XCTAssertFalse(other.canManage, "내 부서(Design)와 담당 부서(NativeOps)가 달라요")
+        XCTAssertFalse(container.makeProposalDetailViewModel(proposalId: 16).canManage, "로그인 정보가 없으면 숨겨요")
+
+        let compose = container.makeProposalComposeViewModel()
+        compose.draft.department = "Design"
+        compose.draft.title = "디자인 리뷰 일정을 고정해요"
+        compose.draft.body = "격주 목요일로 고정하면 준비하기 좋아요."
+        await compose.submit()
+        let created = try XCTUnwrap(compose.published)
+        let same = container.makeProposalDetailViewModel(proposalId: created.id, user: member)
+        await same.load()
+        XCTAssertTrue(same.canManage, "내 부서가 담당 부서면 보여요")
+        XCTAssertEqual(same.manageDraft.action, .reviewing, "접수 상태면 검토 중부터 골라 둬요")
+
+        let byAdmin = container.makeProposalDetailViewModel(proposalId: 16, user: admin)
+        await byAdmin.load()
+        XCTAssertTrue(byAdmin.canManage, "Admin 은 모든 제안을 처리해요")
+    }
+
+    func testAdminChangesStatus() async throws {
+        let viewModel = makeContainer().makeProposalDetailViewModel(proposalId: 16, user: admin)
+        await viewModel.load()
+        XCTAssertEqual(viewModel.manageDraft.action, .inProgress, "검토 중이면 진행 중을 골라 둬요")
+
+        viewModel.manageDraft.action = .reviewing
+        XCTAssertFalse(viewModel.canSubmitManage, "이미 검토 중이에요")
+        viewModel.manageDraft.action = .inProgress
+        XCTAssertTrue(viewModel.canSubmitManage)
+        await viewModel.submitManage()
+
+        let detail = try XCTUnwrap(viewModel.detail)
+        XCTAssertEqual(detail.proposal.status, .inProgress)
+        XCTAssertEqual(detail.steps.map(\.status), [.received, .reviewing, .inProgress], "서버처럼 이력이 남아요")
+        XCTAssertEqual(viewModel.toastMessage, "진행 중으로 바꿨어요")
+        XCTAssertEqual(viewModel.manageDraft.action, .answer, "다음은 답변이에요")
+        XCTAssertNil(viewModel.errorMessage)
+    }
+
+    func testAdminAnswersProposal() async throws {
+        let viewModel = makeContainer().makeProposalDetailViewModel(proposalId: 12, user: admin)
+        await viewModel.load()
+        viewModel.manageDraft.action = .answer
+        viewModel.manageDraft.body = "   "
+        XCTAssertFalse(viewModel.canSubmitManage, "답변이 비어 있으면 못 보내요")
+
+        viewModel.manageDraft.body = "  다음 주부터 회의실 예약을 캘린더로 보여줄게요.  "
+        await viewModel.submitManage()
+        let detail = try XCTUnwrap(viewModel.detail)
+        XCTAssertEqual(detail.proposal.status, .answered)
+        XCTAssertEqual(detail.answer?.body, "다음 주부터 회의실 예약을 캘린더로 보여줄게요.")
+        XCTAssertEqual(viewModel.toastMessage, "공식 답변을 등록했어요")
+        XCTAssertEqual(viewModel.manageDraft.body, "", "보내면 비워요")
+    }
+
+    func testAdminRejectsWithReason() async throws {
+        let viewModel = makeContainer().makeProposalDetailViewModel(proposalId: 13, user: admin)
+        await viewModel.load()
+        viewModel.manageDraft.action = .reject
+        viewModel.manageDraft.body = "이미 정기 회고 일정이 있어요."
+        await viewModel.submitManage()
+
+        let detail = try XCTUnwrap(viewModel.detail)
+        XCTAssertEqual(detail.proposal.status, .rejected, "반려 사유를 남겨도 반려 상태로 남아요")
+        XCTAssertEqual(detail.answer?.body, "이미 정기 회고 일정이 있어요.")
+        XCTAssertEqual(viewModel.toastMessage, "반려했어요")
+    }
+
+    func testManageRequestOmitsAnswerWhenStatusOnly() throws {
+        let statusOnly = try JSONEncoder().encode(ServerProposalManageRequestDTO(status: "협업 중", answer: nil))
+        XCTAssertEqual(String(decoding: statusOnly, as: UTF8.self), #"{"status":"협업 중"}"#)
+        XCTAssertEqual(ProposalStatus.inProgress.serverValue, "협업 중")
+    }
 }

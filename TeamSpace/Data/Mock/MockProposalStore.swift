@@ -7,7 +7,7 @@ final class MockProposalStore: @unchecked Sendable {
         var summary: ProposalSummaryDTO
         let body: String
         var steps: [ProposalStepDTO]
-        let answer: ProposalAnswerDTO?
+        var answer: ProposalAnswerDTO?
         var comments: [ProposalCommentDTO]
         var isRecommended = false
     }
@@ -179,6 +179,31 @@ final class MockProposalStore: @unchecked Sendable {
             steps: [ProposalStepDTO(status: .received, reachedAt: now)], answer: nil, comments: []
         ), at: 0)
         return json(["id": String(id), "status": "접수"])
+    }
+
+    /// PATCH /admin/proposals/{id} — 서버처럼 상태가 바뀌면 이력을 남기고, 답변이 오면 (반려가 아니면) 답변 완료로 바꿔요.
+    /// `{id, status, answer}` · 빈 답변은 nil 대신 "" 로 알려줘요.
+    func manage(id: Int, request: ServerProposalManageRequestDTO) -> String? {
+        lock.lock()
+        defer { lock.unlock() }
+        guard let index = records.firstIndex(where: { $0.summary.id == id }) else { return nil }
+        let now = Date()
+        var status = ProposalStatus(serverValue: request.status)
+        if status != records[index].summary.status {
+            records[index].steps.append(ProposalStepDTO(status: status, reachedAt: now))
+        }
+        if let text = request.answer?.trimmingCharacters(in: .whitespacesAndNewlines) {
+            guard !text.isEmpty else { return "" }
+            records[index].answer = ProposalAnswerDTO(department: Self.me, body: text, answeredAt: now)
+            if status != .rejected {
+                if status != .answered { records[index].steps.append(ProposalStepDTO(status: .answered, reachedAt: now)) }
+                status = .answered
+            }
+        }
+        records[index].summary.status = status
+        var fields: [String: Any] = ["id": String(id), "status": status.serverValue]
+        fields["answer"] = records[index].answer.map { ["who": $0.department, "text": $0.body] } ?? NSNull()
+        return json(fields)
     }
 
     /// 서버 `_proposal_view` 모양

@@ -179,3 +179,42 @@ struct ProposalCommentBar: View {
         .background(Color.tsSurface)
     }
 }
+
+/// 12-2c 담당자 처리 — 담당 부서 · Admin 에게만 보여요.
+struct ProposalManageCard: View {
+    @Bindable var viewModel: ProposalDetailViewModel
+
+    var body: some View {
+        WorkspaceCard {
+            WorkspaceCardTitle(title: "담당자 처리")
+            Text("상태를 바꾸거나 공식 답변을 남기면 제안자에게 알림이 가요.")
+                .tsFont(.caption)
+                .foregroundStyle(Color.tsInk3)
+                .fixedSize(horizontal: false, vertical: true)
+            TSSegmentedControl(
+                items: ProposalManageDraft.Action.allCases,
+                selection: viewModel.manageDraft.action,
+                title: \.title,
+                onSelect: { viewModel.manageDraft.action = $0 }
+            )
+            if viewModel.manageDraft.action.needsBody {
+                PostComposeLabel(
+                    title: viewModel.manageDraft.action == .answer ? "공식 답변" : "반려 사유",
+                    trailing: "\(TSFormat.number(viewModel.manageDraft.body.count)) / \(TSFormat.number(ProposalManageDraft.bodyLimit))"
+                )
+                TextEditor(text: $viewModel.manageDraft.body)
+                    .tsFont(.callout)
+                    .scrollContentBackground(.hidden)
+                    .frame(minHeight: 120)
+                    .padding(Spacing.md)
+                    .background(Color.tsBackground, in: RoundedRectangle(cornerRadius: Radius.lg, style: .continuous))
+                    .accessibilityLabel(viewModel.manageDraft.action == .answer ? "공식 답변" : "반려 사유")
+            }
+            Button(viewModel.manageDraft.action.needsBody ? "\(viewModel.manageDraft.action.title) 등록" : "\(viewModel.manageDraft.action.title)으로 바꾸기") {
+                Task { await viewModel.submitManage() }
+            }
+            .buttonStyle(.tsPrimary)
+            .disabled(!viewModel.canSubmitManage)
+        }
+    }
+}
