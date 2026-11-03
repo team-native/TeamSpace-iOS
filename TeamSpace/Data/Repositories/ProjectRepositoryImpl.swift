@@ -41,6 +41,11 @@ final class ProjectRepositoryImpl: ProjectRepository, @unchecked Sendable {
         _ = try await request(Endpoint(method: .patch, path: "admin/projects/\(id)", body: body), as: EmptyResponseDTO.self)
     }
 
+    func updateOpenings(projectId: String, _ openings: [OpeningDraft]) async throws {
+        let body = ServerProjectOpeningsRequestDTO(openings)
+        _ = try await request(Endpoint(method: .patch, path: "admin/projects/\(projectId)", body: body), as: EmptyResponseDTO.self)
+    }
+
     func fetchTimeline(projectId: String) async throws -> ProjectTimeline {
         try await request(Endpoint(method: .get, path: "projects/\(projectId)/schedule"), as: ProjectTimelineDTO.self).toEntity()
     }

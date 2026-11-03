@@ -729,6 +729,15 @@ extension DIContainer {
         ProjectComposeViewModel(user: user, saveProjectUseCase: SaveProjectUseCase(projectRepository: projectRepository), editing: project)
     }
 
+    func makeProjectOpeningsViewModel(projectId: String, user: AuthUser) -> ProjectOpeningsViewModel {
+        ProjectOpeningsViewModel(
+            projectId: projectId,
+            user: user,
+            fetchProjectDetailUseCase: fetchProjectDetailUseCase,
+            updateProjectOpeningsUseCase: UpdateProjectOpeningsUseCase(projectRepository: projectRepository)
+        )
+    }
+
     func makeProjectDetailViewModel(projectId: String) -> ProjectDetailViewModel {
         ProjectDetailViewModel(projectId: projectId, fetchProjectDetailUseCase: fetchProjectDetailUseCase)
     }

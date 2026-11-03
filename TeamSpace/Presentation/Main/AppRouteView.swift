@@ -27,7 +27,7 @@ struct AppRouteView: View {
             workspaceScreen
         case .workspaceProfile, .workspaceSettings, .workspacePermissions, .passwordChange:
             accountScreen
-        case .projects, .projectDetail, .projectCompose, .projectEdit, .projectTimeline, .projectRecruitment, .myApplications, .applicantReview:
+        case .projects, .projectDetail, .projectCompose, .projectEdit, .projectOpenings, .projectTimeline, .projectRecruitment, .myApplications, .applicantReview:
             projectScreen
         case .rules, .ruleDetail, .ruleComparison:
             ruleScreen
@@ -186,6 +186,8 @@ struct AppRouteView: View {
             )
         case .projectCompose:
             ProjectComposeView(viewModel: container.makeProjectComposeViewModel(user: user))
+        case .projectOpenings(let id):
+            ProjectOpeningsView(viewModel: container.makeProjectOpeningsViewModel(projectId: id, user: user))
         case .projectEdit(let id):
             ProjectEditView(viewModel: container.makeProjectDetailViewModel(projectId: id), container: container, user: user)
         case .projectRecruitment(let id):

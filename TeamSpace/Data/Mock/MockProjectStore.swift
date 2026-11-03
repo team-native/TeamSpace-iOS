@@ -104,6 +104,31 @@ final class MockProjectStore: @unchecked Sendable {
         return json(serverJSON(projects[index]))
     }
 
+    /// PATCH /admin/projects/{id} `{openings}` — 모집 자리만 바꿔요. 없으면 nil
+    func updateOpenings(id: String, request: ServerProjectOpeningsRequestDTO) -> String? {
+        lock.lock()
+        defer { lock.unlock() }
+        guard let index = projects.firstIndex(where: { $0.id == id }) else { return nil }
+        let current = projects[index]
+        let year = calendar.component(.year, from: now)
+        let openings = request.openings.enumerated().map { offset, opening -> ProjectOpeningDTO in
+            let sides = opening.period.components(separatedBy: "–").map { $0.trimmingCharacters(in: .whitespaces) }
+            let start = ServerProjectDTO.dueDate(sides.first, year: year, calendar: calendar) ?? now
+            let end = ServerProjectDTO.dueDate(sides.count > 1 ? sides[1] : nil, year: year, calendar: calendar) ?? start
+            return ProjectOpeningDTO(
+                id: offset + 1, role: opening.role, title: opening.title, headcount: opening.count,
+                startDate: start, endDate: end, description: opening.description
+            )
+        }
+        projects[index] = ProjectSummaryDTO(
+            id: current.id, name: current.name, summary: current.summary, department: current.department,
+            pmName: current.pmName, memberCount: current.memberCount, status: current.status,
+            startDate: current.startDate, endDate: current.endDate, progress: current.progress,
+            openings: openings, resultNote: current.resultNote, updatedAt: Date()
+        )
+        return json(serverJSON(projects[index]))
+    }
+
     /// 요청 desc("설명 · 2026.08 – 2026.11") · due("11.30 마감") 를 읽어 저장 모양으로 바꿔요.
     private func project(
         from request: ServerProjectWriteRequestDTO, id: String, memberCount: Int, openings: [ProjectOpeningDTO]

@@ -276,3 +276,32 @@ extension ProjectRunStatus {
         }
     }
 }
+
+/// PATCH /admin/projects/{id} 모집 자리 — `{ openings: [{ role, title, count, period: "11.01 – 11.15", description }] }`
+/// 서버 목록은 role · count(남은 인원)를, 앱은 period · description 을 읽어요.
+struct ServerProjectOpeningsRequestDTO: Codable, Equatable {
+    struct Opening: Codable, Equatable {
+        let role: String
+        let title: String
+        let count: Int
+        let period: String
+        let description: String
+    }
+
+    let openings: [Opening]
+
+    init(_ drafts: [OpeningDraft], calendar: Calendar = .current) {
+        func monthDay(_ date: Date) -> String {
+            String(format: "%02d.%02d", calendar.component(.month, from: date), calendar.component(.day, from: date))
+        }
+        openings = drafts.map { draft in
+            Opening(
+                role: draft.role,
+                title: draft.displayTitle,
+                count: draft.headcount,
+                period: "\(monthDay(draft.startDate)) – \(monthDay(draft.endDate))",
+                description: draft.description
+            )
+        }
+    }
+}

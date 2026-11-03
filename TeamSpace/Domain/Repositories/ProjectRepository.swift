@@ -25,4 +25,6 @@ protocol ProjectRepository: Sendable {
     func createProject(_ draft: ProjectDraft) async throws -> String
     /// PATCH /admin/projects/{id} — 기본 정보 수정 (Admin). 참여자 · 모집은 그대로예요.
     func updateProject(id: String, _ draft: ProjectDraft) async throws
+    /// PATCH /admin/projects/{id} `{openings}` — 모집 자리 전체를 바꿔요. (Admin)
+    func updateOpenings(projectId: String, _ openings: [OpeningDraft]) async throws
 }
