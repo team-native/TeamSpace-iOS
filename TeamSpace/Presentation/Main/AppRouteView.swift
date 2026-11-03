@@ -29,7 +29,7 @@ struct AppRouteView: View {
             accountScreen
         case .projects, .projectDetail, .projectCompose, .projectEdit, .projectOpenings, .projectTimeline, .projectRecruitment, .myApplications, .applicantReview:
             projectScreen
-        case .rules, .ruleDetail, .ruleComparison:
+        case .rules, .ruleDetail, .ruleComparison, .ruleCompose, .ruleEdit:
             ruleScreen
         case .board, .boardSearch, .postDetail, .postCompose, .postEdit, .commentCompose:
             boardScreen
@@ -208,11 +208,15 @@ struct AppRouteView: View {
     private var ruleScreen: some View {
         switch route {
         case .ruleDetail(let id):
-            RuleDetailView(viewModel: container.makeRuleDetailViewModel(ruleId: id), onNavigate: onNavigate)
+            RuleDetailView(viewModel: container.makeRuleDetailViewModel(ruleId: id), canEdit: user.can(.manageDocs), onNavigate: onNavigate)
+        case .ruleCompose:
+            RuleComposeView(viewModel: container.makeRuleComposeViewModel(user: user))
+        case .ruleEdit(let id):
+            RuleEditView(viewModel: container.makeRuleDetailViewModel(ruleId: id), container: container, user: user)
         case .ruleComparison(let id):
             RuleComparisonView(viewModel: container.makeRuleDetailViewModel(ruleId: id), onNavigate: onNavigate)
         default:
-            RuleListView(viewModel: container.makeRuleListViewModel(), onNavigate: onNavigate)
+            RuleListView(viewModel: container.makeRuleListViewModel(), canRegister: user.can(.manageDocs), onNavigate: onNavigate)
         }
     }
 

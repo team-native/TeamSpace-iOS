@@ -274,3 +274,51 @@ final class RuleAcknowledgementStore: @unchecked Sendable {
         defaults.removeObject(forKey: Self.keyPrefix + slug)
     }
 }
+
+/// POST /admin/docs 요청 — 같은 slug 가 있으면 개정, 없으면 등록이에요.
+/// 조항은 `{ title: "제2조 아이디어 제안", revised, lines: [{ text }] }` (문단마다 한 줄)
+struct ServerDocWriteRequestDTO: Codable, Equatable {
+    struct Section: Codable, Equatable {
+        struct Line: Codable, Equatable { let text: String }
+        let title: String
+        let revised: Bool
+        let lines: [Line]
+    }
+
+    let slug: String
+    let type: String
+    let category: String
+    let title: String
+    let copy: String
+    let effective: String
+    let sections: [Section]
+    let note: String
+    let notify: Bool
+
+    init(_ draft: RuleDraft, slug: String, calendar: Calendar = .current) {
+        self.slug = slug
+        type = "RULE"
+        category = draft.categoryText
+        title = draft.title
+        copy = draft.summary
+        let day = calendar.dateComponents([.year, .month, .day], from: draft.effectiveDate)
+        effective = String(format: "%04d.%02d.%02d", day.year ?? 0, day.month ?? 0, day.day ?? 0)
+        sections = draft.articles.enumerated().map { index, article in
+            Section(
+                title: "제\(index + 1)조 \(article.title)",
+                revised: draft.isRevision && article.isChanged,
+                lines: article.body.components(separatedBy: .newlines)
+                    .map { $0.trimmingCharacters(in: .whitespaces) }
+                    .filter { !$0.isEmpty }
+                    .map(Section.Line.init)
+            )
+        }
+        note = draft.isRevision ? draft.note : "최초 등록"
+        notify = draft.notifies
+    }
+}
+
+/// POST /admin/docs 응답 — 등록 `{slug, id}` · 개정 `{slug, version, revisionId}`
+struct ServerDocSavedDTO: Decodable {
+    let slug: String
+}

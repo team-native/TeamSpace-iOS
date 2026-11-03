@@ -7,7 +7,11 @@ struct RuleListView: View {
 
     @Environment(\.dismiss) private var dismiss
 
-    init(viewModel: RuleListViewModel, onNavigate: @escaping (AppRoute) -> Void) {
+    /// Admin — 규칙 등록 버튼
+    private let canRegister: Bool
+
+    init(viewModel: RuleListViewModel, canRegister: Bool = false, onNavigate: @escaping (AppRoute) -> Void) {
+        self.canRegister = canRegister
         _viewModel = State(initialValue: viewModel)
         self.onNavigate = onNavigate
     }
@@ -31,7 +35,18 @@ struct RuleListView: View {
         }
         .scrollDismissesKeyboard(.interactively)
         .safeAreaInset(edge: .top, spacing: 0) {
-            TSNavigationBar(title: "규칙·제도", onBack: { dismiss() })
+            TSNavigationBar(title: "규칙·제도", onBack: { dismiss() }) {
+                if canRegister {
+                    Button { onNavigate(.ruleCompose) } label: {
+                        TSIcon.plus.sized(.base, weight: .bold)
+                            .foregroundStyle(Color.tsOnPrimary)
+                            .frame(width: 38, height: 38)
+                            .background(Color.tsPrimary, in: Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("규칙 등록")
+                }
+            }
                 .padding(.horizontal, Spacing.screen)
                 .padding(.bottom, Spacing.sm)
                 .background(Color.tsBackground)

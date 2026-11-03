@@ -9,16 +9,18 @@ final class MockDocStore: @unchecked Sendable {
     struct Doc {
         let slug: String
         let type: String
-        let category: String
-        let title: String
-        let copy: String
+        var category: String
+        var title: String
+        var copy: String
         /// 며칠 전 수정
-        let daysAgo: Int
+        var daysAgo: Int
         /// 며칠 전 시행 (음수면 앞으로)
         var effectiveDaysAgo: Int? = nil
         var version = "v1.0"
         var owner = "NativeOps · 안율"
         var revised = false
+        /// POST /admin/docs 로 정한 시행일 "yyyy.MM.dd"
+        var effectiveText: String? = nil
     }
 
     static let docs: [Doc] = [
@@ -51,14 +53,67 @@ final class MockDocStore: @unchecked Sendable {
     private let lock = NSLock()
     private let now: Date
     private var readCount: [String: Int] = [:]
+    /// POST /admin/docs 로 바뀐 문서 · 본문 · 변경 내역
+    private var docs: [Doc] = MockDocStore.docs
+    private var savedSections: [String: [[String: Any]]] = [:]
+    private var savedHistory: [String: [[String: Any]]] = [:]
 
     init(now: Date = Date()) {
         self.now = now
     }
 
+    private func current() -> [Doc] {
+        lock.lock()
+        defer { lock.unlock() }
+        return docs
+    }
+
+    /// POST /admin/docs — 같은 slug 면 개정(버전 +0.1, 변경 내역 추가), 없으면 v1.0 으로 등록
+    func save(_ request: ServerDocWriteRequestDTO, who: String) -> String {
+        lock.lock()
+        defer { lock.unlock() }
+        let sections: [[String: Any]] = request.sections.map { section in
+            var item: [String: Any] = ["title": section.title, "lines": section.lines.map { ["text": $0.text] }]
+            if section.revised { item["revised"] = true }
+            return item
+        }
+        if let index = docs.firstIndex(where: { $0.slug == request.slug }) {
+            let old = docs[index]
+            let history = savedHistory[request.slug] ?? historyItems(old)
+            var doc = old
+            doc.title = request.title
+            doc.copy = request.copy
+            doc.category = request.category
+            doc.daysAgo = 0
+            doc.version = Self.nextVersion(old.version)
+            doc.revised = true
+            doc.owner = who
+            doc.effectiveText = request.effective
+            docs.remove(at: index)
+            docs.insert(doc, at: 0)
+            savedSections[request.slug] = sections
+            savedHistory[request.slug] = [["ver": doc.version, "date": day(0), "who": who, "note": request.note]] + history
+            return json(["slug": request.slug, "version": doc.version, "revisionId": history.count + 1])
+        }
+        var doc = Doc(slug: request.slug, type: request.type, category: request.category, title: request.title,
+                      copy: request.copy, daysAgo: 0, owner: who)
+        doc.effectiveText = request.effective
+        docs.insert(doc, at: 0)
+        savedSections[request.slug] = sections
+        savedHistory[request.slug] = [["ver": "v1.0", "date": day(0), "who": who, "note": request.note]]
+        return json(["slug": request.slug, "id": docs.count])
+    }
+
+    /// 서버 `_next_version` — "v1.3" → "v1.4"
+    static func nextVersion(_ version: String) -> String {
+        let parts = version.dropFirst().split(separator: ".")
+        guard parts.count == 2, let major = Int(parts[0]), let minor = Int(parts[1]) else { return "v1.1" }
+        return "v\(major).\(minor + 1)"
+    }
+
     /// GET /docs?q&category&type&cursor&limit — 최근 수정 순
     func listJSON(query: [String: String]) -> String {
-        var matched = Self.docs
+        var matched = current()
         if let q = query["q"]?.trimmingCharacters(in: .whitespaces), !q.isEmpty {
             matched = matched.filter { $0.title.localizedCaseInsensitiveContains(q) || $0.copy.localizedCaseInsensitiveContains(q) }
         }
@@ -73,19 +128,29 @@ final class MockDocStore: @unchecked Sendable {
 
     /// GET /docs/{slug}
     func detailJSON(slug: String) -> String? {
-        guard let doc = Self.docs.first(where: { $0.slug == slug }) else { return nil }
+        guard let doc = current().first(where: { $0.slug == slug }) else { return nil }
         var body = summary(doc)
         if doc.type == "TEMPLATE" {
             body["fields"] = Self.fields(slug).map { [$0.0, $0.1] }
         } else {
-            body["sections"] = sections(doc)
+            lock.lock()
+            let saved = savedSections[slug]
+            lock.unlock()
+            body["sections"] = saved ?? sections(doc)
         }
         return json(body)
     }
 
     /// GET /docs/{slug}/history
     func historyJSON(slug: String) -> String? {
-        guard let doc = Self.docs.first(where: { $0.slug == slug }) else { return nil }
+        guard let doc = current().first(where: { $0.slug == slug }) else { return nil }
+        lock.lock()
+        let saved = savedHistory[slug]
+        lock.unlock()
+        return json(["items": saved ?? historyItems(doc), "nextCursor": NSNull()])
+    }
+
+    private func historyItems(_ doc: Doc) -> [[String: Any]] {
         let items: [[String: Any]]
         switch doc.slug {
         case "project-principles":
@@ -102,12 +167,12 @@ final class MockDocStore: @unchecked Sendable {
         default:
             items = [["ver": "v1.0", "date": day(doc.daysAgo), "who": "김민준", "note": "최초 제정"]]
         }
-        return json(["items": items, "nextCursor": NSNull()])
+        return items
     }
 
     /// POST /docs/{slug}/read
     func read(slug: String) -> String? {
-        guard Self.docs.contains(where: { $0.slug == slug }) else { return nil }
+        guard current().contains(where: { $0.slug == slug }) else { return nil }
         lock.lock()
         defer { lock.unlock() }
         readCount[slug, default: 0] += 1
@@ -117,7 +182,7 @@ final class MockDocStore: @unchecked Sendable {
     private func summary(_ doc: Doc) -> [String: Any] {
         [
             "slug": doc.slug, "type": doc.type, "category": doc.category, "title": doc.title, "copy": doc.copy,
-            "date": day(doc.daysAgo), "version": doc.version, "effective": day(doc.effectiveDaysAgo ?? doc.daysAgo),
+            "date": day(doc.daysAgo), "version": doc.version, "effective": doc.effectiveText ?? day(doc.effectiveDaysAgo ?? doc.daysAgo),
             "owner": doc.owner, "revised": doc.revised
         ]
     }

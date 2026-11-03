@@ -58,6 +58,8 @@ enum AppRoute: Hashable {
     case rules                           // 09-1 규칙 · 제도
     case ruleDetail(id: String)           // 09-2 문서 상세 · 규칙 (09-3 변경 내역 시트)
     case ruleComparison(id: String)         // 09-4 규칙 개정 비교
+    case ruleCompose                     // 09 규칙 등록 [Admin]
+    case ruleEdit(id: String)            // 09 규칙 개정 [Admin]
     // 10 게시판 · 공지
     case board                           // 10-1 팀 게시판
     case boardSearch                     // 10-12 게시글 검색

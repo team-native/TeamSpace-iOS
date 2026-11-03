@@ -14,7 +14,9 @@ struct FetchRuleDetailUseCase {
             rule: detail.rule,
             articles: detail.articles.sorted { $0.number < $1.number },
             acknowledgedAt: detail.acknowledgedAt,
-            revisions: detail.revisions.sorted { $0.revisedAt > $1.revisedAt }
+            revisions: detail.revisions.sorted { $0.revisedAt > $1.revisedAt },
+            summaryText: detail.summaryText,
+            categoryText: detail.categoryText
         )
     }
 }
