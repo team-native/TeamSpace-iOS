@@ -52,11 +52,15 @@ struct MockTransport: HTTPTransport {
     private let proposalStore = MockProposalStore()
     private let signupStore = MockSignupRequestStore()
     private let financePermissionStore = MockFinancePermissionStore()
+    private let bankImportStore = MockBankImportStore()
 
     func send(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
         try await Task.sleep(nanoseconds: latencyNanoseconds)
         let path = request.url?.lastPathComponent ?? ""
         if let response = try memberRoute(request, path: path) {
+            return response
+        }
+        if let response = try bankImportRoute(request) {
             return response
         }
         if let response = try financeRoute(request, path: path) {
@@ -839,6 +843,30 @@ struct MockTransport: HTTPTransport {
     }
 
     /// 04 재무 — GET /finance/summary · /finance/receipts · /finance/contracts/{project} (요약은 누구나, 나머지는 FA 토큰이 아니면 403)
+    /// 은행 거래 — /finance/bank-imports · /finance/bank-import-commits (서버 develop `finance.py` 형식)
+    private func bankImportRoute(_ request: URLRequest) throws -> (Data, HTTPURLResponse)? {
+        guard let url = request.url else { return nil }
+        let components = Array(url.pathComponents.drop(while: { $0 != "finance" }))
+        switch (request.httpMethod ?? "", components.count) {
+        case ("GET", 2) where components[1] == "bank-imports":
+            return try respond(request, status: 200, json: bankImportStore.listJSON())
+        case ("PATCH", 3) where components[1] == "bank-imports":
+            guard let body = request.httpBody, let dto = try? JSONDecoder().decode(ServerBankImportReviewRequestDTO.self, from: body) else {
+                return try respond(request, status: 422, json: #"{"detail":"잘못된 요청입니다."}"#)
+            }
+            let result = bankImportStore.review(id: components[2], confirm: dto.confirm, exclude: dto.exclude)
+            return try respond(request, status: result.status, json: result.json)
+        case ("POST", 2) where components[1] == "bank-import-commits":
+            guard let body = request.httpBody, let dto = try? JSONDecoder().decode(ServerBankImportCommitRequestDTO.self, from: body) else {
+                return try respond(request, status: 422, json: #"{"detail":"잘못된 요청입니다."}"#)
+            }
+            let result = bankImportStore.commit(rowIds: dto.rowIds)
+            return try respond(request, status: result.status, json: result.json)
+        default:
+            return nil
+        }
+    }
+
     private func financeRoute(_ request: URLRequest, path: String) throws -> (Data, HTTPURLResponse)? {
         guard request.httpMethod == "GET", let url = request.url, !url.pathComponents.contains("admin") else { return nil }
         let components = Array(url.pathComponents.drop(while: { $0 != "finance" }))

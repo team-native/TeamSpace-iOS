@@ -111,6 +111,8 @@ struct WorkspaceMenuList: View {
     var canApproveSignups = false
     /// Admin 에게만 재정 권한 줄을 보여줘요.
     var canManageFinancePermissions = false
+    /// FA · Admin 에게만 은행 거래 줄을 보여줘요.
+    var canManageBankImports = false
     let onNavigate: (AppRoute) -> Void
 
     private var rows: [(title: String, route: AppRoute)] {
@@ -133,6 +135,9 @@ struct WorkspaceMenuList: View {
         }
         if canManageFinancePermissions {
             rows.append(("재정 권한", .financePermissions))
+        }
+        if canManageBankImports {
+            rows.append(("은행 거래", .bankImports))
         }
         return rows
     }
