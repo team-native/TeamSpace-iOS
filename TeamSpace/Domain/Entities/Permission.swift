@@ -20,6 +20,8 @@ enum Permission: Hashable, Sendable {
     case handleReports
     /// 가입 요청 승인 (서버 `require_admin` — Admin 만)
     case approveSignups
+    /// 재정 열람 권한 주기 · 회수 (서버 `require_admin` — Admin 만)
+    case manageFinancePermissions
 }
 
 extension AuthUser {
@@ -38,7 +40,7 @@ extension AuthUser {
             return !roles.isDisjoint(with: [.fa, .leader, .admin])
         case .publishNotice:
             return !roles.isDisjoint(with: [.fa, .leader, .admin])
-        case .viewNoticeReceipts, .manageEvents, .handleReports, .approveSignups:
+        case .viewNoticeReceipts, .manageEvents, .handleReports, .approveSignups, .manageFinancePermissions:
             return roles.contains(.admin)
         }
     }

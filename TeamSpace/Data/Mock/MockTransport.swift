@@ -51,6 +51,7 @@ struct MockTransport: HTTPTransport {
     private let inquiryStore = MockInquiryStore()
     private let proposalStore = MockProposalStore()
     private let signupStore = MockSignupRequestStore()
+    private let financePermissionStore = MockFinancePermissionStore()
 
     func send(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
         try await Task.sleep(nanoseconds: latencyNanoseconds)
@@ -286,6 +287,18 @@ struct MockTransport: HTTPTransport {
             else { return try respond(request, status: 422, json: #"{"detail":"잘못된 요청입니다."}"#) }
             guard let json = scheduleStore.update(id: id, request: dto) else {
                 return try respond(request, status: 404, json: #"{"detail":"일정을 찾을 수 없습니다."}"#)
+            }
+            return try respond(request, status: 200, json: json)
+        }
+        if components == ["admin", "finance", "permissions"], request.httpMethod == "GET" {
+            return try respond(request, status: 200, json: financePermissionStore.listJSON())
+        }
+        if components.count == 4, components.starts(with: ["admin", "finance", "permissions"]), request.httpMethod == "PATCH" {
+            guard let id = Int(components[3]), let body = request.httpBody,
+                  let dto = try? JSONDecoder().decode(ServerFinancePermissionRequestDTO.self, from: body)
+            else { return try respond(request, status: 422, json: #"{"detail":"잘못된 요청입니다."}"#) }
+            guard let json = financePermissionStore.update(id: id, canViewFinance: dto.canViewFinance) else {
+                return try respond(request, status: 404, json: #"{"detail":"사용자를 찾을 수 없습니다."}"#)
             }
             return try respond(request, status: 200, json: json)
         }
@@ -799,7 +812,7 @@ struct MockTransport: HTTPTransport {
 
     /// 04 재무 — GET /finance/summary · /finance/receipts · /finance/contracts/{project} (요약은 누구나, 나머지는 FA 토큰이 아니면 403)
     private func financeRoute(_ request: URLRequest, path: String) throws -> (Data, HTTPURLResponse)? {
-        guard request.httpMethod == "GET", let url = request.url else { return nil }
+        guard request.httpMethod == "GET", let url = request.url, !url.pathComponents.contains("admin") else { return nil }
         let components = Array(url.pathComponents.drop(while: { $0 != "finance" }))
         guard components.first == "finance", components.count >= 2 else { return nil }
         let isFA = request.value(forHTTPHeaderField: "Authorization")?.contains(Self.faToken) == true
