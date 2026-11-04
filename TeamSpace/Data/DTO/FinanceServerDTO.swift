@@ -320,3 +320,13 @@ enum FinanceMonthParameter {
         formatter.date(from: string)
     }
 }
+
+/// POST /admin/finance/receipts · PATCH /admin/finance/receipts/{id} 요청 — 비운 값은 보내지 않아요.
+/// 등록은 client · project · amount · status · date 가 모두 필요해요.
+struct ServerReceiptWriteRequestDTO: Codable, Equatable {
+    var client: String?
+    var project: String?
+    var amount: Int?
+    var status: String?
+    var date: String?
+}

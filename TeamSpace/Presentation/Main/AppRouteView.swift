@@ -18,7 +18,7 @@ struct AppRouteView: View {
         case .memberDirectory, .memberDetail:
             memberScreen
         case .financeContractLedger, .financeContractDetail, .financeMonthlyFlow, .financeComposition,
-             .financeAccess, .financeProjectAmounts:
+             .financeAccess, .financeProjectAmounts, .receiptCompose, .receiptEdit:
             financeScreen
         case .approvalDetail, .approvalCompose, .approvalEdit, .librarySearch, .templateDetail, .templateCompose:
             documentScreen
@@ -80,7 +80,15 @@ struct AppRouteView: View {
         let year = Calendar.current.component(.year, from: Date())
         switch route {
         case .financeContractDetail(let id):
-            ContractDetailView(viewModel: container.makeContractDetailViewModel(contractId: id), onNavigate: onNavigate)
+            ContractDetailView(
+                viewModel: container.makeContractDetailViewModel(contractId: id),
+                canEdit: user.can(.manageReceipts),
+                onNavigate: onNavigate
+            )
+        case .receiptCompose:
+            ReceiptComposeView(viewModel: container.makeReceiptComposeViewModel(user: user))
+        case .receiptEdit(let id):
+            ReceiptEditView(viewModel: container.makeContractDetailViewModel(contractId: id), container: container, user: user)
         case .financeMonthlyFlow(let month):
             MonthlyFlowView(viewModel: container.makeMonthlyFlowViewModel(endMonth: month))
         case .financeComposition(let month):
@@ -93,7 +101,11 @@ struct AppRouteView: View {
                 onNavigate: onNavigate
             )
         default:
-            ContractLedgerView(viewModel: container.makeContractLedgerViewModel(year: year), onNavigate: onNavigate)
+            ContractLedgerView(
+                viewModel: container.makeContractLedgerViewModel(year: year),
+                canRegister: user.can(.manageReceipts),
+                onNavigate: onNavigate
+            )
         }
     }
 

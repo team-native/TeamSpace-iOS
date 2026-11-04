@@ -5,11 +5,14 @@ import UIKit
 struct ContractDetailView: View {
     @State private var viewModel: ContractDetailViewModel
     private let onNavigate: (AppRoute) -> Void
+    /// FA · Admin 은 수금 내역을 고칠 수 있어요.
+    private let canEdit: Bool
 
     @Environment(\.dismiss) private var dismiss
 
-    init(viewModel: ContractDetailViewModel, onNavigate: @escaping (AppRoute) -> Void) {
+    init(viewModel: ContractDetailViewModel, canEdit: Bool = false, onNavigate: @escaping (AppRoute) -> Void) {
         _viewModel = State(initialValue: viewModel)
+        self.canEdit = canEdit
         self.onNavigate = onNavigate
     }
 
@@ -23,6 +26,11 @@ struct ContractDetailView: View {
         }
         .safeAreaInset(edge: .top, spacing: 0) {
             TSNavigationBar(title: "수주 상세", onBack: { dismiss() }) {
+                if canEdit, viewModel.state.value != nil {
+                    CircleIconButton(icon: .pencil, accessibilityLabel: "수금 수정", background: .tsSurface, hasBorder: true) {
+                        onNavigate(.receiptEdit(id: viewModel.contractId))
+                    }
+                }
                 CircleIconButton(icon: .link, accessibilityLabel: "수주 링크 복사", background: .tsSurface) {
                     UIPasteboard.general.string = viewModel.shareLink
                     viewModel.didCopyLink()

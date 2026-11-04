@@ -575,6 +575,10 @@ extension DIContainer {
         ContractDetailViewModel(contractId: contractId, fetchContractDetailUseCase: fetchContractDetailUseCase)
     }
 
+    func makeReceiptComposeViewModel(user: AuthUser, editing contract: FinanceContract? = nil) -> ReceiptComposeViewModel {
+        ReceiptComposeViewModel(user: user, editing: contract, saveReceiptUseCase: SaveReceiptUseCase(financeRepository: financeRepository))
+    }
+
     func makeMonthlyFlowViewModel(endMonth: Date) -> MonthlyFlowViewModel {
         MonthlyFlowViewModel(endMonth: endMonth, fetchMonthlyFlowsUseCase: fetchMonthlyFlowsUseCase)
     }

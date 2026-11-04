@@ -53,12 +53,16 @@ struct MockTransport: HTTPTransport {
     private let signupStore = MockSignupRequestStore()
     private let financePermissionStore = MockFinancePermissionStore()
     let bankImportStore = MockBankImportStore()
+    private let receiptStore = MockReceiptStore()
     private let uploadStore = MockUploadStore()
 
     func send(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
         try await Task.sleep(nanoseconds: latencyNanoseconds)
         let path = request.url?.lastPathComponent ?? ""
         if let response = try memberRoute(request, path: path) {
+            return response
+        }
+        if let response = try receiptWriteRoute(request) {
             return response
         }
         if let response = try bankImportRoute(request) {
@@ -852,6 +856,28 @@ struct MockTransport: HTTPTransport {
     }
 
     /// 04 재무 — GET /finance/summary · /finance/receipts · /finance/contracts/{project} (요약은 누구나, 나머지는 FA 토큰이 아니면 403)
+    /// 수금 등록 · 수정 [FA · Admin] — 서버 `workflows.py` 처럼 FA 토큰이 아니면 403
+    private func receiptWriteRoute(_ request: URLRequest) throws -> (Data, HTTPURLResponse)? {
+        guard let url = request.url else { return nil }
+        let components = Array(url.pathComponents.drop(while: { $0 != "admin" }))
+        guard components.count >= 3, components[1] == "finance", components[2] == "receipts" else { return nil }
+        guard request.value(forHTTPHeaderField: "Authorization")?.contains(Self.faToken) == true else {
+            return try respond(request, status: 403, json: #"{"detail":"수금 등록 권한이 없습니다."}"#)
+        }
+        let body = request.httpBody.flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] } ?? [:]
+        switch (request.httpMethod ?? "", components.count) {
+        case ("POST", 3):
+            let result = receiptStore.create(body)
+            return try respond(request, status: result.status, json: result.json)
+        case ("PATCH", 4):
+            let id = components[3]
+            let result = receiptStore.update(id: id, body, exists: MockFinanceFixture.receipts.contains { String($0.id) == id })
+            return try respond(request, status: result.status, json: result.json)
+        default:
+            return nil
+        }
+    }
+
     /// 은행 거래 — /finance/bank-imports · /finance/bank-import-commits (서버 develop `finance.py` 형식)
     private func bankImportRoute(_ request: URLRequest) throws -> (Data, HTTPURLResponse)? {
         guard let url = request.url else { return nil }
@@ -895,7 +921,7 @@ struct MockTransport: HTTPTransport {
         }
         switch (components[1], components.count) {
         case ("receipts", 2):
-            return try respond(request, status: 200, json: MockFinanceFixture.receipts(query: Self.query(of: request)))
+            return try respond(request, status: 200, json: MockFinanceFixture.receipts(query: Self.query(of: request), store: receiptStore))
         case ("contracts", 3):
             guard let json = MockFinanceFixture.contract(project: components[2]) else {
                 return try respond(request, status: 404, json: #"{"detail":"계약 정보를 찾을 수 없습니다."}"#)

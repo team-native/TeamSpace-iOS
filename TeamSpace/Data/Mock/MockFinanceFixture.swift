@@ -77,16 +77,22 @@ enum MockFinanceFixture {
     }
 
     /// GET /finance/receipts?from&to&cursor&limit — 최근 날짜 순, totals 는 기간 전체
-    static func receipts(query: [String: String], now: Date = Date(), calendar: Calendar = .current) -> String {
+    static func receipts(query: [String: String], store: MockReceiptStore? = nil, now: Date = Date(), calendar: Calendar = .current) -> String {
         let year = query["from"].flatMap { Int($0.prefix(4)) } ?? calendar.component(.year, from: now)
         let offset = query["cursor"].flatMap(Int.init) ?? 0
         let limit = query["limit"].flatMap(Int.init) ?? 20
-        let page = Array(receipts.dropFirst(offset).prefix(limit))
-        let paid = receipts.filter(\.isCollected).reduce(0) { $0 + $1.amount }
-        let total = receipts.reduce(0) { $0 + $1.amount }
+        let base = receipts.map { receiptJSON($0, year: year, withId: true) }
+        // 새로 등록한 수금은 그해 것만 (from 이 없으면 전부)
+        let all = (store?.merge(base) ?? base).filter { item in
+            guard query["from"] != nil, let date = item["date"] as? String else { return true }
+            return date.hasPrefix(String(year))
+        }
+        let page = Array(all.dropFirst(offset).prefix(limit))
+        let paid = all.filter { $0["status"] as? String == "입금 완료" }.reduce(0) { $0 + ($1["amount"] as? Int ?? 0) }
+        let total = all.reduce(0) { $0 + ($1["amount"] as? Int ?? 0) }
         return json([
-            "items": page.map { receiptJSON($0, year: year, withId: true) },
-            "nextCursor": offset + limit < receipts.count ? String(offset + limit) as Any : NSNull(),
+            "items": page,
+            "nextCursor": offset + limit < all.count ? String(offset + limit) as Any : NSNull(),
             "totals": ["totalOrder": total, "paid": paid, "pending": total - paid, "overdue": 0]
         ])
     }
