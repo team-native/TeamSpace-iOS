@@ -575,6 +575,14 @@ extension DIContainer {
         ContractDetailViewModel(contractId: contractId, fetchContractDetailUseCase: fetchContractDetailUseCase)
     }
 
+    func makeContractInfoComposeViewModel(user: AuthUser, detail: ContractDetail) -> ContractInfoComposeViewModel {
+        ContractInfoComposeViewModel(
+            user: user,
+            detail: detail,
+            saveContractInfoUseCase: SaveContractInfoUseCase(contractInfoRepository: ContractInfoRepositoryImpl(client: apiClient))
+        )
+    }
+
     func makeReceiptComposeViewModel(user: AuthUser, editing contract: FinanceContract? = nil) -> ReceiptComposeViewModel {
         ReceiptComposeViewModel(user: user, editing: contract, saveReceiptUseCase: SaveReceiptUseCase(financeRepository: financeRepository))
     }

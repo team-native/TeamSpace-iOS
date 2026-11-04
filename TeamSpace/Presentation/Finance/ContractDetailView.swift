@@ -68,6 +68,12 @@ struct ContractDetailView: View {
             ContractRelatedSection(detail: detail) {
                 onNavigate(.comingSoon(title: "문서함"))
             }
+            if canEdit {
+                Button(detail.info == nil ? "계약 정보 등록" : "계약 정보 수정") {
+                    onNavigate(.contractInfoEdit(receiptId: viewModel.contractId))
+                }
+                .buttonStyle(.tsSecondary)
+            }
         }
     }
 

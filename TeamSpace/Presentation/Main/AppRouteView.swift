@@ -18,7 +18,8 @@ struct AppRouteView: View {
         case .memberDirectory, .memberDetail:
             memberScreen
         case .financeContractLedger, .financeContractDetail, .financeMonthlyFlow, .financeComposition,
-             .financeAccess, .financeProjectAmounts, .receiptCompose, .receiptEdit:
+             .financeAccess, .financeProjectAmounts, .receiptCompose, .receiptEdit,
+             .contractInfoEdit:
             financeScreen
         case .approvalDetail, .approvalCompose, .approvalEdit, .librarySearch, .templateDetail, .templateCompose:
             documentScreen
@@ -89,6 +90,8 @@ struct AppRouteView: View {
             ReceiptComposeView(viewModel: container.makeReceiptComposeViewModel(user: user))
         case .receiptEdit(let id):
             ReceiptEditView(viewModel: container.makeContractDetailViewModel(contractId: id), container: container, user: user)
+        case .contractInfoEdit(let receiptId):
+            ContractInfoEditView(viewModel: container.makeContractDetailViewModel(contractId: receiptId), container: container, user: user)
         case .financeMonthlyFlow(let month):
             MonthlyFlowView(viewModel: container.makeMonthlyFlowViewModel(endMonth: month))
         case .financeComposition(let month):
