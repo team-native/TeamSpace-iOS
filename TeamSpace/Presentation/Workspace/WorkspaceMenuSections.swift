@@ -138,6 +138,7 @@ struct WorkspaceMenuList: View {
         }
         if canManageBankImports {
             rows.append(("은행 거래", .bankImports))
+            rows.append(("재무 설정", .financeSettings))
         }
         return rows
     }

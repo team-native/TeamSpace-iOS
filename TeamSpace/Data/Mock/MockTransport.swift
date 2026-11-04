@@ -41,6 +41,7 @@ struct MockTransport: HTTPTransport {
     var latencyNanoseconds: UInt64 = 700_000_000
     private let notificationStore = MockNotificationStore()
     private let notificationSettingsStore = MockNotificationSettingsStore()
+    private let financeSettingsStore = MockFinanceSettingsStore()
     private let approvalStore = MockApprovalStore()
     private let todoStore = MockTodoStore()
     private let scheduleStore = MockScheduleStore()
@@ -79,6 +80,9 @@ struct MockTransport: HTTPTransport {
             return response
         }
         if let response = try projectRoute(request, path: path) {
+            return response
+        }
+        if let response = try financeSettingsRoute(request) {
             return response
         }
         switch (request.httpMethod, path) {
@@ -939,7 +943,7 @@ struct MockTransport: HTTPTransport {
         let isFA = request.value(forHTTPHeaderField: "Authorization")?.contains(Self.faToken) == true
         if components.count == 2, ["summary", "public-summary"].contains(components[1]) {
             let month = Self.query(of: request)["month"]
-            return try respond(request, status: 200, json: MockFinanceFixture.summary(month: month, isFA: isFA))
+            return try respond(request, status: 200, json: MockFinanceFixture.summary(month: month, isFA: isFA, pools: financeSettingsStore.pools))
         }
         guard isFA else {
             return try respond(request, status: 403, json: MockFinanceFixture.forbidden)
@@ -952,6 +956,24 @@ struct MockTransport: HTTPTransport {
                 return try respond(request, status: 404, json: #"{"detail":"계약 정보를 찾을 수 없습니다."}"#)
             }
             return try respond(request, status: 200, json: json)
+        default:
+            return nil
+        }
+    }
+
+    /// 재무 요약 설정 [FA · Admin] — GET · PATCH /admin/finance/settings (FA 토큰이 아니면 403)
+    private func financeSettingsRoute(_ request: URLRequest) throws -> (Data, HTTPURLResponse)? {
+        guard let url = request.url, url.path.hasSuffix("/admin/finance/settings") else { return nil }
+        guard request.value(forHTTPHeaderField: "Authorization")?.contains(Self.faToken) == true else {
+            return try respond(request, status: 403, json: #"{"detail":"재무 설정 권한이 없습니다."}"#)
+        }
+        switch request.httpMethod ?? "" {
+        case "GET":
+            return try respond(request, status: 200, json: financeSettingsStore.json())
+        case "PATCH":
+            let body = request.httpBody.flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] } ?? [:]
+            let result = financeSettingsStore.patch(body)
+            return try respond(request, status: result.status, json: result.json)
         default:
             return nil
         }

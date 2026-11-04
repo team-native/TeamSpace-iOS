@@ -32,7 +32,17 @@ enum MockFinanceFixture {
 
     /// GET /finance/summary — 이번 달까지 7개월 흐름
     /// `month` 가 "YYYY-MM" 이면 그 달 수입 · 지출, 재정 권한이 없으면 수금 내역 · 공지 · 풀 메모를 빼요. (서버 develop)
-    static func summary(now: Date = Date(), month selected: String? = nil, isFA: Bool = true, calendar: Calendar = .current) -> String {
+    /// Figma 04 풀 (재무 설정 Mock 의 처음 값)
+    static let pools: [[String: Any]] = [
+        ["id": "operation", "label": "운영풀", "amount": 3_560_000, "ratio": 40, "color": "#3182f6", "note": "운영 자금"],
+        ["id": "reserve", "label": "적립풀", "amount": 2_670_000, "ratio": 30, "color": "#7c5cff", "note": "예비 자금"],
+        ["id": "dividend", "label": "배당풀", "amount": 2_670_000, "ratio": 30, "color": "#ff8a3d", "note": "참여자 배당"]
+    ]
+
+    static func summary(
+        now: Date = Date(), month selected: String? = nil, isFA: Bool = true,
+        pools: [[String: Any]]? = nil, calendar: Calendar = .current
+    ) -> String {
         let end = calendar.startOfMonth(for: now)
         let flow: [[String: Any]] = (0..<7).compactMap { index in
             guard let month = calendar.date(byAdding: .month, value: index - 6, to: end) else { return nil }
@@ -59,11 +69,7 @@ enum MockFinanceFixture {
                 "available": 3_560_000, "monthlyRevenue": revenue, "monthlyExpense": expense,
                 "externalReceipts": receipts.reduce(0) { $0 + $1.amount }, "reserveBalance": 2_670_000
             ],
-            "pools": [
-                ["id": "operation", "label": "운영풀", "amount": 3_560_000, "ratio": 40, "color": "#3182f6", "note": "운영 자금"],
-                ["id": "reserve", "label": "적립풀", "amount": 2_670_000, "ratio": 30, "color": "#7c5cff", "note": "예비 자금"],
-                ["id": "dividend", "label": "배당풀", "amount": 2_670_000, "ratio": 30, "color": "#ff8a3d", "note": "참여자 배당"]
-            ],
+            "pools": pools ?? Self.pools,
             "flow": flow
         ]
         if isFA {
