@@ -4,11 +4,14 @@ import SwiftUI
 struct ContractLedgerView: View {
     @State private var viewModel: ContractLedgerViewModel
     private let onNavigate: (AppRoute) -> Void
+    /// FA · Admin 은 수금을 등록할 수 있어요.
+    private let canRegister: Bool
 
     @Environment(\.dismiss) private var dismiss
 
-    init(viewModel: ContractLedgerViewModel, onNavigate: @escaping (AppRoute) -> Void) {
+    init(viewModel: ContractLedgerViewModel, canRegister: Bool = false, onNavigate: @escaping (AppRoute) -> Void) {
         _viewModel = State(initialValue: viewModel)
+        self.canRegister = canRegister
         self.onNavigate = onNavigate
     }
 
@@ -28,6 +31,16 @@ struct ContractLedgerView: View {
         }
         .safeAreaInset(edge: .top, spacing: 0) {
             TSNavigationBar(title: "수금 내역", onBack: { dismiss() }) {
+                if canRegister {
+                    Button { onNavigate(.receiptCompose) } label: {
+                        TSIcon.plus.sized(.base, weight: .bold)
+                            .foregroundStyle(Color.tsOnPrimary)
+                            .frame(width: 36, height: 36)
+                            .background(Color.tsPrimary, in: Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("수금 등록")
+                }
                 Menu {
                     Picker("정렬", selection: $viewModel.sort) {
                         ForEach(CollectionSort.allCases, id: \.self) { Text($0.title).tag($0) }

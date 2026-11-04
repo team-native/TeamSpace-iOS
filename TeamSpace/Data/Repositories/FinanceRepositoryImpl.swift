@@ -126,6 +126,30 @@ final class FinanceRepositoryImpl: FinanceRepository, @unchecked Sendable {
         return (items, totals)
     }
 
+    func createReceipt(_ draft: ReceiptDraft) async throws -> Int {
+        let body = ServerReceiptWriteRequestDTO(
+            client: draft.client.trimmingCharacters(in: .whitespaces),
+            project: draft.project.trimmingCharacters(in: .whitespaces),
+            amount: draft.amount,
+            status: draft.status.rawValue,
+            date: draft.dayText()
+        )
+        let created = try await request(Endpoint(method: .post, path: "admin/finance/receipts", body: body), as: ServerIdResponseDTO.self)
+        guard let id = Int(created.id) else { throw AppError.decoding("수금 id 를 읽지 못했어요.") }
+        return id
+    }
+
+    func updateReceipt(id: Int, changes: ReceiptChanges) async throws {
+        let body = ServerReceiptWriteRequestDTO(
+            client: changes.client?.trimmingCharacters(in: .whitespaces),
+            project: changes.project?.trimmingCharacters(in: .whitespaces),
+            amount: changes.amount,
+            status: changes.status?.rawValue,
+            date: changes.date
+        )
+        _ = try await request(Endpoint(method: .patch, path: "admin/finance/receipts/\(id)", body: body), as: EmptyResponseDTO.self)
+    }
+
     private func request<Response: Decodable>(_ endpoint: Endpoint, as type: Response.Type) async throws -> Response {
         do {
             return try await client.request(endpoint, as: type)

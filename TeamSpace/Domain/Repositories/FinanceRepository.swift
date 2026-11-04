@@ -14,4 +14,8 @@ protocol FinanceRepository: Sendable {
     func fetchPublicLedger(year: Int) async throws -> ContractLedger
     /// 수금 한 건 + GET /finance/contracts/{project}
     func fetchContract(id: Int) async throws -> ContractDetail
+    /// POST /admin/finance/receipts — 새 수금 id
+    func createReceipt(_ draft: ReceiptDraft) async throws -> Int
+    /// PATCH /admin/finance/receipts/{id} — 바뀐 값만
+    func updateReceipt(id: Int, changes: ReceiptChanges) async throws
 }

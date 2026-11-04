@@ -28,6 +28,8 @@ enum Permission: Hashable, Sendable {
     case manageDocs
     /// 은행 거래 확인 · 재정 반영 (서버 `_require_finance_admin` — Admin · FA)
     case manageBankImports
+    /// 수금 등록 · 수정 (서버 `/admin/finance/receipts` — Admin · FA)
+    case manageReceipts
 }
 
 extension AuthUser {
@@ -46,7 +48,7 @@ extension AuthUser {
             return !roles.isDisjoint(with: [.fa, .leader, .admin])
         case .publishNotice:
             return !roles.isDisjoint(with: [.fa, .leader, .admin])
-        case .manageBankImports:
+        case .manageBankImports, .manageReceipts:
             return !roles.isDisjoint(with: [.fa, .admin])
         case .viewNoticeReceipts, .manageEvents, .handleReports, .approveSignups, .manageFinancePermissions, .registerProjects, .manageDocs:
             return roles.contains(.admin)
