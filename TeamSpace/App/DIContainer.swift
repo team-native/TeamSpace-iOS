@@ -795,6 +795,15 @@ extension DIContainer {
         )
     }
 
+    func makeFinanceSettingsViewModel(user: AuthUser) -> FinanceSettingsViewModel {
+        let repository = FinanceSettingsRepositoryImpl(client: apiClient)
+        return FinanceSettingsViewModel(
+            user: user,
+            fetchFinanceSettingsUseCase: FetchFinanceSettingsUseCase(financeSettingsRepository: repository),
+            saveFinanceSettingsUseCase: SaveFinanceSettingsUseCase(financeSettingsRepository: repository)
+        )
+    }
+
     func makeBankImportViewModel(user: AuthUser) -> BankImportViewModel {
         BankImportViewModel(
             user: user,

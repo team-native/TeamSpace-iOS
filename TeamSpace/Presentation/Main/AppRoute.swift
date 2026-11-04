@@ -82,6 +82,7 @@ enum AppRoute: Hashable {
     case signupRequests                  // 가입 요청 승인 (Admin, GET /admin/signup-requests)
     case bankImports                     // 은행 거래 확인 · 반영 (FA · Admin, /finance/bank-imports)
     case financePermissions              // 재정 열람 권한 관리 (Admin, /admin/finance/permissions)
+    case financeSettings                 // 재무 요약 설정 — 풀 금액 · 배분 비율 (FA · Admin, /admin/finance/settings)
     case inquiryReview(id: Int)          // 11-6 문의 검토 · 공식 답변 작성
     // 12 운영 제안
     case proposals                       // 12-1b 운영 제안 목록
