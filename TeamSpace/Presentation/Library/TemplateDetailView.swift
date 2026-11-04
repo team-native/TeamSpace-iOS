@@ -60,7 +60,7 @@ struct TemplateDetailView: View {
         case .idle, .loading:
             LoadingSkeletonView(message: "내용을 불러오는 중이에요", count: 2)
         case .loaded(let template):
-            TemplateDetailContent(template: template)
+            TemplateDetailContent(template: template, downloader: viewModel.attachmentDownloader)
         case .empty:
             InfoBanner(message: "템플릿을 찾을 수 없어요.", icon: .file, style: .muted)
         case .forbidden:
@@ -76,6 +76,7 @@ struct TemplateDetailView: View {
 
 struct TemplateDetailContent: View {
     let template: LibraryTemplate
+    var downloader: AttachmentDownloadViewModel? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.xxl) {
@@ -85,6 +86,9 @@ struct TemplateDetailContent: View {
                     .tsFont(.calloutBold)
                     .foregroundStyle(Color.tsInk)
                 TemplateFieldList(fields: template.fields)
+            }
+            if let file = template.file {
+                AttachmentSection(attachments: [file], downloader: downloader)
             }
             if template.monthlyUsageCount > 0 {
                 usageBanner(template.monthlyUsageCount)

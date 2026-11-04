@@ -15,9 +15,15 @@ struct ServerDocDTO: Decodable {
     let revised: Bool
     let sections: [ServerDocSectionDTO]
     let fields: [TemplateField]
+    /// 템플릿 원본 파일 — 서버가 `fileId` 가 있으면 `downloadUrl: "/uploads/{id}"` 도 줘요.
+    let fileId: String?
+    let downloadUrl: String?
+    let fileName: String?
+    let fileSize: Int?
 
     private enum CodingKeys: String, CodingKey {
         case slug, category, type, title, copy, date, version, effective, owner, revised, sections, fields
+        case fileId, downloadUrl, fileName, filename, fileSize, size
     }
 
     init(from decoder: Decoder) throws {
@@ -34,6 +40,20 @@ struct ServerDocDTO: Decodable {
         revised = (try? container.decodeIfPresent(Bool.self, forKey: .revised)) ?? false
         sections = (try? container.decodeIfPresent([ServerDocSectionDTO].self, forKey: .sections)) ?? []
         fields = ((try? container.decodeIfPresent([ServerTemplateFieldDTO].self, forKey: .fields)) ?? []).compactMap(\.field)
+        fileId = (try? container.decodeIfPresent(String.self, forKey: .fileId))
+            ?? (try? container.decodeIfPresent(Int.self, forKey: .fileId)).flatMap { $0.map(String.init) }
+        downloadUrl = try? container.decodeIfPresent(String.self, forKey: .downloadUrl)
+        fileName = (try? container.decodeIfPresent(String.self, forKey: .fileName))
+            ?? (try? container.decodeIfPresent(String.self, forKey: .filename))
+        fileSize = (try? container.decodeIfPresent(Int.self, forKey: .fileSize))
+            ?? (try? container.decodeIfPresent(Int.self, forKey: .size))
+    }
+
+    /// 원본 파일 — 이름이 없으면 템플릿 제목으로 받아요.
+    var templateFile: FileAttachment? {
+        guard let id = FileAttachment.uploadId(id: fileId, url: downloadUrl) else { return nil }
+        let name = fileName.flatMap { $0.isEmpty ? nil : $0 } ?? title
+        return FileAttachment(name: name, sizeText: fileSize.map(FileAttachment.sizeText) ?? "원본 양식 파일", fileId: id)
     }
 
     var libraryCategory: LibraryCategory {
@@ -111,7 +131,8 @@ struct ServerDocDTO: Decodable {
             description: copy ?? "",
             fields: fields,
             monthlyUsageCount: 0,
-            formKind: TemplateFormKind(title: title)
+            formKind: TemplateFormKind(title: title),
+            file: templateFile
         )
     }
 }
