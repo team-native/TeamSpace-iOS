@@ -796,7 +796,10 @@ extension DIContainer {
             user: user,
             fetchBankImportsUseCase: FetchBankImportsUseCase(bankImportRepository: bankImportRepository),
             reviewBankImportUseCase: ReviewBankImportUseCase(bankImportRepository: bankImportRepository),
-            commitBankImportsUseCase: CommitBankImportsUseCase(bankImportRepository: bankImportRepository)
+            commitBankImportsUseCase: CommitBankImportsUseCase(bankImportRepository: bankImportRepository),
+            fetchBankAccountUseCase: FetchBankAccountUseCase(bankImportRepository: bankImportRepository),
+            syncBankTransactionsUseCase: SyncBankTransactionsUseCase(bankImportRepository: bankImportRepository),
+            fetchLinkableContractsUseCase: FetchLinkableContractsUseCase(financeRepository: financeRepository)
         )
     }
 

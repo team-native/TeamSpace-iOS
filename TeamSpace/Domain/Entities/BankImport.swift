@@ -40,3 +40,41 @@ struct BankImportCommitResult: Equatable, Sendable {
     let receiptCount: Int
     let expenseCount: Int
 }
+
+/// 은행 계좌 연동 상태 (GET /finance/bank-accounts)
+struct BankAccountStatus: Equatable, Sendable {
+    /// 서버 `connectionStatus` — connected · provider_pending · not_configured
+    let connectionStatus: String
+    let configured: Bool
+    let alias: String?
+    /// 끝 4자리만 보이는 번호 (예: ******1234)
+    let accountNumber: String?
+    let lastSyncedAt: Date?
+    let inboundCount: Int
+    let outboundCount: Int
+    let consecutiveFailures: Int
+
+    /// "NativeOps 운영 계좌 · ******1234"
+    var title: String {
+        let parts = [alias, accountNumber].compactMap { $0?.isEmpty == false ? $0 : nil }
+        return parts.isEmpty ? "연결된 계좌 없음" : parts.joined(separator: " · ")
+    }
+
+    var connectionText: String {
+        switch connectionStatus {
+        case "connected": return "연결됨"
+        case "provider_pending": return "은행 연동 준비 중"
+        default: return "계좌 설정 전"
+        }
+    }
+
+    /// 계좌 설정이 끝나야 불러오기를 시도해요.
+    var canSync: Bool { configured }
+}
+
+/// POST /finance/bank-syncs 결과
+struct BankSyncResult: Equatable, Sendable {
+    let fetchedCount: Int
+    let importedCount: Int
+    let lastSyncedAt: Date?
+}
