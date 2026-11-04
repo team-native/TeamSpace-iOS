@@ -29,14 +29,18 @@ final class ApprovalDetailViewModel {
     private let decideApprovalUseCase: DecideApprovalUseCase
     private let addApprovalCommentUseCase: AddApprovalCommentUseCase
     private let withdrawApprovalUseCase: WithdrawApprovalUseCase
+    /// 첨부 내려받기 · 미리보기
+    let attachmentDownloader: AttachmentDownloadViewModel?
 
     init(
         documentId: Int,
         fetchApprovalDetailUseCase: FetchApprovalDetailUseCase,
         decideApprovalUseCase: DecideApprovalUseCase,
         addApprovalCommentUseCase: AddApprovalCommentUseCase,
-        withdrawApprovalUseCase: WithdrawApprovalUseCase
+        withdrawApprovalUseCase: WithdrawApprovalUseCase,
+        attachmentDownloader: AttachmentDownloadViewModel? = nil
     ) {
+        self.attachmentDownloader = attachmentDownloader
         self.documentId = documentId
         self.fetchApprovalDetailUseCase = fetchApprovalDetailUseCase
         self.decideApprovalUseCase = decideApprovalUseCase

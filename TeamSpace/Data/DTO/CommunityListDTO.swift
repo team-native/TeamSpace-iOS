@@ -86,6 +86,8 @@ struct ServerNoticeItemDTO: Decodable {
     let confirmed: Int
     let total: Int
     let confirmedByMe: Bool
+    /// 첨부 — `[{id, url, filename, size, contentType}]`
+    let attachments: [ServerApprovalDTO.File]
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -101,10 +103,11 @@ struct ServerNoticeItemDTO: Decodable {
         confirmed = (try? container.decodeIfPresent(Int.self, forKey: .confirmed)) ?? 0
         total = (try? container.decodeIfPresent(Int.self, forKey: .total)) ?? 0
         confirmedByMe = (try? container.decodeIfPresent(Bool.self, forKey: .confirmedByMe)) ?? false
+        attachments = (try? container.decodeIfPresent([ServerApprovalDTO.File].self, forKey: .attachments)) ?? []
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, kind, title, body, author, createdAt, updatedAt, pinned, mustRead, confirmed, total, confirmedByMe
+        case id, kind, title, body, author, createdAt, updatedAt, pinned, mustRead, confirmed, total, confirmedByMe, attachments
     }
 
     func toEntity() -> NoticeSummary {
@@ -131,7 +134,10 @@ struct ServerNoticeItemDTO: Decodable {
             isAcknowledged: confirmedByMe,
             acknowledgedAt: nil,
             confirmedCount: confirmed,
-            memberCount: total
+            memberCount: total,
+            attachments: attachments.map {
+                FileAttachment(name: $0.filename, sizeText: FileAttachment.sizeText($0.size), fileId: FileAttachment.uploadId(id: $0.id, url: $0.url))
+            }
         )
     }
 }

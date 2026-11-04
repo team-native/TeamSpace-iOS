@@ -35,8 +35,21 @@ struct ServerApprovalDTO: Decodable {
     }
 
     struct File: Decodable {
+        let id: String?
+        let url: String?
         let filename: String
         let size: Int
+
+        private enum CodingKeys: String, CodingKey { case id, url, filename, size }
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            id = (try? container.decodeIfPresent(String.self, forKey: .id))
+                ?? (try? container.decodeIfPresent(Int.self, forKey: .id)).flatMap { $0.map(String.init) }
+            url = try? container.decodeIfPresent(String.self, forKey: .url)
+            filename = (try? container.decodeIfPresent(String.self, forKey: .filename)) ?? "file"
+            size = (try? container.decodeIfPresent(Int.self, forKey: .size)) ?? 0
+        }
     }
 
     struct Comment: Decodable {
@@ -149,7 +162,9 @@ struct ServerApprovalDTO: Decodable {
             fields: fields(for: item.kind),
             reason: reason,
             approvers: approvers,
-            attachments: files.map { ApprovalAttachment(name: $0.filename, sizeText: Self.sizeText($0.size)) },
+            attachments: files.map {
+                FileAttachment(name: $0.filename, sizeText: Self.sizeText($0.size), fileId: FileAttachment.uploadId(id: $0.id, url: $0.url))
+            },
             comments: comments.enumerated().map { index, comment in
                 ApprovalComment(id: index + 1, authorName: comment.who, body: comment.text, createdAt: comment.createdAt ?? item.updatedAt)
             },

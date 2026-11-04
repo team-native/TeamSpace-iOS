@@ -8,6 +8,8 @@ final class MockNoticeStore: @unchecked Sendable {
         let authorName: String
         var body: String
         let isDraft: Bool
+        /// 서버 첨부 `{id, url, filename, size, contentType}`
+        var attachments: [[String: Any]] = []
     }
 
     /// 목 서버 기준 전체 인원 (서버 `total`)
@@ -34,7 +36,8 @@ final class MockNoticeStore: @unchecked Sendable {
                    authorName: "안율", body: Self.meetingBody, isDraft: false),
             Record(summary: summary(41, .finance, "10월 프로젝트 정산 기준 안내",
                                     "수주 금액은 운영 · 적립 · 배당 풀로 나눠 관리해요.", at(1), important: true),
-                   authorName: "김민준", body: Self.settlementBody, isDraft: false),
+                   authorName: "김민준", body: Self.settlementBody, isDraft: false,
+                   attachments: [["id": "21", "url": "/uploads/21", "filename": "10월_정산표.csv", "size": 2_048, "contentType": "text/csv"]]),
             Record(summary: summary(42, .rule, "외주 프로젝트 착수 전 체크리스트",
                                     "착수 전에 계약 · 인력 · 일정 확인 항목을 점검해요.", at(3)),
                    authorName: "안율",
@@ -126,6 +129,7 @@ final class MockNoticeStore: @unchecked Sendable {
         fields["confirmed"] = confirmedCount(record.summary.id)
         fields["total"] = Self.memberCount
         fields["confirmedByMe"] = confirmedIds.contains(record.summary.id)
+        fields["attachments"] = record.attachments
         return fields
     }
 
@@ -188,7 +192,11 @@ final class MockNoticeStore: @unchecked Sendable {
             summary: request.body.split(separator: "\n").first.map(String.init),
             updatedAt: request.publishAt ?? Date(), isPinned: request.pinned, isImportant: request.mustRead
         )
-        records.append(Record(summary: summary, authorName: "김민준", body: request.body, isDraft: request.status == .draft))
+        let attachments: [[String: Any]] = request.attachments.map {
+            ["id": $0, "url": "/uploads/\($0)", "filename": "image", "size": 0, "contentType": "image/jpeg"]
+        }
+        records.append(Record(summary: summary, authorName: "김민준", body: request.body, isDraft: request.status == .draft,
+                              attachments: attachments))
         lastCreateRequest = request
         return json(["id": String(id)])
     }

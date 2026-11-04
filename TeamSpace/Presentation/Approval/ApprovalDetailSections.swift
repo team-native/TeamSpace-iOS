@@ -3,6 +3,7 @@ import SwiftUI
 /// 05-3 내 결재 상세
 struct MyApprovalDetailContent: View {
     let detail: ApprovalDetail
+    var downloader: AttachmentDownloadViewModel?
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
@@ -22,7 +23,7 @@ struct MyApprovalDetailContent: View {
         ApprovalInfoCard(fields: detail.fields, reason: detail.reason)
         ApproverLineSection(approvers: detail.approvers)
         if !detail.attachments.isEmpty {
-            AttachmentSection(attachments: detail.attachments)
+            AttachmentSection(attachments: detail.attachments, downloader: downloader)
         }
         CommentSection(comments: detail.comments)
     }
@@ -59,6 +60,9 @@ struct ReviewApprovalContent: View {
             }
         }
         ApprovalInfoCard(fields: detail.fields, reason: detail.reason)
+        if !detail.attachments.isEmpty {
+            AttachmentSection(attachments: detail.attachments, downloader: viewModel.attachmentDownloader)
+        }
         if detail.canDecide {
             CommentInputSection(text: $viewModel.commentDraft, isSending: viewModel.isProcessing) {
                 Task { await viewModel.sendComment() }

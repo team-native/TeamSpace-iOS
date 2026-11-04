@@ -24,6 +24,7 @@ final class DIContainer {
     private let signupRequestRepository: SignupRequestRepository
     private let financePermissionRepository: FinancePermissionRepository
     private let bankImportRepository: BankImportRepository
+    private let uploadRepository: UploadRepository
     private let searchRepository: SearchRepository
     private let boardRecentSearchRepository: RecentSearchRepository
     private let postDraftRepository: PostDraftRepository
@@ -69,6 +70,7 @@ final class DIContainer {
         self.signupRequestRepository = SignupRequestRepositoryImpl(client: apiClient)
         self.financePermissionRepository = FinancePermissionRepositoryImpl(client: apiClient)
         self.bankImportRepository = BankImportRepositoryImpl(client: apiClient)
+        self.uploadRepository = UploadRepositoryImpl(client: apiClient)
         self.searchRepository = SearchRepositoryImpl(client: apiClient)
         self.boardRecentSearchRepository = boardRecentSearchRepository
         self.postDraftRepository = postDraftRepository
@@ -599,8 +601,13 @@ extension DIContainer {
             fetchApprovalDetailUseCase: fetchApprovalDetailUseCase,
             decideApprovalUseCase: decideApprovalUseCase,
             addApprovalCommentUseCase: addApprovalCommentUseCase,
-            withdrawApprovalUseCase: withdrawApprovalUseCase
+            withdrawApprovalUseCase: withdrawApprovalUseCase,
+            attachmentDownloader: makeAttachmentDownloadViewModel()
         )
+    }
+
+    func makeAttachmentDownloadViewModel() -> AttachmentDownloadViewModel {
+        AttachmentDownloadViewModel(downloadAttachmentUseCase: DownloadAttachmentUseCase(uploadRepository: uploadRepository))
     }
 
     func makeExpenseRequestViewModel() -> ExpenseRequestViewModel {
@@ -842,7 +849,8 @@ extension DIContainer {
             fetchNoticeDetailUseCase: fetchNoticeDetailUseCase,
             acknowledgeNoticeUseCase: acknowledgeNoticeUseCase,
             fetchNoticeUnconfirmedUseCase: FetchNoticeUnconfirmedUseCase(noticeRepository: noticeRepository),
-            user: user
+            user: user,
+            attachmentDownloader: makeAttachmentDownloadViewModel()
         )
     }
 

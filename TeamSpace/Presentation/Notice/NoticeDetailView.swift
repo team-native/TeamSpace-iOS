@@ -79,6 +79,9 @@ struct NoticeDetailView: View {
                     Task { await viewModel.showUnconfirmed() }
                 }
             }
+            if !detail.attachments.isEmpty {
+                AttachmentSection(attachments: detail.attachments, downloader: viewModel.attachmentDownloader)
+            }
             if let document = detail.linkedDocument {
                 NoticeLinkedDocumentCard(document: document) { onNavigate(document.route) }
             }

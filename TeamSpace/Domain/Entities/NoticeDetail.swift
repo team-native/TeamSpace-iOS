@@ -18,6 +18,8 @@ struct NoticeDetail: Equatable, Sendable {
     /// 확인한 사람 수 · 전체 인원 (서버 `confirmed` · `total`)
     var confirmedCount: Int = 0
     var memberCount: Int = 0
+    /// 첨부 파일 (GET /uploads/{id} 로 내려받아요)
+    var attachments: [FileAttachment] = []
 }
 
 /// 공지를 아직 확인하지 않은 사람 (GET /admin/notices/{id}/unconfirmed)
