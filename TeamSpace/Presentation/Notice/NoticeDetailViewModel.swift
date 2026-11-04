@@ -15,6 +15,8 @@ final class NoticeDetailViewModel {
     private let acknowledgeNoticeUseCase: AcknowledgeNoticeUseCase
     private let fetchNoticeUnconfirmedUseCase: FetchNoticeUnconfirmedUseCase?
     private let user: AuthUser?
+    /// 첨부 내려받기 · 미리보기
+    let attachmentDownloader: AttachmentDownloadViewModel?
     /// 미확인자 시트
     var isUnconfirmedPresented = false
     private(set) var unconfirmedState: ViewState<[NoticeUnconfirmedMember]> = .idle
@@ -24,8 +26,10 @@ final class NoticeDetailViewModel {
         fetchNoticeDetailUseCase: FetchNoticeDetailUseCase,
         acknowledgeNoticeUseCase: AcknowledgeNoticeUseCase,
         fetchNoticeUnconfirmedUseCase: FetchNoticeUnconfirmedUseCase? = nil,
-        user: AuthUser? = nil
+        user: AuthUser? = nil,
+        attachmentDownloader: AttachmentDownloadViewModel? = nil
     ) {
+        self.attachmentDownloader = attachmentDownloader
         self.noticeId = noticeId
         self.fetchNoticeDetailUseCase = fetchNoticeDetailUseCase
         self.acknowledgeNoticeUseCase = acknowledgeNoticeUseCase

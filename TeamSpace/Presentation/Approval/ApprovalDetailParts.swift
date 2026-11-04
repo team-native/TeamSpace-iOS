@@ -1,3 +1,4 @@
+import QuickLook
 import SwiftUI
 
 /// 결재선
@@ -35,9 +36,10 @@ struct ApproverLineSection: View {
     }
 }
 
-/// 첨부
+/// 첨부 — 내려받을 수 있는 파일은 눌러서 미리보기로 열어요.
 struct AttachmentSection: View {
-    let attachments: [ApprovalAttachment]
+    let attachments: [FileAttachment]
+    var downloader: AttachmentDownloadViewModel?
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.md) {
@@ -45,23 +47,73 @@ struct AttachmentSection: View {
                 .tsFont(.bodyBold)
                 .foregroundStyle(Color.tsInk)
             VStack(spacing: Spacing.md) {
-                ForEach(Array(attachments.enumerated()), id: \.offset) { _, file in
-                    HStack(spacing: Spacing.md) {
-                        IconTile(icon: .file, iconSize: .lg, tint: .tsPrimary, background: .tsPrimarySoft)
-                        VStack(alignment: .leading, spacing: Spacing.xxxs) {
-                            Text(file.name)
-                                .tsFont(.footnoteBold)
-                                .foregroundStyle(Color.tsInk)
-                            Text(file.sizeText)
-                                .tsFont(.caption2)
-                                .foregroundStyle(Color.tsInk3)
+                ForEach(attachments) { file in
+                    if let downloader, file.canDownload {
+                        Button { Task { await downloader.open(file) } } label: {
+                            AttachmentRow(file: file, isDownloading: downloader.downloadingId == file.id, showsAction: true)
                         }
-                        Spacer(minLength: 0)
+                        .buttonStyle(.plain)
+                        .disabled(downloader.downloadingId != nil)
+                        .accessibilityHint("내려받아 열어요")
+                    } else {
+                        AttachmentRow(file: file, isDownloading: false, showsAction: false)
                     }
-                    .accessibilityElement(children: .combine)
                 }
             }
             .tsCard(padding: Spacing.lg)
+        }
+        .modifier(AttachmentPreviewModifier(downloader: downloader))
+    }
+}
+
+/// 파일 한 줄 — 아이콘 · 이름 · 크기 · (받는 중 / 열기)
+private struct AttachmentRow: View {
+    let file: FileAttachment
+    let isDownloading: Bool
+    let showsAction: Bool
+
+    var body: some View {
+        HStack(spacing: Spacing.md) {
+            IconTile(icon: .file, iconSize: .lg, tint: .tsPrimary, background: .tsPrimarySoft)
+            VStack(alignment: .leading, spacing: Spacing.xxxs) {
+                Text(file.name)
+                    .tsFont(.footnoteBold)
+                    .foregroundStyle(Color.tsInk)
+                Text(file.sizeText)
+                    .tsFont(.caption2)
+                    .foregroundStyle(Color.tsInk3)
+            }
+            Spacer(minLength: 0)
+            if isDownloading {
+                ProgressView()
+            } else if showsAction {
+                Text("열기")
+                    .tsFont(.caption2Bold)
+                    .foregroundStyle(Color.tsPrimary)
+            }
+        }
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .combine)
+    }
+}
+
+/// 내려받은 파일 미리보기 · 실패 안내
+private struct AttachmentPreviewModifier: ViewModifier {
+    let downloader: AttachmentDownloadViewModel?
+
+    func body(content: Content) -> some View {
+        if let downloader {
+            @Bindable var downloader = downloader
+            content
+                .quickLookPreview($downloader.previewURL)
+                .alert(downloader.errorMessage ?? "", isPresented: Binding(
+                    get: { downloader.errorMessage != nil },
+                    set: { if !$0 { downloader.errorMessage = nil } }
+                )) {
+                    Button("확인", role: .cancel) {}
+                }
+        } else {
+            content
         }
     }
 }

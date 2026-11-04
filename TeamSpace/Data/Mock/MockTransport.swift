@@ -53,6 +53,7 @@ struct MockTransport: HTTPTransport {
     private let signupStore = MockSignupRequestStore()
     private let financePermissionStore = MockFinancePermissionStore()
     private let bankImportStore = MockBankImportStore()
+    private let uploadStore = MockUploadStore()
 
     func send(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
         try await Task.sleep(nanoseconds: latencyNanoseconds)
@@ -241,6 +242,14 @@ struct MockTransport: HTTPTransport {
         }
         if components.first == "uploads", request.httpMethod == "POST" {
             return try upload(request)
+        }
+        if components.count == 2, components.first == "uploads", request.httpMethod == "GET" {
+            guard let file = uploadStore.file(id: components[1]), let url = request.url,
+                  let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: "HTTP/1.1", headerFields: [
+                      "Content-Disposition": "attachment; filename=\"\(file.filename)\""
+                  ])
+            else { return try respond(request, status: 404, json: #"{"detail":"파일을 찾을 수 없습니다."}"#) }
+            return (file.data, response)
         }
         if components.first == "posts" {
             return try boardRoute(request, components: components)
@@ -959,8 +968,22 @@ struct MockTransport: HTTPTransport {
         guard contentType.hasPrefix("multipart/form-data"), let body = request.httpBody, !body.isEmpty else {
             return try respond(request, status: 422, json: #"{"detail":"파일이 필요합니다."}"#)
         }
-        let id = UUID().uuidString.prefix(8).lowercased()
-        return try respond(request, status: 201, json: #"{"id":"\#(id)","url":"/uploads/\#(id)","filename":"image","size":\#(body.count)}"#)
+        let id = String(UUID().uuidString.prefix(8).lowercased())
+        let part = Self.multipartFile(body, contentType: contentType)
+        uploadStore.save(id: id, filename: part.filename, data: part.data)
+        return try respond(request, status: 201, json: #"{"id":"\#(id)","url":"/uploads/\#(id)","filename":"\#(part.filename)","size":\#(part.data.count)}"#)
+    }
+
+    /// multipart 본문에서 첫 파일의 이름 · 내용만 꺼내요.
+    static func multipartFile(_ body: Data, contentType: String) -> (filename: String, data: Data) {
+        let boundary = contentType.components(separatedBy: "boundary=").last ?? ""
+        let headerEnd = Data("\r\n\r\n".utf8)
+        guard let start = body.range(of: headerEnd) else { return ("file", body) }
+        let header = String(decoding: body[body.startIndex..<start.lowerBound], as: UTF8.self)
+        let filename = header.components(separatedBy: "filename=\"").dropFirst().first?.components(separatedBy: "\"").first ?? "file"
+        let rest = body[start.upperBound...]
+        let end = rest.range(of: Data("\r\n--\(boundary)".utf8))?.lowerBound ?? rest.endIndex
+        return (filename, Data(rest[rest.startIndex..<end]))
     }
 
     /// 요청 URL 의 쿼리를 이름 → 값으로

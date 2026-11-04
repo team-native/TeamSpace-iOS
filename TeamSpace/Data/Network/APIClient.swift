@@ -34,6 +34,11 @@ final class APIClient: @unchecked Sendable {
         }
     }
 
+    /// 파일처럼 JSON 이 아닌 응답 — 받은 그대로 돌려줘요. (GET /uploads/{id})
+    func data(_ endpoint: Endpoint) async throws -> Data {
+        try await perform(endpoint)
+    }
+
     /// 공통 형식이면 `data` 를 꺼내고, 아니면(`/auth/login` · `/auth/refresh` · `/users/me`) 응답 전체를 그대로 읽어요.
     static func decodePayload<Response: Decodable>(_ type: Response.Type, from data: Data) throws -> Response {
         let decoder = JSONCoder.makeDecoder()

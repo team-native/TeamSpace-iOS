@@ -29,11 +29,8 @@ struct ApprovalField: Equatable, Sendable {
     let value: String
 }
 
-struct ApprovalAttachment: Equatable, Sendable {
-    let name: String
-    /// 예) 1.2MB
-    let sizeText: String
-}
+/// 결재 첨부 — 공지 첨부와 같은 모양이에요.
+typealias ApprovalAttachment = FileAttachment
 
 struct ApprovalComment: Equatable, Identifiable, Sendable {
     let id: Int

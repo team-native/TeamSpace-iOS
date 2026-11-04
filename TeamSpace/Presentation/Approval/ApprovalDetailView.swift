@@ -53,7 +53,7 @@ struct ApprovalDetailView: View {
             ErrorStateView(message: error.userMessage, title: "내용을 불러오지 못했어요") { Task { await viewModel.load() } }
         case .loaded(let detail):
             if detail.isMine {
-                MyApprovalDetailContent(detail: detail)
+                MyApprovalDetailContent(detail: detail, downloader: viewModel.attachmentDownloader)
             } else {
                 ReviewApprovalContent(detail: detail, meta: viewModel.reviewMeta, viewModel: viewModel)
             }
