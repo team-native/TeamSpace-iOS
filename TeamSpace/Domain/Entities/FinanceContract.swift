@@ -54,6 +54,8 @@ struct ContractDetail: Equatable, Sendable {
     let managerName: String
     let memberCount: Int
     let documentName: String?
+    /// 등록된 계약 정보 — 없으면 수금 내용만 있어요.
+    var info: ContractInfo? = nil
 }
 
 /// 월별로 묶은 수금 내역

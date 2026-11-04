@@ -288,7 +288,13 @@ extension ContractDetail {
             pools: contract?.pools(total: total) ?? [],
             managerName: contract?.managerName ?? "",
             memberCount: contract?.memberCount ?? 0,
-            documentName: contract?.file
+            documentName: contract?.file,
+            info: contract.map {
+                ContractInfo(
+                    pm: $0.pm, signed: $0.signed, total: $0.total, collected: $0.collected,
+                    step: $0.step, staff: $0.staff, split: $0.split, next: $0.next
+                )
+            }
         )
     }
 }

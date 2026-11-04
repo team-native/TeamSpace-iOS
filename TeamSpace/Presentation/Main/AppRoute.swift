@@ -16,6 +16,7 @@ enum AppRoute: Hashable {
     case financeContractDetail(id: Int) // 04-2 수주 상세
     case receiptCompose                 // 04-3 수금 등록 [FA · Admin]
     case receiptEdit(id: Int)           // 04-2 수금 수정 [FA · Admin]
+    case contractInfoEdit(receiptId: Int) // 04-2 계약 정보 등록 · 수정 [FA · Admin]
     case financeMonthlyFlow(month: Date) // 04-5 월별 흐름
     case financeComposition(month: Date) // 04-6 돈의 구성
     case financeAccess              // 04-7 재정 제한 권한
