@@ -7,10 +7,17 @@ final class TemplateDetailViewModel {
     private(set) var state: ViewState<LibraryTemplate> = .idle
     private let templateId: String
     private let fetchTemplateUseCase: FetchLibraryTemplateUseCase
+    /// 원본 양식 파일 내려받기
+    let attachmentDownloader: AttachmentDownloadViewModel?
 
-    init(templateId: String, fetchTemplateUseCase: FetchLibraryTemplateUseCase) {
+    init(
+        templateId: String,
+        fetchTemplateUseCase: FetchLibraryTemplateUseCase,
+        attachmentDownloader: AttachmentDownloadViewModel? = nil
+    ) {
         self.templateId = templateId
         self.fetchTemplateUseCase = fetchTemplateUseCase
+        self.attachmentDownloader = attachmentDownloader
     }
 
     func load() async {

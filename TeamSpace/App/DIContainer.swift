@@ -633,7 +633,8 @@ extension DIContainer {
     func makeTemplateDetailViewModel(templateId: String) -> TemplateDetailViewModel {
         TemplateDetailViewModel(
             templateId: templateId,
-            fetchTemplateUseCase: FetchLibraryTemplateUseCase(libraryRepository: libraryRepository)
+            fetchTemplateUseCase: FetchLibraryTemplateUseCase(libraryRepository: libraryRepository),
+            attachmentDownloader: makeAttachmentDownloadViewModel()
         )
     }
 

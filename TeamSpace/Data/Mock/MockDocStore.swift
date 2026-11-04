@@ -50,6 +50,11 @@ final class MockDocStore: @unchecked Sendable {
             copy: "공용 계정과 권한 관리 방법", daysAgo: 45)
     ]
 
+    /// 원본 양식 파일 (MockUploadStore 에 같은 id 로 있어요)
+    static let templateFiles: [String: (id: Int, name: String)] = [
+        "budget-request": (31, "예산_품의서_양식.csv")
+    ]
+
     private let lock = NSLock()
     private let now: Date
     private var readCount: [String: Int] = [:]
@@ -132,6 +137,12 @@ final class MockDocStore: @unchecked Sendable {
         var body = summary(doc)
         if doc.type == "TEMPLATE" {
             body["fields"] = Self.fields(slug).map { [$0.0, $0.1] }
+            // 서버처럼 fileId 가 있으면 downloadUrl 을 붙여요.
+            if let file = Self.templateFiles[slug] {
+                body["fileId"] = file.id
+                body["fileName"] = file.name
+                body["downloadUrl"] = "/uploads/\(file.id)"
+            }
         } else {
             lock.lock()
             let saved = savedSections[slug]

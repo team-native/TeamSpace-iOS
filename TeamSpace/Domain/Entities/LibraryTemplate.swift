@@ -23,4 +23,6 @@ struct LibraryTemplate: Equatable, Identifiable, Sendable {
     /// 서버에 없어 0이면 숨겨요.
     let monthlyUsageCount: Int
     let formKind: TemplateFormKind
+    /// 서버에 올린 원본 양식 파일 (없으면 nil)
+    var file: FileAttachment? = nil
 }
