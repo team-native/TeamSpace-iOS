@@ -23,6 +23,7 @@ final class DIContainer {
     private let proposalRepository: ProposalRepository
     private let signupRequestRepository: SignupRequestRepository
     private let financePermissionRepository: FinancePermissionRepository
+    private let bankImportRepository: BankImportRepository
     private let searchRepository: SearchRepository
     private let boardRecentSearchRepository: RecentSearchRepository
     private let postDraftRepository: PostDraftRepository
@@ -67,6 +68,7 @@ final class DIContainer {
         self.proposalRepository = ProposalRepositoryImpl(client: apiClient)
         self.signupRequestRepository = SignupRequestRepositoryImpl(client: apiClient)
         self.financePermissionRepository = FinancePermissionRepositoryImpl(client: apiClient)
+        self.bankImportRepository = BankImportRepositoryImpl(client: apiClient)
         self.searchRepository = SearchRepositoryImpl(client: apiClient)
         self.boardRecentSearchRepository = boardRecentSearchRepository
         self.postDraftRepository = postDraftRepository
@@ -778,6 +780,15 @@ extension DIContainer {
             ruleId: ruleId,
             fetchRuleDetailUseCase: fetchRuleDetailUseCase,
             acknowledgeRuleUseCase: acknowledgeRuleUseCase
+        )
+    }
+
+    func makeBankImportViewModel(user: AuthUser) -> BankImportViewModel {
+        BankImportViewModel(
+            user: user,
+            fetchBankImportsUseCase: FetchBankImportsUseCase(bankImportRepository: bankImportRepository),
+            reviewBankImportUseCase: ReviewBankImportUseCase(bankImportRepository: bankImportRepository),
+            commitBankImportsUseCase: CommitBankImportsUseCase(bankImportRepository: bankImportRepository)
         )
     }
 
