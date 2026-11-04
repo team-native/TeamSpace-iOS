@@ -23,8 +23,14 @@ struct APIErrorResponseDTO: Decodable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         code = try? container.decodeIfPresent(Int.self, forKey: .code)
         errors = try? container.decodeIfPresent([FieldErrorDTO].self, forKey: .errors)
-        let detail = try? container.decodeIfPresent(String.self, forKey: .detail)
+        let detail = (try? container.decodeIfPresent(String.self, forKey: .detail))
+            ?? (try? container.decodeIfPresent(DetailObject.self, forKey: .detail))?.message
         message = (try? container.decodeIfPresent(String.self, forKey: .message)) ?? detail
+    }
+
+    /// `{ "detail": { "message": "...", "lastSuccessfulSyncAt": ... } }` (은행 거래 불러오기 실패 등)
+    private struct DetailObject: Decodable {
+        let message: String?
     }
 
     private enum CodingKeys: String, CodingKey {

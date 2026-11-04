@@ -82,7 +82,7 @@ final class BankImportTests: XCTestCase {
         await viewModel.load()
         let unmatched = try XCTUnwrap(viewModel.items.first { $0.id == "103" })
         await viewModel.review(unmatched, .confirm)
-        XCTAssertEqual(viewModel.errorMessage, "연결된 수주 계약이 없는 입금이에요. 웹에서 계약을 연결하거나 제외해 주세요.")
+        XCTAssertEqual(viewModel.errorMessage, "연결된 수주 계약이 없는 입금이에요. 계약을 연결하거나 제외해 주세요.")
 
         viewModel.errorMessage = nil
         viewModel.filter = .done

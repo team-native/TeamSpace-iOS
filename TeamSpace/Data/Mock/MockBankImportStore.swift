@@ -26,6 +26,11 @@ final class MockBankImportStore: @unchecked Sendable {
             committedAt: Date(timeIntervalSinceNow: -70 * 3600))
     ]
 
+    private var lastSyncedAt: Date?
+    private var syncFailures = 0
+    /// 테스트에서 불러오기 실패를 흉내 내요.
+    var failsSync = false
+
     init(now: Date = Date()) {
         self.now = now
     }
@@ -52,7 +57,7 @@ final class MockBankImportStore: @unchecked Sendable {
     }
 
     /// PATCH /finance/bank-imports/{rowId}
-    func review(id: String, confirm: Bool, exclude: Bool) -> (status: Int, json: String) {
+    func review(id: String, confirm: Bool, exclude: Bool, matchedProject: String? = nil) -> (status: Int, json: String) {
         lock.lock()
         defer { lock.unlock() }
         guard let index = rows.firstIndex(where: { $0.id == id }) else {
@@ -65,14 +70,58 @@ final class MockBankImportStore: @unchecked Sendable {
             return (200, json(["rowId": id, "status": "제외"]))
         }
         if rows[index].direction == "입금" {
+            if let matchedProject, !matchedProject.isEmpty {
+                // 서버처럼 계약의 project 이름으로 찾아요.
+                guard MockFinanceFixture.receipts.contains(where: { $0.project == matchedProject }) else {
+                    return (404, #"{"detail":"연결할 수주 계약을 찾을 수 없습니다."}"#)
+                }
+                rows[index].matchedProject = matchedProject
+            }
             guard rows[index].matchedProject != nil else { return (404, #"{"detail":"연결할 수주 계약을 찾을 수 없습니다."}"#) }
             rows[index].status = confirm ? "확인 완료" : "자동 매칭"
         } else {
+            if matchedProject?.isEmpty == false { return (422, #"{"detail":"출금 거래는 수주 계약에 연결할 수 없습니다."}"#) }
             rows[index].status = confirm ? "확인 완료" : "확인 필요"
         }
         rows[index].confirmed = confirm
         let row = rows[index]
         return (200, json(["rowId": id, "matchedProject": row.matchedProject ?? NSNull(), "confirmed": row.confirmed, "status": row.status]))
+    }
+
+    /// GET /finance/bank-accounts — 서버처럼 아직 은행 연동 업체는 정해지지 않았어요(provider_pending).
+    func accountJSON() -> String {
+        lock.lock()
+        defer { lock.unlock() }
+        return json([
+            "connected": false, "configured": true, "connectionStatus": "provider_pending",
+            "provider": "mock", "accountNumber": "******1234", "alias": "NativeOps 운영 계좌",
+            "lastSyncedAt": lastSyncedAt.map { iso($0) as Any } ?? NSNull(),
+            "thisMonth": [
+                "inboundCount": rows.filter { $0.direction == "입금" }.count,
+                "outboundCount": rows.filter { $0.direction == "출금" }.count
+            ],
+            "consecutiveFailures": syncFailures, "recentFailures": []
+        ])
+    }
+
+    /// POST /finance/bank-syncs — 처음엔 새 입금 1건, 그다음엔 새 거래 없음.
+    /// `failsSync` 면 서버처럼 503 `{detail: {message, lastSuccessfulSyncAt}}`
+    func sync() -> (status: Int, json: String) {
+        lock.lock()
+        defer { lock.unlock() }
+        if failsSync {
+            syncFailures += 1
+            return (503, json(["detail": ["message": "은행 연동 업체가 아직 정해지지 않았습니다.", "lastSuccessfulSyncAt": lastSyncedAt.map { iso($0) as Any } ?? NSNull()]]))
+        }
+        var imported = 0
+        if !rows.contains(where: { $0.id == "106" }) {
+            rows.insert(Row(id: "106", hoursAgo: 0, counterparty: "모션스튜디오", amount: 1_400_000, direction: "입금", status: "확인 필요"), at: 0)
+            imported = 1
+        }
+        let at = Date()
+        lastSyncedAt = at
+        syncFailures = 0
+        return (200, json(["success": true, "fetchedCount": imported, "importedCount": imported, "lastSyncedAt": iso(at)]))
     }
 
     /// POST /finance/bank-import-commits

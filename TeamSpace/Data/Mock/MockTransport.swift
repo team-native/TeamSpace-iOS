@@ -52,7 +52,7 @@ struct MockTransport: HTTPTransport {
     private let proposalStore = MockProposalStore()
     private let signupStore = MockSignupRequestStore()
     private let financePermissionStore = MockFinancePermissionStore()
-    private let bankImportStore = MockBankImportStore()
+    let bankImportStore = MockBankImportStore()
     private let uploadStore = MockUploadStore()
 
     func send(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
@@ -863,7 +863,12 @@ struct MockTransport: HTTPTransport {
             guard let body = request.httpBody, let dto = try? JSONDecoder().decode(ServerBankImportReviewRequestDTO.self, from: body) else {
                 return try respond(request, status: 422, json: #"{"detail":"잘못된 요청입니다."}"#)
             }
-            let result = bankImportStore.review(id: components[2], confirm: dto.confirm, exclude: dto.exclude)
+            let result = bankImportStore.review(id: components[2], confirm: dto.confirm, exclude: dto.exclude, matchedProject: dto.matchedProject)
+            return try respond(request, status: result.status, json: result.json)
+        case ("GET", 2) where components[1] == "bank-accounts":
+            return try respond(request, status: 200, json: bankImportStore.accountJSON())
+        case ("POST", 2) where components[1] == "bank-syncs":
+            let result = bankImportStore.sync()
             return try respond(request, status: result.status, json: result.json)
         case ("POST", 2) where components[1] == "bank-import-commits":
             guard let body = request.httpBody, let dto = try? JSONDecoder().decode(ServerBankImportCommitRequestDTO.self, from: body) else {
