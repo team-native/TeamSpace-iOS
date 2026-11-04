@@ -20,9 +20,16 @@ final class MockUploadStore: @unchecked Sendable {
         files[id] = File(filename: filename, data: data)
     }
 
+    /// 예시 게시글 사진 id 앞부분 — "post-photo-3" 처럼 글마다 하나씩
+    static let samplePhotoPrefix = "post-photo-"
+    /// 1×1 PNG
+    static let samplePhoto = Data(base64Encoded: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==") ?? Data()
+
     func file(id: String) -> File? {
         lock.lock()
         defer { lock.unlock() }
-        return files[id]
+        if let file = files[id] { return file }
+        guard id.hasPrefix(Self.samplePhotoPrefix) else { return nil }
+        return File(filename: "photo-\(id).png", data: Self.samplePhoto)
     }
 }

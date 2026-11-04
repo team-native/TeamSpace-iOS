@@ -98,7 +98,7 @@ private struct AttachmentRow: View {
 }
 
 /// 내려받은 파일 미리보기 · 실패 안내
-private struct AttachmentPreviewModifier: ViewModifier {
+struct AttachmentPreviewModifier: ViewModifier {
     let downloader: AttachmentDownloadViewModel?
 
     func body(content: Content) -> some View {

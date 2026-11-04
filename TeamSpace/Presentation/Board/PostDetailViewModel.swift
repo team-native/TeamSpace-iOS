@@ -23,14 +23,18 @@ final class PostDetailViewModel {
     private let togglePostLikeUseCase: TogglePostLikeUseCase
     private let reportPostUseCase: ReportPostUseCase
     private let deletePostUseCase: DeletePostUseCase
+    /// 첨부 사진 받기 · 크게 보기
+    let attachmentDownloader: AttachmentDownloadViewModel?
 
     init(
         postId: Int,
         fetchPostDetailUseCase: FetchPostDetailUseCase,
         togglePostLikeUseCase: TogglePostLikeUseCase,
         reportPostUseCase: ReportPostUseCase,
-        deletePostUseCase: DeletePostUseCase
+        deletePostUseCase: DeletePostUseCase,
+        attachmentDownloader: AttachmentDownloadViewModel? = nil
     ) {
+        self.attachmentDownloader = attachmentDownloader
         self.postId = postId
         self.fetchPostDetailUseCase = fetchPostDetailUseCase
         self.togglePostLikeUseCase = togglePostLikeUseCase

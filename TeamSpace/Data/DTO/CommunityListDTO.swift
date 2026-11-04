@@ -21,6 +21,8 @@ struct ServerPostItemDTO: Decodable {
     let mine: Bool
     let commentCount: Int
     let attachmentCount: Int
+    /// 상세에서 보여줄 사진 (`{id, url, filename, size, contentType}`)
+    let attachments: [ServerApprovalDTO.File]
     /// 익명 글이면 없어요.
     let author: String?
 
@@ -37,6 +39,7 @@ struct ServerPostItemDTO: Decodable {
         mine = try container.decodeIfPresent(Bool.self, forKey: .mine) ?? false
         commentCount = try container.decodeIfPresent(Int.self, forKey: .commentCount) ?? 0
         attachmentCount = try container.decodeIfPresent([IgnoredJSONValue].self, forKey: .attachments)?.count ?? 0
+        attachments = (try? container.decodeIfPresent([ServerApprovalDTO.File].self, forKey: .attachments)) ?? []
         author = try container.decodeIfPresent(String.self, forKey: .author)
     }
 

@@ -65,6 +65,8 @@ struct PostDetail: Equatable, Sendable {
     let commentPolicy: CommentPolicy
     var isLiked: Bool
     var comments: [PostComment]
+    /// 첨부 사진 (JPG · PNG, 최대 5장) — GET /uploads/{id} 로 받아요.
+    var images: [FileAttachment] = []
 }
 
 /// POST /posts/{id}/like 결과

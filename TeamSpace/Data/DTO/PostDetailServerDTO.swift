@@ -25,7 +25,11 @@ struct ServerPostDetailDTO: Decodable {
             body: post.body,
             commentPolicy: anonComments || post.anonymous ? .anonymous : .realName,
             isLiked: false,
-            comments: comments.map { $0.toEntity(postAuthor: summary.authorName) }
+            comments: comments.map { $0.toEntity(postAuthor: summary.authorName) },
+            images: post.attachments.compactMap { file in
+                guard let id = FileAttachment.uploadId(id: file.id, url: file.url) else { return nil }
+                return FileAttachment(name: file.filename, sizeText: FileAttachment.sizeText(file.size), fileId: id)
+            }
         )
     }
 }
