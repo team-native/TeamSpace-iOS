@@ -818,7 +818,8 @@ extension DIContainer {
             fetchPostDetailUseCase: fetchPostDetailUseCase,
             togglePostLikeUseCase: togglePostLikeUseCase,
             reportPostUseCase: reportPostUseCase,
-            deletePostUseCase: deletePostUseCase
+            deletePostUseCase: deletePostUseCase,
+            attachmentDownloader: makeAttachmentDownloadViewModel()
         )
     }
 

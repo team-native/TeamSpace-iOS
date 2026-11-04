@@ -62,6 +62,9 @@ struct PostDetailView: View {
             ErrorStateView(message: error.userMessage, title: "내용을 불러오지 못했어요") { Task { await viewModel.load() } }
         case .loaded(let detail):
             PostDetailHeader(detail: detail)
+            if !detail.images.isEmpty {
+                PostImageGallery(images: detail.images, downloader: viewModel.attachmentDownloader)
+            }
             PostReactionBar(
                 detail: detail,
                 isLiking: viewModel.isLiking,

@@ -17,6 +17,8 @@ final class MockBoardStore: @unchecked Sendable {
     /// 댓글 공감 — 댓글 id → 수, 내가 누른 댓글
     private var commentLikes: [Int: Int] = [:]
     private var likedCommentIds: Set<Int> = []
+    /// POST /posts 로 붙인 업로드 id
+    private var attachmentIds: [Int: [String]] = [:]
     private var comments: [Int: [PostCommentDTO]] = [:]
     /// 새로 쓴 글의 본문 · 댓글 정책
     private var bodies: [Int: String] = [:]
@@ -181,7 +183,11 @@ final class MockBoardStore: @unchecked Sendable {
         let category: String = post.category.serverValue ?? "자유"
         let body: String = bodies[post.id] ?? post.excerpt
         let commentCount: Int = comments[post.id]?.count ?? post.commentCount
-        let attachments: [[String: String]] = post.hasImage ? [["id": "upload-\(post.id)"]] : []
+        let ids: [String] = attachmentIds[post.id] ?? (post.hasImage ? ["\(MockUploadStore.samplePhotoPrefix)\(post.id)"] : [])
+        let attachments: [[String: Any]] = ids.map {
+            ["id": $0, "url": "/uploads/\($0)", "filename": "photo-\($0).png",
+             "size": MockUploadStore.samplePhoto.count, "contentType": "image/png"]
+        }
         let createdAt: String = Self.pythonISO(post.createdAt)
         var fields: [String: Any] = [:]
         fields["id"] = String(post.id)
@@ -266,6 +272,7 @@ final class MockBoardStore: @unchecked Sendable {
         bodies[id] = request.body
         policies[id] = request.anonComments ? .anonymous : .realName
         comments[id] = []
+        attachmentIds[id] = request.attachments
         return #"{"id":"\#(id)"}"#
     }
 
