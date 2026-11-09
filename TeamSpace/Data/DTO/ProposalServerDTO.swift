@@ -29,6 +29,10 @@ struct ServerProposalDTO: Decodable {
     let answer: Answer?
     let history: [History]
     let comments: [ServerProposalCommentDTO]?
+    /// 조회 수 — 상세를 열 때마다 서버가 1씩 올려요.
+    let views: Int?
+    /// 내가 추천했는지 (상세에만 있어요)
+    let recommended: Bool?
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -47,11 +51,13 @@ struct ServerProposalDTO: Decodable {
         answer = try? container.decodeIfPresent(Answer.self, forKey: .answer)
         history = (try? container.decodeIfPresent([History].self, forKey: .history)) ?? []
         comments = try? container.decodeIfPresent([ServerProposalCommentDTO].self, forKey: .comments)
+        views = try? container.decodeIfPresent(Int.self, forKey: .views)
+        recommended = try? container.decodeIfPresent(Bool.self, forKey: .recommended)
     }
 
     private enum CodingKeys: String, CodingKey {
         case id, category, title, body, status, anonymous, likes, recommendCount, commentCount, createdAt, mine, author
-        case answer, history, comments
+        case answer, history, comments, views, recommended
     }
 
     func toEntity() -> ProposalSummary {
@@ -70,14 +76,13 @@ struct ServerProposalDTO: Decodable {
         )
     }
 
-    /// 서버는 조회 수와 내 추천 여부를 주지 않아요. (추천 여부는 누르면 서버 값으로 바뀌어요)
     func toDetail() -> ProposalDetail {
         let summary = toEntity()
         return ProposalDetail(
             proposal: summary,
             body: body,
-            viewCount: nil,
-            isRecommended: false,
+            viewCount: views,
+            isRecommended: recommended ?? false,
             steps: history.compactMap { item in
                 item.at.map { ProposalStep(status: ProposalStatus(serverValue: item.status).step, reachedAt: $0) }
             },
