@@ -2,7 +2,7 @@ import Foundation
 
 /// GET · PATCH /me 응답 (TeamSpace-backend develop `shared.user_profile`)
 /// 소속은 `dept` 로 "Native · {dept}" 를 만들고, 한 줄 소개는 `bio` 예요.
-/// 미모티콘 배경색은 서버에 없어 `avatarBackground` 가 오면 읽고, 없으면 회색이에요.
+/// 미모티콘 배경색(`avatarBackground`)이 비어 있거나 모르는 값이면 회색이에요.
 struct ServerProfileDTO: Decodable {
     let id: Int?
     let name: String
@@ -32,7 +32,7 @@ struct ServerProfileDTO: Decodable {
     }
 }
 
-/// PATCH /me 요청 — 바꾼 항목만 보내요. (`avatarBackground` 는 서버에 아직 없어요)
+/// PATCH /me 요청 — 바꾼 항목만 보내요.
 struct ServerProfilePatchRequestDTO: Codable, Equatable {
     let bio: String
     let interests: [String]

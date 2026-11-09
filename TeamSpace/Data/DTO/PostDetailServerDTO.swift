@@ -4,27 +4,29 @@ import Foundation
 struct ServerPostDetailDTO: Decodable {
     let post: ServerPostItemDTO
     let anonComments: Bool
+    /// 내가 이 글에 공감했는지
+    let liked: Bool
     let comments: [ServerCommentDTO]
 
     init(from decoder: Decoder) throws {
         post = try ServerPostItemDTO(from: decoder)
         let container = try decoder.container(keyedBy: CodingKeys.self)
         anonComments = try container.decodeIfPresent(Bool.self, forKey: .anonComments) ?? false
+        liked = (try? container.decodeIfPresent(Bool.self, forKey: .liked)) ?? false
         comments = try container.decodeIfPresent([ServerCommentDTO].self, forKey: .comments) ?? []
     }
 
     private enum CodingKeys: String, CodingKey {
-        case anonComments, comments
+        case anonComments, liked, comments
     }
 
-    /// 서버는 내가 공감했는지 알려주지 않아요 — 처음엔 꺼진 상태로 보여요.
     func toEntity() -> PostDetail {
         let summary = post.toEntity()
         return PostDetail(
             post: summary,
             body: post.body,
             commentPolicy: anonComments || post.anonymous ? .anonymous : .realName,
-            isLiked: false,
+            isLiked: liked,
             comments: comments.map { $0.toEntity(postAuthor: summary.authorName) },
             images: post.attachments.compactMap { file in
                 guard let id = FileAttachment.uploadId(id: file.id, url: file.url) else { return nil }
@@ -45,7 +47,6 @@ struct ServerCommentDTO: Decodable {
     let author: String?
     let mine: Bool
     let likes: Int
-    /// 서버가 아직 주지 않아요. 생기면 처음부터 빨간 하트로 보여요.
     let liked: Bool
 
     init(from decoder: Decoder) throws {
@@ -64,7 +65,7 @@ struct ServerCommentDTO: Decodable {
         case id, anonymous, text, createdAt, author, mine, likes, liked
     }
 
-    /// 서버는 익명 번호를 주지 않아 "익명"으로만 보여요.
+    /// 익명 글의 익명 댓글은 author 가 "익명 1", "익명 2" 처럼 와요. 그 숫자를 익명 번호로 써요.
     func toEntity(postAuthor: String?) -> PostComment {
         let isAnonymousPostAuthor = author == Self.postAuthorLabel
         let isAnonymous = anonymous || isAnonymousPostAuthor
@@ -72,7 +73,7 @@ struct ServerCommentDTO: Decodable {
             id: id,
             authorName: isAnonymous ? nil : author,
             isAnonymous: isAnonymous,
-            anonymousNumber: nil,
+            anonymousNumber: isAnonymous && !isAnonymousPostAuthor ? Self.anonymousNumber(from: author) : nil,
             isPostAuthor: isAnonymousPostAuthor || (postAuthor != nil && author == postAuthor),
             isMine: mine,
             body: text,
@@ -80,6 +81,12 @@ struct ServerCommentDTO: Decodable {
             likeCount: likes,
             isLiked: liked
         )
+    }
+
+    /// "익명 3" → 3. 번호가 없으면 nil 이에요.
+    static func anonymousNumber(from author: String?) -> Int? {
+        guard let author, author.hasPrefix("익명 ") else { return nil }
+        return Int(author.dropFirst(3))
     }
 }
 

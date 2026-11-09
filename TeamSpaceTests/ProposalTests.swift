@@ -123,6 +123,15 @@ final class ProposalTests: XCTestCase {
         XCTAssertTrue(detail.comments[1].isAnonymous)
         XCTAssertNil(detail.comments[1].authorName)
         XCTAssertEqual(ProposalStatus(serverValue: "협업 중"), .inProgress)
+        XCTAssertNil(detail.viewCount, "서버가 views 를 안 주면 숨겨요")
+        XCTAssertFalse(detail.isRecommended)
+    }
+
+    func testServerProposalDetailDecodesViewsAndRecommended() throws {
+        let json = #"{"id":"22","category":"PMO","title":"t","body":"b","status":"접수","anonymous":true,"recommendCount":4,"commentCount":0,"createdAt":"2026-10-20T09:30:00","mine":false,"history":[],"views":17,"recommended":true,"comments":[]}"#
+        let detail = try JSONCoder.makeDecoder().decode(ServerProposalDTO.self, from: Data(json.utf8)).toDetail()
+        XCTAssertEqual(detail.viewCount, 17)
+        XCTAssertTrue(detail.isRecommended)
     }
 
     func testListLoadsEveryPage() async throws {

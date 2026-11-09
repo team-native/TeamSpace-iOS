@@ -335,6 +335,24 @@ final class BoardTests: XCTestCase {
         XCTAssertFalse(comment.isLiked, "서버가 liked 를 안 주면 빈 하트")
     }
 
+    func testServerPostDetailDecodesLikedAndAnonymousNumbers() throws {
+        let json = Data(#"""
+        {"id":"41","category":"자유","title":"t","body":"b","anonymous":true,"anonComments":true,"views":1,"likes":2,
+          "createdAt":"2026-11-02T09:00:00+09:00","mine":false,"commentCount":3,"attachments":[],"liked":true,
+          "comments":[
+            {"id":"1","anonymous":true,"text":"a","createdAt":"2026-11-02T09:00:00+09:00","author":"익명 1","likes":0,"mine":false},
+            {"id":"2","anonymous":true,"text":"b","createdAt":"2026-11-02T09:01:00+09:00","author":"글쓴이","likes":0,"mine":false},
+            {"id":"3","anonymous":true,"text":"c","createdAt":"2026-11-02T09:02:00+09:00","author":"익명 2","likes":0,"mine":true}
+          ]}
+        """#.utf8)
+        let detail = try JSONCoder.makeDecoder().decode(ServerPostDetailDTO.self, from: json).toEntity()
+        XCTAssertTrue(detail.isLiked)
+        XCTAssertEqual(detail.comments.map(\.anonymousNumber), [1, nil, 2])
+        XCTAssertEqual(detail.comments.map(\.isAnonymous), [true, true, true])
+        XCTAssertTrue(detail.comments[1].isPostAuthor)
+        XCTAssertNil(detail.comments[0].authorName, "익명 번호를 이름으로 쓰지 않아요")
+    }
+
     func testRealNamePostComments() async throws {
         let viewModel = makeContainer().makePostDetailViewModel(postId: 40)
         await viewModel.load()
