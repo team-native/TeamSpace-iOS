@@ -330,6 +330,17 @@ struct MockTransport: HTTPTransport {
         if components == ["admin", "signup-requests"], request.httpMethod == "GET" {
             return try respond(request, status: 200, json: signupStore.listJSON())
         }
+        if components.count == 4, components.starts(with: ["admin", "signup-requests"]), components[3] == "reject", request.httpMethod == "POST" {
+            let reason = request.httpBody.flatMap { try? JSONDecoder().decode(ServerSignupRejectRequestDTO.self, from: $0) }?.reason
+                .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            guard !reason.isEmpty else { return try respond(request, status: 422, json: #"{"detail":"반려 사유를 입력해주세요."}"#) }
+            switch signupStore.reject(id: Int(components[2]) ?? 0, reason: reason) {
+            case .some(true):
+                return try respond(request, status: 200, json: #"{"id":"\#(components[2])","status":"REJECTED"}"#)
+            case .some(false): return try respond(request, status: 409, json: #"{"detail":"대기 중인 가입 요청만 반려할 수 있습니다."}"#)
+            case .none: return try respond(request, status: 404, json: #"{"detail":"리소스를 찾을 수 없습니다."}"#)
+            }
+        }
         if components.count == 4, components.starts(with: ["admin", "signup-requests"]), components[3] == "approve", request.httpMethod == "POST" {
             let approval = request.httpBody.flatMap { try? JSONDecoder().decode(ServerSignupApproveRequestDTO.self, from: $0) }
             let password = approval?.temporaryPassword

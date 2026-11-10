@@ -13,5 +13,8 @@ struct SignupRequestItem: Equatable, Identifiable, Sendable {
     var status: AccountRequestStatus
     let requestedAt: Date?
     var approvedBy: String?
+    /// 반려 사유 · 반려한 사람
+    var rejectionReason: String?
+    var rejectedBy: String?
 }
 

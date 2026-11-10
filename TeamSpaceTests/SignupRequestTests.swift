@@ -111,6 +111,47 @@ final class SignupRequestTests: XCTestCase {
         XCTAssertEqual(viewModel.linkableMembers.count, 2, "연결하지 않았으면 후보에 그대로 남아요")
     }
 
+    func testRejectNeedsReasonAndMovesToProcessed() async throws {
+        let viewModel = makeContainer().makeSignupRequestListViewModel(user: admin)
+        await viewModel.load()
+        viewModel.startRejection(try XCTUnwrap(viewModel.requests.first { $0.name == "조현우" }))
+        viewModel.rejectReason = "   "
+        XCTAssertFalse(viewModel.canReject, "사유가 비면 반려할 수 없어요")
+
+        viewModel.rejectReason = " 재학생 인증이 필요해요. "
+        XCTAssertTrue(viewModel.canReject)
+        await viewModel.reject()
+
+        XCTAssertNil(viewModel.errorMessage)
+        XCTAssertNil(viewModel.rejectingRequest, "시트를 닫아요")
+        XCTAssertEqual(viewModel.toastMessage, "조현우님 요청을 반려했어요")
+        XCTAssertEqual(viewModel.requests.map(\.name), ["유다인"])
+        viewModel.filter = .processed
+        let rejected = try XCTUnwrap(viewModel.requests.first { $0.name == "조현우" })
+        XCTAssertEqual(rejected.status, .rejected)
+        XCTAssertEqual(rejected.rejectionReason, "재학생 인증이 필요해요.")
+        XCTAssertEqual(rejected.statusText, "반려 · 관리자")
+
+        await viewModel.load()
+        XCTAssertEqual(viewModel.requests.first { $0.name == "조현우" }?.rejectionReason, "재학생 인증이 필요해요.", "서버에도 반려로 남아요")
+    }
+
+    func testOnlyAdminRejectsSignups() async throws {
+        let client = APIClient(
+            baseURL: MockTransport.baseURL, transport: MockTransport(latencyNanoseconds: 0), tokenStorage: InMemoryTokenStorage()
+        )
+        let useCase = RejectSignupRequestUseCase(signupRequestRepository: SignupRequestRepositoryImpl(client: client))
+        let request = SignupRequestItem(
+            id: 2, name: "조현우", email: "a@b.c", department: "Dev", major: nil, cohort: nil, message: nil,
+            status: .reviewing, requestedAt: nil, approvedBy: nil
+        )
+        do {
+            _ = try await useCase.execute(request, reason: "사유", user: leader)
+            XCTFail("리더는 반려할 수 없어요")
+        } catch AppError.forbidden {
+        }
+    }
+
     func testApproveBodyCarriesMemberId() throws {
         let body = try JSONEncoder().encode(ServerSignupApproveRequestDTO(temporaryPassword: nil, memberId: "member-02"))
         XCTAssertEqual(String(decoding: body, as: UTF8.self), #"{"memberId":"member-02"}"#)
