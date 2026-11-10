@@ -24,7 +24,7 @@ final class MemberRepositoryImpl: MemberRepository, @unchecked Sendable {
         return members
     }
 
-    func fetchMember(id: Int) async throws -> MemberDetail {
+    func fetchMember(id: String) async throws -> MemberDetail {
         try await request(Endpoint(method: .get, path: "people/\(id)"), as: ServerPersonDTO.self).toDetail()
     }
 

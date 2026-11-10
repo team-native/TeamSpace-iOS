@@ -51,7 +51,7 @@ final class IntegratedSearchTests: XCTestCase {
         let proposal = hits.first { $0.category == .proposals }
         XCTAssertEqual(proposal?.route, .proposalDetail(id: 11))
         XCTAssertTrue(proposal?.metaText.contains("추천 18") == true)
-        XCTAssertEqual(hits.first { $0.category == .people }?.route, .memberDetail(id: 1))
+        XCTAssertEqual(hits.first { $0.category == .people }?.route, .memberDetail(id: "1"))
     }
 
     // MARK: 14-2 결과 없음 · 짧은 검색어

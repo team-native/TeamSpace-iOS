@@ -7,7 +7,7 @@ struct FetchMemberDetailUseCase {
         self.memberRepository = memberRepository
     }
 
-    func execute(id: Int) async throws -> MemberDetail {
+    func execute(id: String) async throws -> MemberDetail {
         try await memberRepository.fetchMember(id: id)
     }
 }
