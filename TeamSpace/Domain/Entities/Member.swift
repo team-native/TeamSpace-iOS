@@ -2,7 +2,8 @@ import Foundation
 
 /// 03 팀원 — 목록에 보이는 요약
 struct Member: Equatable, Hashable, Identifiable, Sendable {
-    let id: Int
+    /// 조직도 사람은 "member-02", 조직도에 없는 계정은 숫자 문자열 "37" 이에요.
+    let id: String
     let name: String
     let department: Department
     let roles: [UserRole]

@@ -8,10 +8,10 @@ final class MemberDetailViewModel {
     private(set) var state: ViewState<MemberDetail> = .idle
     var toastMessage: String?
 
-    let memberId: Int
+    let memberId: String
     private let fetchMemberDetailUseCase: FetchMemberDetailUseCase
 
-    init(memberId: Int, fetchMemberDetailUseCase: FetchMemberDetailUseCase) {
+    init(memberId: String, fetchMemberDetailUseCase: FetchMemberDetailUseCase) {
         self.memberId = memberId
         self.fetchMemberDetailUseCase = fetchMemberDetailUseCase
     }

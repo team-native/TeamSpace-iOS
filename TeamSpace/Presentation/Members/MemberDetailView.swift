@@ -82,7 +82,7 @@ struct MemberDetailView: View {
 #Preview {
     NavigationStack {
         MemberDetailView(
-            viewModel: DIContainer.preview().makeMemberDetailViewModel(memberId: 4),
+            viewModel: DIContainer.preview().makeMemberDetailViewModel(memberId: "4"),
             onNavigate: { _ in }
         )
     }

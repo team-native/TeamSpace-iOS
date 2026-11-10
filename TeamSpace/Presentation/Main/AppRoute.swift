@@ -10,7 +10,7 @@ enum AppRoute: Hashable {
     case notificationTroubleshoot   // 02-7
     // 03 팀원
     case memberDirectory            // 목록 · 조직도
-    case memberDetail(id: Int)
+    case memberDetail(id: String)
     // 04 재무
     case financeContractLedger      // 04-3 수금 내역
     case financeContractDetail(id: Int) // 04-2 수주 상세

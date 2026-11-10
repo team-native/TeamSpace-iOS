@@ -559,7 +559,7 @@ extension DIContainer {
         )
     }
 
-    func makeMemberDetailViewModel(memberId: Int) -> MemberDetailViewModel {
+    func makeMemberDetailViewModel(memberId: String) -> MemberDetailViewModel {
         MemberDetailViewModel(memberId: memberId, fetchMemberDetailUseCase: fetchMemberDetailUseCase)
     }
 

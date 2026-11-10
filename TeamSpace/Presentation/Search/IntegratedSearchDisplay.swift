@@ -66,11 +66,13 @@ extension SearchHit {
             if isRule { return .ruleDetail(id: slug) }
             return documentType?.uppercased() == "TEMPLATE" ? .templateDetail(id: slug) : .comingSoon(title: title)
         }
+        // 팀원은 숫자 계정 id · 조직도 id("member-02") 둘 다 상세로 열려요.
+        if category == .people { return .memberDetail(id: serverId) }
         guard let id = targetId else { return .comingSoon(title: title) }
         switch category {
         case .documents: return .comingSoon(title: title)
         case .projects: return .projectDetail(id: serverId)  // 서버 상세는 레코드 번호 · slug 둘 다 받아요
-        case .people: return .memberDetail(id: id)
+        case .people: return .memberDetail(id: serverId)
         case .posts: return .postDetail(id: id)
         case .proposals: return .proposalDetail(id: id)
         }

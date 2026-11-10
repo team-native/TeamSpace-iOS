@@ -70,7 +70,7 @@ final class MemberDirectoryTests: XCTestCase {
     }
 
     func testMemberDetailFromFigmaSample() async throws {
-        let viewModel = makeContainer().makeMemberDetailViewModel(memberId: 4)
+        let viewModel = makeContainer().makeMemberDetailViewModel(memberId: "4")
 
         await viewModel.load()
 
@@ -79,6 +79,15 @@ final class MemberDirectoryTests: XCTestCase {
         XCTAssertEqual(detail.email, "s26099@gsm.hs.kr")
         XCTAssertEqual(detail.projects.map(\.status), [.inProgress, .inProgress, .completed])
         XCTAssertEqual(viewModel.joinedText(detail), "2026년 3월 · 2기")
+    }
+
+    func testPersonDecodesOrganizationId() throws {
+        let json = #"""
+        {"items":[{"id":"member-02","name":"안율","dept":"Design","role":"Product Designer","isNew":false,"lead":true,"active":true,"avatarBackground":""},
+                  {"id":37,"name":"새 팀원","dept":"PMO","role":"","roles":["Member"]}],"nextCursor":null}
+        """#
+        let page = try JSONCoder.makeDecoder().decode(CursorPageDTO<ServerPersonDTO>.self, from: Data(json.utf8))
+        XCTAssertEqual(page.items.map { $0.toEntity().id }, ["member-02", "37"], "조직도 id · 숫자 계정 id 둘 다 받아요")
     }
 
     func testPersonDecodingFromServer() throws {
@@ -91,7 +100,7 @@ final class MemberDirectoryTests: XCTestCase {
         let dto = try JSONCoder.makeDecoder().decode(ServerPersonDTO.self, from: Data(json.utf8))
         let detail = dto.toDetail()
 
-        XCTAssertEqual(detail.member.id, 7)
+        XCTAssertEqual(detail.member.id, "7")
         XCTAssertEqual(detail.member.department, .dev, "Core Platform 은 개발")
         XCTAssertEqual(detail.member.position, "iOS")
         XCTAssertNil(detail.generation, "기수가 비어 있으면 숨겨요")
@@ -119,7 +128,7 @@ final class MemberDirectoryTests: XCTestCase {
     }
 
     func testUnknownMemberShowsError() async {
-        let viewModel = makeContainer().makeMemberDetailViewModel(memberId: 999)
+        let viewModel = makeContainer().makeMemberDetailViewModel(memberId: "999")
 
         await viewModel.load()
 

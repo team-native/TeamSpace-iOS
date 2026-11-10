@@ -3,7 +3,7 @@ import Foundation
 /// GET /people 한 항목 · GET /people/{id} (TeamSpace-backend develop `shared.user_profile`)
 /// `{ id: "4", name, email, dept, role(=major), cohort, github, joined, bio, interests, projects: [[name, role]], isNew, lead, roles }`
 struct ServerPersonDTO: Decodable {
-    let id: Int
+    let id: String
     let name: String
     let email: String
     let dept: String
@@ -22,7 +22,7 @@ struct ServerPersonDTO: Decodable {
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        id = try container.decodeIntOrString(forKey: .id)
+        id = try container.decodeStringOrInt(forKey: .id)
         name = (try? container.decodeIfPresent(String.self, forKey: .name)) ?? ""
         email = (try? container.decodeIfPresent(String.self, forKey: .email)) ?? ""
         dept = (try? container.decodeIfPresent(String.self, forKey: .dept))

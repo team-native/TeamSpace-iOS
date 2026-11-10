@@ -10,4 +10,10 @@ extension KeyedDecodingContainer {
         }
         return number
     }
+
+    /// 조직도 ID("member-02")처럼 문자열 ID 도 있어서, 숫자로 와도 문자열로 받아요.
+    func decodeStringOrInt(forKey key: Key) throws -> String {
+        if let number = try? decode(Int.self, forKey: key) { return String(number) }
+        return try decode(String.self, forKey: key)
+    }
 }
