@@ -1,6 +1,6 @@
 import Foundation
 
-/// GET /admin/signup-requests 한 항목 — `{ id, email, name, dept, major?, cohort?, message?, status, createdAt, approvedBy? }`
+/// GET /admin/signup-requests 한 항목 — `{ id, email, name, dept, major?, cohort?, message?, status, createdAt, approvedBy?, rejectionReason?, rejectedBy? }`
 struct ServerSignupRequestDTO: Decodable {
     let id: Int
     let email: String
@@ -12,8 +12,12 @@ struct ServerSignupRequestDTO: Decodable {
     let status: String
     let createdAt: Date?
     let approvedBy: String?
+    let rejectionReason: String?
+    let rejectedBy: String?
 
-    private enum CodingKeys: String, CodingKey { case id, email, name, dept, major, cohort, message, status, createdAt, approvedBy }
+    private enum CodingKeys: String, CodingKey {
+        case id, email, name, dept, major, cohort, message, status, createdAt, approvedBy, rejectionReason, rejectedBy
+    }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -32,12 +36,15 @@ struct ServerSignupRequestDTO: Decodable {
         status = (try? container.decodeIfPresent(String.self, forKey: .status)) ?? "PENDING"
         createdAt = optional(.createdAt).flatMap(ServerDate.parse)
         approvedBy = optional(.approvedBy)
+        rejectionReason = optional(.rejectionReason)
+        rejectedBy = optional(.rejectedBy)
     }
 
     func toEntity() -> SignupRequestItem {
         SignupRequestItem(
             id: id, name: name, email: email, department: dept, major: major, cohort: cohort, message: message,
-            status: AccountRequestStatus(serverValue: status), requestedAt: createdAt, approvedBy: approvedBy
+            status: AccountRequestStatus(serverValue: status), requestedAt: createdAt, approvedBy: approvedBy,
+            rejectionReason: rejectionReason, rejectedBy: rejectedBy
         )
     }
 }
@@ -47,4 +54,9 @@ struct ServerSignupRequestDTO: Decodable {
 struct ServerSignupApproveRequestDTO: Codable, Equatable {
     let temporaryPassword: String?
     var memberId: String?
+}
+
+/// POST /admin/signup-requests/{id}/reject 요청 — 사유는 꼭 있어야 해요.
+struct ServerSignupRejectRequestDTO: Codable, Equatable {
+    let reason: String
 }

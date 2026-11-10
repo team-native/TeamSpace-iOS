@@ -934,6 +934,7 @@ extension DIContainer {
             user: user,
             fetchSignupRequestsUseCase: FetchSignupRequestsUseCase(signupRequestRepository: signupRequestRepository),
             approveSignupRequestUseCase: ApproveSignupRequestUseCase(signupRequestRepository: signupRequestRepository),
+            rejectSignupRequestUseCase: RejectSignupRequestUseCase(signupRequestRepository: signupRequestRepository),
             fetchLinkableMembersUseCase: FetchLinkableMembersUseCase(memberRepository: memberRepository)
         )
     }

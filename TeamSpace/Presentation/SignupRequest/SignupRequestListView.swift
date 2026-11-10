@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// 가입 요청 관리 [Admin] — 검토 중 · 처리됨, 요청마다 승인 (서버에 거절은 없어요)
+/// 가입 요청 관리 [Admin] — 검토 중 · 처리됨, 요청마다 승인 · 반려(사유 필수)
 struct SignupRequestListView: View {
     @State private var viewModel: SignupRequestListViewModel
 
@@ -33,6 +33,10 @@ struct SignupRequestListView: View {
             SignupApproveSheet(viewModel: viewModel, request: request)
                 .presentationDetents([.height(500)])
         }
+        .sheet(item: $viewModel.rejectingRequest) { request in
+            SignupRejectSheet(viewModel: viewModel, request: request)
+                .presentationDetents([.medium, .large])
+        }
         .alert(viewModel.errorMessage ?? "", isPresented: Binding(
             get: { viewModel.errorMessage != nil },
             set: { if !$0 { viewModel.errorMessage = nil } }
@@ -61,16 +65,21 @@ struct SignupRequestListView: View {
                 InfoBanner(message: viewModel.filter == .pending ? "검토할 가입 요청이 없어요." : "처리한 가입 요청이 없어요.", style: .muted)
             }
             ForEach(viewModel.requests) { request in
-                SignupRequestCard(request: request) { Task { await viewModel.startApproval(request) } }
+                SignupRequestCard(
+                    request: request,
+                    onApprove: { Task { await viewModel.startApproval(request) } },
+                    onReject: { viewModel.startRejection(request) }
+                )
             }
         }
     }
 }
 
-/// 가입 요청 한 건 — 이름 · 이메일 · 부서 · 남긴 말
+/// 가입 요청 한 건 — 이름 · 이메일 · 부서 · 남긴 말 (반려했으면 사유)
 private struct SignupRequestCard: View {
     let request: SignupRequestItem
     let onApprove: () -> Void
+    let onReject: () -> Void
 
     var body: some View {
         WorkspaceCard {
@@ -90,9 +99,19 @@ private struct SignupRequestCard: View {
                     .foregroundStyle(Color.tsInk)
                     .fixedSize(horizontal: false, vertical: true)
             }
+            if request.status == .rejected, let reason = request.rejectionReason {
+                Text("반려 사유 · \(reason)")
+                    .tsFont(.footnote)
+                    .foregroundStyle(Color.tsInk3)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             if request.status == .reviewing {
-                Button("승인하기", action: onApprove)
-                    .buttonStyle(.tsPrimary)
+                HStack(spacing: Spacing.sm) {
+                    Button("반려", action: onReject)
+                        .buttonStyle(.tsSecondary)
+                    Button("승인하기", action: onApprove)
+                        .buttonStyle(.tsPrimary)
+                }
             }
         }
     }
@@ -164,6 +183,50 @@ private struct SignupApproveSheet: View {
                 .tsFont(.caption)
                 .foregroundStyle(Color.tsInk3)
         }
+    }
+}
+
+/// 반려 시트 — 사유는 꼭 적어요. (요청자에게 그대로 전해질 수 있어요)
+private struct SignupRejectSheet: View {
+    @Bindable var viewModel: SignupRequestListViewModel
+    let request: SignupRequestItem
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Spacing.lg) {
+            VStack(alignment: .leading, spacing: Spacing.xs) {
+                Text("\(request.name)님 요청을 반려할까요?")
+                    .tsFont(.title3)
+                    .foregroundStyle(Color.tsInk)
+                Text("반려하면 다시 승인할 수 없어요. 다시 가입하려면 새로 요청해야 해요.")
+                    .tsFont(.footnote)
+                    .foregroundStyle(Color.tsInk3)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            VStack(alignment: .leading, spacing: Spacing.sm) {
+                HStack {
+                    Text("반려 사유")
+                        .tsFont(.footnoteBold)
+                        .foregroundStyle(Color.tsInk)
+                    Spacer()
+                    Text("\(TSFormat.number(viewModel.rejectReason.count)) / \(TSFormat.number(RejectSignupRequestUseCase.reasonLimit))")
+                        .tsFont(.caption)
+                        .foregroundStyle(viewModel.rejectReason.count > RejectSignupRequestUseCase.reasonLimit ? Color.tsNegative : Color.tsInk3)
+                }
+                TextEditor(text: $viewModel.rejectReason)
+                    .tsFont(.callout)
+                    .scrollContentBackground(.hidden)
+                    .frame(minHeight: 120)
+                    .padding(Spacing.md)
+                    .background(Color.tsSurface, in: RoundedRectangle(cornerRadius: Radius.lg, style: .continuous))
+                    .accessibilityLabel("반려 사유")
+            }
+            Spacer(minLength: 0)
+            Button("반려") { Task { await viewModel.reject() } }
+                .buttonStyle(.tsPrimaryLarge)
+                .disabled(!viewModel.canReject)
+        }
+        .padding(Spacing.screen)
+        .background(Color.tsBackground.ignoresSafeArea())
     }
 }
 

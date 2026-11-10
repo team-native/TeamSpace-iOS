@@ -26,6 +26,13 @@ final class SignupRequestRepositoryImpl: SignupRequestRepository, @unchecked Sen
         )
     }
 
+    func reject(id: Int, reason: String) async throws {
+        _ = try await request(
+            Endpoint(method: .post, path: "admin/signup-requests/\(id)/reject", body: ServerSignupRejectRequestDTO(reason: reason)),
+            as: EmptyResponseDTO.self
+        )
+    }
+
     private func request<Response: Decodable>(_ endpoint: Endpoint, as type: Response.Type) async throws -> Response {
         do {
             return try await client.request(endpoint, as: type)

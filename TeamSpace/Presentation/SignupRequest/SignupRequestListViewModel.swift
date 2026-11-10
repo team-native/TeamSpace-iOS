@@ -1,7 +1,7 @@
 import Foundation
 import Observation
 
-/// 가입 요청 관리 [Admin] — GET /admin/signup-requests · POST /admin/signup-requests/{id}/approve
+/// 가입 요청 관리 [Admin] — GET /admin/signup-requests · POST …/approve · POST …/reject
 /// 승인할 때 조직도의 누구인지 골라 `memberId` 로 보내요. (이름만으로는 동명이인을 못 가려요)
 @Observable
 @MainActor
@@ -23,23 +23,30 @@ final class SignupRequestListViewModel {
     /// 계정이 아직 없는 조직도 구성원
     private(set) var linkableMembers: [Member] = []
     private(set) var isApproving = false
+    /// 반려 시트에 띄운 요청
+    var rejectingRequest: SignupRequestItem?
+    var rejectReason = ""
+    private(set) var isRejecting = false
     var toastMessage: String?
     var errorMessage: String?
 
     private let user: AuthUser
     private let fetchSignupRequestsUseCase: FetchSignupRequestsUseCase
     private let approveSignupRequestUseCase: ApproveSignupRequestUseCase
+    private let rejectSignupRequestUseCase: RejectSignupRequestUseCase
     private let fetchLinkableMembersUseCase: FetchLinkableMembersUseCase
 
     init(
         user: AuthUser,
         fetchSignupRequestsUseCase: FetchSignupRequestsUseCase,
         approveSignupRequestUseCase: ApproveSignupRequestUseCase,
+        rejectSignupRequestUseCase: RejectSignupRequestUseCase,
         fetchLinkableMembersUseCase: FetchLinkableMembersUseCase
     ) {
         self.user = user
         self.fetchSignupRequestsUseCase = fetchSignupRequestsUseCase
         self.approveSignupRequestUseCase = approveSignupRequestUseCase
+        self.rejectSignupRequestUseCase = rejectSignupRequestUseCase
         self.fetchLinkableMembersUseCase = fetchLinkableMembersUseCase
     }
 
@@ -127,6 +134,35 @@ final class SignupRequestListViewModel {
             errorMessage = error.userMessage
         }
     }
+
+    var canReject: Bool {
+        rejectingRequest != nil && !isRejecting
+            && !rejectReason.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && rejectReason.count <= RejectSignupRequestUseCase.reasonLimit
+    }
+
+    func startRejection(_ request: SignupRequestItem) {
+        rejectReason = ""
+        rejectingRequest = request
+    }
+
+    func reject() async {
+        guard let request = rejectingRequest, canReject else { return }
+        isRejecting = true
+        defer { isRejecting = false }
+        do {
+            let rejected = try await rejectSignupRequestUseCase.execute(request, reason: rejectReason, user: user)
+            var items = all
+            if let index = items.firstIndex(where: { $0.id == rejected.id }) { items[index] = rejected }
+            state = .loaded(items)
+            rejectingRequest = nil
+            rejectReason = ""
+            toastMessage = "\(rejected.name)님 요청을 반려했어요"
+        } catch {
+            AppLog.record(error, context: "signup.requests.reject")
+            errorMessage = error.userMessage
+        }
+    }
 }
 
 extension SignupRequestItem {
@@ -140,7 +176,7 @@ extension SignupRequestItem {
         switch status {
         case .reviewing: return requestedAt.map { "\(TSFormat.shortDate($0)) 요청" } ?? "검토 중"
         case .approved: return ["승인", approvedBy].compactMap { $0 }.joined(separator: " · ")
-        case .rejected: return "거절"
+        case .rejected: return ["반려", rejectedBy].compactMap { $0 }.joined(separator: " · ")
         case .unknown: return "확인 중"
         }
     }

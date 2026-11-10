@@ -15,6 +15,7 @@ final class MockSignupRequestStore: @unchecked Sendable {
         let createdAt: Date
         var status = "PENDING"
         var approvedBy: String?
+        var rejectionReason: String?
     }
 
     private let lock = NSLock()
@@ -55,6 +56,8 @@ final class MockSignupRequestStore: @unchecked Sendable {
             fields["cohort"] = record.cohort
             fields["message"] = record.message
             fields["approvedBy"] = record.approvedBy
+            fields["rejectionReason"] = record.rejectionReason
+            fields["rejectedBy"] = record.rejectionReason == nil ? nil : "관리자"
             return fields
         }
         return json(["items": items, "nextCursor": NSNull()])
@@ -77,6 +80,17 @@ final class MockSignupRequestStore: @unchecked Sendable {
         records[index].status = "APPROVED"
         records[index].approvedBy = "관리자"
         return .approved(json(["userId": String(100 + id), "memberId": memberId ?? NSNull(), "status": "APPROVED"]))
+    }
+
+    /// POST /admin/signup-requests/{id}/reject — 없으면 nil, 대기 중이 아니면 false
+    func reject(id: Int, reason: String) -> Bool? {
+        lock.lock()
+        defer { lock.unlock() }
+        guard let index = records.firstIndex(where: { $0.id == id }) else { return nil }
+        guard records[index].status == "PENDING" else { return false }
+        records[index].status = "REJECTED"
+        records[index].rejectionReason = reason
+        return true
     }
 
     private func json(_ object: [String: Any]) -> String {
