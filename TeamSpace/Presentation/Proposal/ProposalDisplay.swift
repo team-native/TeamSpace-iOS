@@ -55,9 +55,9 @@ extension ProposalDetail {
 }
 
 extension ProposalComment {
-    /// "익명 · 10.15" / "옥물결 · 제안자 · 10.16"
+    /// "익명 2 · 10.15" / "옥물결 · 제안자 · 10.16"
     var headerText: String {
-        let name = isAnonymous ? "익명" : authorName ?? "익명"
+        let name = isAnonymous ? "익명\(anonymousNumber.map { " \($0)" } ?? "")" : authorName ?? "익명"
         let role = isProposer ? " · 제안자" : ""
         return "\(name)\(role) · \(TSFormat.shortDate(createdAt))"
     }

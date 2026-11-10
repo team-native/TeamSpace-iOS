@@ -933,7 +933,8 @@ extension DIContainer {
         SignupRequestListViewModel(
             user: user,
             fetchSignupRequestsUseCase: FetchSignupRequestsUseCase(signupRequestRepository: signupRequestRepository),
-            approveSignupRequestUseCase: ApproveSignupRequestUseCase(signupRequestRepository: signupRequestRepository)
+            approveSignupRequestUseCase: ApproveSignupRequestUseCase(signupRequestRepository: signupRequestRepository),
+            fetchLinkableMembersUseCase: FetchLinkableMembersUseCase(memberRepository: memberRepository)
         )
     }
 

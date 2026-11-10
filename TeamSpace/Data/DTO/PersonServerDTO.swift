@@ -15,9 +15,13 @@ struct ServerPersonDTO: Decodable {
     let projects: [[String]]
     let lead: Bool
     let roles: [UserRole]
+    /// 조직도 구성원에 계정이 연결됐는지 — 없으면(옛 서버) nil
+    let linked: Bool?
+    /// 연결된 계정 id — 계정 없는 조직도 구성원은 nil
+    let userId: String?
 
     private enum CodingKeys: String, CodingKey {
-        case id, name, email, dept, department, role, major, cohort, joined, bio, interests, projects, lead, roles
+        case id, name, email, dept, department, role, major, cohort, joined, bio, interests, projects, lead, roles, linked, userId
     }
 
     init(from decoder: Decoder) throws {
@@ -37,6 +41,9 @@ struct ServerPersonDTO: Decodable {
         projects = (try? container.decodeIfPresent([[String]].self, forKey: .projects)) ?? []
         lead = (try? container.decodeIfPresent(Bool.self, forKey: .lead)) ?? false
         roles = (try? container.decodeIfPresent([UserRole].self, forKey: .roles)) ?? []
+        linked = try? container.decodeIfPresent(Bool.self, forKey: .linked)
+        userId = (try? container.decodeIfPresent(String.self, forKey: .userId))
+            ?? (try? container.decodeIfPresent(Int.self, forKey: .userId)).map { String($0) }
     }
 
     var department: Department { Department(serverDept: dept, roles: roles) }
@@ -53,7 +60,8 @@ struct ServerPersonDTO: Decodable {
     func toEntity() -> Member {
         Member(
             id: id, name: name, department: department, roles: roles, tag: tag,
-            position: role, joinedAt: joined ?? .distantPast
+            position: role, joinedAt: joined ?? .distantPast,
+            needsAccount: linked == false && userId == nil
         )
     }
 

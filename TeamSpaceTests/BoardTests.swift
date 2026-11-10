@@ -353,6 +353,14 @@ final class BoardTests: XCTestCase {
         XCTAssertNil(detail.comments[0].authorName, "익명 번호를 이름으로 쓰지 않아요")
     }
 
+    func testCommentAnonymousNumberFieldWins() throws {
+        let json = Data(#"""
+        {"id":"9","anonymous":true,"text":"t","createdAt":"2026-11-02T09:00:00+09:00","author":"익명","anonymousNumber":3,"likes":0,"mine":false}
+        """#.utf8)
+        let comment = try JSONCoder.makeDecoder().decode(ServerCommentDTO.self, from: json).toEntity(postAuthor: nil)
+        XCTAssertEqual(comment.anonymousNumber, 3, "실명 글의 익명 댓글도 번호가 와요")
+    }
+
     func testRealNamePostComments() async throws {
         let viewModel = makeContainer().makePostDetailViewModel(postId: 40)
         await viewModel.load()

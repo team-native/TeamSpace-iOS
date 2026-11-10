@@ -31,7 +31,7 @@ struct SignupRequestListView: View {
         .tsToast($viewModel.toastMessage)
         .sheet(item: $viewModel.approvingRequest) { request in
             SignupApproveSheet(viewModel: viewModel, request: request)
-                .presentationDetents([.height(420)])
+                .presentationDetents([.height(500)])
         }
         .alert(viewModel.errorMessage ?? "", isPresented: Binding(
             get: { viewModel.errorMessage != nil },
@@ -61,7 +61,7 @@ struct SignupRequestListView: View {
                 InfoBanner(message: viewModel.filter == .pending ? "검토할 가입 요청이 없어요." : "처리한 가입 요청이 없어요.", style: .muted)
             }
             ForEach(viewModel.requests) { request in
-                SignupRequestCard(request: request) { viewModel.startApproval(request) }
+                SignupRequestCard(request: request) { Task { await viewModel.startApproval(request) } }
             }
         }
     }
@@ -98,7 +98,7 @@ private struct SignupRequestCard: View {
     }
 }
 
-/// 승인 시트 — 초기 비밀번호는 선택
+/// 승인 시트 — 조직도 구성원 · 초기 비밀번호는 선택
 private struct SignupApproveSheet: View {
     @Bindable var viewModel: SignupRequestListViewModel
     let request: SignupRequestItem
@@ -114,6 +114,7 @@ private struct SignupApproveSheet: View {
                     .foregroundStyle(Color.tsInk3)
                     .fixedSize(horizontal: false, vertical: true)
             }
+            memberPicker
             VStack(alignment: .leading, spacing: Spacing.xs) {
                 TSTextField(
                     label: "초기 비밀번호 (선택)", placeholder: "비우면 요청할 때 정한 비밀번호", text: $viewModel.temporaryPassword,
@@ -132,6 +133,37 @@ private struct SignupApproveSheet: View {
         }
         .padding(Spacing.screen)
         .background(Color.tsBackground.ignoresSafeArea())
+    }
+
+    /// 조직도의 누구인지 — 계정이 아직 없는 사람만 보여요.
+    private var memberPicker: some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            Text("조직도 구성원")
+                .tsFont(.footnoteBold)
+                .foregroundStyle(Color.tsInk)
+            Menu {
+                Button("연결 안 함") { viewModel.selectedMemberId = nil }
+                ForEach(viewModel.linkableMembers) { member in
+                    Button(SignupRequestListViewModel.memberText(member)) { viewModel.selectedMemberId = member.id }
+                }
+            } label: {
+                HStack {
+                    Text(viewModel.selectedMemberText)
+                        .tsFont(.body)
+                        .foregroundStyle(viewModel.selectedMember == nil ? Color.tsInk3 : Color.tsInk)
+                    Spacer(minLength: Spacing.sm)
+                    Image(systemName: "chevron.up.chevron.down")
+                        .foregroundStyle(Color.tsInk3)
+                }
+                .padding(.horizontal, Spacing.lg)
+                .frame(minHeight: 52)
+                .background(Color.tsBackground, in: RoundedRectangle(cornerRadius: Radius.lg, style: .continuous))
+            }
+            .accessibilityLabel("조직도 구성원, \(viewModel.selectedMemberText)")
+            Text(viewModel.linkableMembers.isEmpty ? "연결할 수 있는 구성원이 없어요." : "같은 이름이라도 한 번 더 확인해 주세요.")
+                .tsFont(.caption)
+                .foregroundStyle(Color.tsInk3)
+        }
     }
 }
 

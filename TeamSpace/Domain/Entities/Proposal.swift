@@ -40,6 +40,8 @@ struct ProposalComment: Equatable, Identifiable, Sendable {
     let isMine: Bool
     let body: String
     let createdAt: Date
+    /// 익명 댓글의 작성자별 번호 — "익명 2"
+    var anonymousNumber: Int?
 }
 
 /// 12-2b 운영 제안 상세

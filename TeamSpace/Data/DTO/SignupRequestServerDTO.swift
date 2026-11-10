@@ -43,6 +43,8 @@ struct ServerSignupRequestDTO: Decodable {
 }
 
 /// POST /admin/signup-requests/{id}/approve 요청 — 비우면 키를 빼요.
+/// `memberId` 는 조직도 구성원 id("member-02") — 이 계정을 그 사람과 연결해요.
 struct ServerSignupApproveRequestDTO: Codable, Equatable {
     let temporaryPassword: String?
+    var memberId: String?
 }

@@ -2,6 +2,7 @@ import Foundation
 import Observation
 
 /// 가입 요청 관리 [Admin] — GET /admin/signup-requests · POST /admin/signup-requests/{id}/approve
+/// 승인할 때 조직도의 누구인지 골라 `memberId` 로 보내요. (이름만으로는 동명이인을 못 가려요)
 @Observable
 @MainActor
 final class SignupRequestListViewModel {
@@ -17,6 +18,10 @@ final class SignupRequestListViewModel {
     /// 승인 시트에 띄운 요청
     var approvingRequest: SignupRequestItem?
     var temporaryPassword = ""
+    /// 연결할 조직도 구성원 id — nil 이면 연결하지 않아요.
+    var selectedMemberId: String?
+    /// 계정이 아직 없는 조직도 구성원
+    private(set) var linkableMembers: [Member] = []
     private(set) var isApproving = false
     var toastMessage: String?
     var errorMessage: String?
@@ -24,15 +29,18 @@ final class SignupRequestListViewModel {
     private let user: AuthUser
     private let fetchSignupRequestsUseCase: FetchSignupRequestsUseCase
     private let approveSignupRequestUseCase: ApproveSignupRequestUseCase
+    private let fetchLinkableMembersUseCase: FetchLinkableMembersUseCase
 
     init(
         user: AuthUser,
         fetchSignupRequestsUseCase: FetchSignupRequestsUseCase,
-        approveSignupRequestUseCase: ApproveSignupRequestUseCase
+        approveSignupRequestUseCase: ApproveSignupRequestUseCase,
+        fetchLinkableMembersUseCase: FetchLinkableMembersUseCase
     ) {
         self.user = user
         self.fetchSignupRequestsUseCase = fetchSignupRequestsUseCase
         self.approveSignupRequestUseCase = approveSignupRequestUseCase
+        self.fetchLinkableMembersUseCase = fetchLinkableMembersUseCase
     }
 
     private var all: [SignupRequestItem] { state.value ?? [] }
@@ -66,9 +74,33 @@ final class SignupRequestListViewModel {
         }
     }
 
-    func startApproval(_ request: SignupRequestItem) {
+    var selectedMember: Member? {
+        linkableMembers.first { $0.id == selectedMemberId }
+    }
+
+    /// "안율 · OL" — 고른 사람이 없으면 "연결 안 함"
+    var selectedMemberText: String {
+        selectedMember.map(Self.memberText) ?? "연결 안 함"
+    }
+
+    static func memberText(_ member: Member) -> String {
+        [member.name, member.tag].filter { !$0.isEmpty }.joined(separator: " · ")
+    }
+
+    /// 승인 시트를 열면서 조직도 구성원을 받아요. 같은 이름이 딱 한 명이면 미리 골라 둬요. (확인은 관리자가)
+    func startApproval(_ request: SignupRequestItem) async {
         temporaryPassword = ""
+        selectedMemberId = nil
         approvingRequest = request
+        do {
+            linkableMembers = try await fetchLinkableMembersUseCase.execute()
+        } catch {
+            AppLog.record(error, context: "signup.requests.linkableMembers")
+            linkableMembers = []
+        }
+        guard approvingRequest?.id == request.id else { return }
+        let sameName = linkableMembers.filter { $0.name == request.name }
+        if sameName.count == 1 { selectedMemberId = sameName[0].id }
     }
 
     func approve() async {
@@ -76,13 +108,20 @@ final class SignupRequestListViewModel {
         isApproving = true
         defer { isApproving = false }
         do {
-            let approved = try await approveSignupRequestUseCase.execute(request, temporaryPassword: temporaryPassword, user: user)
+            let approved = try await approveSignupRequestUseCase.execute(
+                request, temporaryPassword: temporaryPassword, memberId: selectedMember?.id, user: user
+            )
             var items = all
             if let index = items.firstIndex(where: { $0.id == approved.id }) { items[index] = approved }
             state = .loaded(items)
+            let linked = selectedMember
             approvingRequest = nil
             temporaryPassword = ""
-            toastMessage = "\(approved.name)님 계정을 만들었어요"
+            selectedMemberId = nil
+            if let linked { linkableMembers.removeAll { $0.id == linked.id } }
+            toastMessage = linked == nil
+                ? "\(approved.name)님 계정을 만들었어요"
+                : "\(approved.name)님 계정을 만들어 조직도와 연결했어요"
         } catch {
             AppLog.record(error, context: "signup.requests.approve")
             errorMessage = error.userMessage
