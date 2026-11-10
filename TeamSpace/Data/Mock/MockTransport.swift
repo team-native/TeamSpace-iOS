@@ -327,6 +327,9 @@ struct MockTransport: HTTPTransport {
             }
             return try respond(request, status: 200, json: json)
         }
+        if components.first == "admin", components.count >= 2, components[1] == "users" {
+            return try adminUserRoute(request, components: components)
+        }
         if components == ["admin", "signup-requests"], request.httpMethod == "GET" {
             return try respond(request, status: 200, json: signupStore.listJSON())
         }
@@ -988,6 +991,43 @@ struct MockTransport: HTTPTransport {
             return try respond(request, status: result.status, json: result.json)
         default:
             return nil
+        }
+    }
+
+    /// 멤버 관리 — PATCH /admin/users/{id}(/roles) · POST /admin/users · DELETE /admin/users/{id}
+    /// 목록(/people)은 고정 예시라 바꾼 값은 남지 않아요. `taken@` 이메일 · id "1"(마지막 관리자) 은 409
+    private func adminUserRoute(_ request: URLRequest, components: [String]) throws -> (Data, HTTPURLResponse) {
+        let body = request.httpBody.flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] } ?? [:]
+        switch (request.httpMethod ?? "GET", components.count) {
+        case ("POST", 2):
+            let email = (body["email"] as? String ?? "").lowercased()
+            if email.hasPrefix("taken@") { return try respond(request, status: 409, json: #"{"detail":"이미 등록된 이메일입니다."}"#) }
+            let roles = body["roles"] as? [String] ?? ["Member"]
+            if roles == ["FA"] { return try respond(request, status: 422, json: #"{"detail":"FA 권한은 재정 권한 API에서 설정해주세요."}"#) }
+            let created: [String: Any] = [
+                "id": "301", "name": body["name"] ?? "", "email": email, "dept": body["dept"] ?? NSNull(),
+                "roles": roles, "temporaryPassword": "mock-temp-Pw8x"
+            ]
+            let data = try JSONSerialization.data(withJSONObject: ["code": 201, "message": "사용자를 추가했습니다.", "data": created] as [String: Any])
+            return try respond(request, status: 201, json: String(decoding: data, as: UTF8.self))
+        case ("PATCH", 4) where components[3] == "roles":
+            let roles = body["roles"] as? [String] ?? []
+            if components[2] == "1", roles != ["Admin"] {
+                return try respond(request, status: 409, json: #"{"detail":"마지막 관리자 역할은 해제할 수 없습니다."}"#)
+            }
+            let data = try JSONSerialization.data(withJSONObject: ["code": 200, "message": "OK", "data": ["id": components[2], "roles": roles]] as [String: Any])
+            return try respond(request, status: 200, json: String(decoding: data, as: UTF8.self))
+        case ("PATCH", 3):
+            guard !body.isEmpty else { return try respond(request, status: 422, json: #"{"detail":"active, dept 또는 memberId 값을 입력해주세요."}"#) }
+            var result: [String: Any] = ["id": components[2]]
+            result.merge(body) { $1 }
+            let data = try JSONSerialization.data(withJSONObject: ["code": 200, "message": "OK", "data": result] as [String: Any])
+            return try respond(request, status: 200, json: String(decoding: data, as: UTF8.self))
+        case ("DELETE", 3):
+            if components[2] == "1" { return try respond(request, status: 409, json: #"{"detail":"마지막 관리자 계정은 삭제할 수 없습니다."}"#) }
+            return try respond(request, status: 200, json: #"{"code":200,"message":"OK","data":{"id":"\#(components[2])","deleted":true}}"#)
+        default:
+            return try respond(request, status: 404, json: #"{"detail":"리소스를 찾을 수 없습니다."}"#)
         }
     }
 

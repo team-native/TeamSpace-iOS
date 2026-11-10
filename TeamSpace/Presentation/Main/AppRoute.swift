@@ -81,6 +81,7 @@ enum AppRoute: Hashable {
     case inquiryInbox                    // 11-5 문의 담당자 받은함
     case reportList                      // 신고 관리 (Admin, GET /admin/reports)
     case signupRequests                  // 가입 요청 승인 (Admin, GET /admin/signup-requests)
+    case memberAdmin                     // 멤버 관리 — 역할 · 부서 · 활성 · 조직도 연결 · 추가 · 삭제 (Admin, /admin/users)
     case bankImports                     // 은행 거래 확인 · 반영 (FA · Admin, /finance/bank-imports)
     case financePermissions              // 재정 열람 권한 관리 (Admin, /admin/finance/permissions)
     case financeSettings                 // 재무 요약 설정 — 풀 금액 · 배분 비율 (FA · Admin, /admin/finance/settings)
