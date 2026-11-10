@@ -88,6 +88,11 @@ final class MemberDirectoryTests: XCTestCase {
         """#
         let page = try JSONCoder.makeDecoder().decode(CursorPageDTO<ServerPersonDTO>.self, from: Data(json.utf8))
         XCTAssertEqual(page.items.map { $0.toEntity().id }, ["member-02", "37"], "조직도 id · 숫자 계정 id 둘 다 받아요")
+        XCTAssertEqual(page.items.map { $0.toEntity().needsAccount }, [false, false], "linked 가 없으면 연결 후보로 보지 않아요")
+        let unlinked = Data(#"{"id":"member-24","name":"홍길동","linked":false,"userId":null}"#.utf8)
+        XCTAssertTrue(try JSONCoder.makeDecoder().decode(ServerPersonDTO.self, from: unlinked).toEntity().needsAccount)
+        let linked = Data(#"{"id":"member-02","name":"안율","linked":true,"userId":"7"}"#.utf8)
+        XCTAssertFalse(try JSONCoder.makeDecoder().decode(ServerPersonDTO.self, from: linked).toEntity().needsAccount)
     }
 
     func testPersonDecodingFromServer() throws {

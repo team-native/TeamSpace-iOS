@@ -36,13 +36,13 @@ final class SignupRequestTests: XCTestCase {
     func testApproveWithRequestedPassword() async throws {
         let viewModel = makeContainer().makeSignupRequestListViewModel(user: admin)
         await viewModel.load()
-        viewModel.startApproval(try XCTUnwrap(viewModel.requests.first))
+        await viewModel.startApproval(try XCTUnwrap(viewModel.requests.first))
         XCTAssertTrue(viewModel.canApprove, "비워 두면 요청할 때 정한 비밀번호를 써요")
 
         await viewModel.approve()
         XCTAssertNil(viewModel.errorMessage)
         XCTAssertNil(viewModel.approvingRequest, "시트를 닫아요")
-        XCTAssertEqual(viewModel.toastMessage, "유다인님 계정을 만들었어요")
+        XCTAssertEqual(viewModel.toastMessage, "유다인님 계정을 만들어 조직도와 연결했어요")
         XCTAssertEqual(viewModel.requests.map(\.name), ["조현우"])
         XCTAssertEqual(viewModel.count(of: .processed), 2)
     }
@@ -52,7 +52,7 @@ final class SignupRequestTests: XCTestCase {
         await viewModel.load()
         let noPassword = try XCTUnwrap(viewModel.requests.first { $0.name == "조현우" })
 
-        viewModel.startApproval(noPassword)
+        await viewModel.startApproval(noPassword)
         await viewModel.approve()
         XCTAssertEqual(viewModel.errorMessage, "가입 요청에 비밀번호가 없으므로 초기 비밀번호가 필요합니다.", "서버 안내를 그대로 보여줘요")
         XCTAssertNotNil(viewModel.approvingRequest, "시트는 열어 둬요")
@@ -85,6 +85,35 @@ final class SignupRequestTests: XCTestCase {
         let viewModel = makeContainer().makeSignupRequestListViewModel(user: leader)
         await viewModel.load()
         guard case .forbidden = viewModel.state else { return XCTFail("권한 없음 화면이어야 해요") }
+    }
+
+    func testApprovalPreselectsOnlySameNameUnlinkedMember() async throws {
+        let viewModel = makeContainer().makeSignupRequestListViewModel(user: admin)
+        await viewModel.load()
+
+        await viewModel.startApproval(try XCTUnwrap(viewModel.requests.first { $0.name == "유다인" }))
+        XCTAssertEqual(viewModel.linkableMembers.map(\.name), ["유다인", "홍길동"], "계정이 없는 조직도 구성원만")
+        XCTAssertEqual(viewModel.selectedMember?.name, "유다인", "같은 이름이 한 명이면 미리 골라요")
+
+        await viewModel.startApproval(try XCTUnwrap(viewModel.requests.first { $0.name == "조현우" }))
+        XCTAssertNil(viewModel.selectedMemberId, "이미 계정이 연결된 사람은 고르지 않아요")
+        XCTAssertEqual(viewModel.selectedMemberText, "연결 안 함")
+    }
+
+    func testApproveWithoutLinkKeepsPlainMessage() async throws {
+        let viewModel = makeContainer().makeSignupRequestListViewModel(user: admin)
+        await viewModel.load()
+        await viewModel.startApproval(try XCTUnwrap(viewModel.requests.first { $0.name == "유다인" }))
+        viewModel.selectedMemberId = nil
+
+        await viewModel.approve()
+        XCTAssertEqual(viewModel.toastMessage, "유다인님 계정을 만들었어요")
+        XCTAssertEqual(viewModel.linkableMembers.count, 2, "연결하지 않았으면 후보에 그대로 남아요")
+    }
+
+    func testApproveBodyCarriesMemberId() throws {
+        let body = try JSONEncoder().encode(ServerSignupApproveRequestDTO(temporaryPassword: nil, memberId: "member-02"))
+        XCTAssertEqual(String(decoding: body, as: UTF8.self), #"{"memberId":"member-02"}"#)
     }
 
     func testApproveBodyOmitsEmptyPassword() throws {

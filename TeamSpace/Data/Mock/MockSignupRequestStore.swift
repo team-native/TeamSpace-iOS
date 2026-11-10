@@ -68,7 +68,7 @@ final class MockSignupRequestStore: @unchecked Sendable {
     }
 
     /// POST /admin/signup-requests/{id}/approve — 이미 승인된 이메일은 409, 비밀번호가 없는데 초기 비밀번호도 없으면 400
-    func approve(id: Int, temporaryPassword: String?) -> ApproveResult {
+    func approve(id: Int, temporaryPassword: String?, memberId: String? = nil) -> ApproveResult {
         lock.lock()
         defer { lock.unlock() }
         guard let index = records.firstIndex(where: { $0.id == id }) else { return .notFound }
@@ -76,7 +76,7 @@ final class MockSignupRequestStore: @unchecked Sendable {
         guard records[index].hasPassword || !(temporaryPassword ?? "").isEmpty else { return .needsPassword }
         records[index].status = "APPROVED"
         records[index].approvedBy = "관리자"
-        return .approved(json(["userId": String(100 + id), "status": "APPROVED"]))
+        return .approved(json(["userId": String(100 + id), "memberId": memberId ?? NSNull(), "status": "APPROVED"]))
     }
 
     private func json(_ object: [String: Any]) -> String {

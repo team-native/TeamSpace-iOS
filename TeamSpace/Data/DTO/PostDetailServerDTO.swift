@@ -48,10 +48,13 @@ struct ServerCommentDTO: Decodable {
     let mine: Bool
     let likes: Int
     let liked: Bool
+    /// 익명 댓글의 작성자별 번호 (`익명 1` 의 1)
+    let anonymousNumber: Int?
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decodeIntOrString(forKey: .id)
+        anonymousNumber = try? container.decodeIfPresent(Int.self, forKey: .anonymousNumber)
         anonymous = try container.decodeIfPresent(Bool.self, forKey: .anonymous) ?? false
         text = try container.decodeIfPresent(String.self, forKey: .text) ?? ""
         createdAt = try container.decode(Date.self, forKey: .createdAt)
@@ -62,10 +65,10 @@ struct ServerCommentDTO: Decodable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, anonymous, text, createdAt, author, mine, likes, liked
+        case id, anonymous, text, createdAt, author, mine, likes, liked, anonymousNumber
     }
 
-    /// 익명 글의 익명 댓글은 author 가 "익명 1", "익명 2" 처럼 와요. 그 숫자를 익명 번호로 써요.
+    /// 익명 댓글은 `anonymousNumber` 로 번호가 와요. 없으면 author "익명 1" 에서 숫자를 읽어요.
     func toEntity(postAuthor: String?) -> PostComment {
         let isAnonymousPostAuthor = author == Self.postAuthorLabel
         let isAnonymous = anonymous || isAnonymousPostAuthor
@@ -73,7 +76,7 @@ struct ServerCommentDTO: Decodable {
             id: id,
             authorName: isAnonymous ? nil : author,
             isAnonymous: isAnonymous,
-            anonymousNumber: isAnonymous && !isAnonymousPostAuthor ? Self.anonymousNumber(from: author) : nil,
+            anonymousNumber: isAnonymous && !isAnonymousPostAuthor ? anonymousNumber ?? Self.anonymousNumber(from: author) : nil,
             isPostAuthor: isAnonymousPostAuthor || (postAuthor != nil && author == postAuthor),
             isMine: mine,
             body: text,

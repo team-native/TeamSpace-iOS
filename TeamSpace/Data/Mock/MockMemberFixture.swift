@@ -36,6 +36,8 @@ enum MockMemberFixture {
         return rows.enumerated().map { index, row in
             let id = index + 1
             let isFigmaSample = row.0 == "오잉"
+            // 마지막 두 명은 조직도에만 있고 아직 계정이 없어요. (가입 승인 때 연결)
+            let hasAccount = id <= rows.count - 2
             // 카피바라 님은 이번 주에 합류 (Figma 02-3 "이번 주 새 멤버")
             let joined = row.0 == "카피바라" ? now.addingTimeInterval(-2 * 86_400) : firstDay
             let projects: [[String]] = isFigmaSample ? [
@@ -59,7 +61,9 @@ enum MockMemberFixture {
                 "projects": projects,
                 "isNew": now.timeIntervalSince(joined) < 7 * 86_400,
                 "lead": row.2.contains("Leader"),
-                "roles": row.2
+                "roles": row.2,
+                "linked": hasAccount,
+                "userId": hasAccount ? String(id) as Any : NSNull()
             ]
         }
     }

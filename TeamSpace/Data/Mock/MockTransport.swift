@@ -331,11 +331,12 @@ struct MockTransport: HTTPTransport {
             return try respond(request, status: 200, json: signupStore.listJSON())
         }
         if components.count == 4, components.starts(with: ["admin", "signup-requests"]), components[3] == "approve", request.httpMethod == "POST" {
-            let password = request.httpBody.flatMap { try? JSONDecoder().decode(ServerSignupApproveRequestDTO.self, from: $0) }?.temporaryPassword
+            let approval = request.httpBody.flatMap { try? JSONDecoder().decode(ServerSignupApproveRequestDTO.self, from: $0) }
+            let password = approval?.temporaryPassword
             if let password, password.count < 8 {
                 return try respond(request, status: 400, json: #"{"detail":"초기 비밀번호는 8자 이상이어야 합니다."}"#)
             }
-            switch signupStore.approve(id: Int(components[2]) ?? 0, temporaryPassword: password) {
+            switch signupStore.approve(id: Int(components[2]) ?? 0, temporaryPassword: password, memberId: approval?.memberId) {
             case .approved(let json): return try respond(request, status: 200, json: json)
             case .notFound: return try respond(request, status: 404, json: #"{"detail":"리소스를 찾을 수 없습니다."}"#)
             case .duplicated: return try respond(request, status: 409, json: #"{"detail":"이메일이 이미 등록되었습니다."}"#)

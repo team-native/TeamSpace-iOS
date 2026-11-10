@@ -105,10 +105,12 @@ struct ServerProposalCommentDTO: Decodable {
     let anonymous: Bool
     let mine: Bool?
     let author: String?
+    let anonymousNumber: Int?
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decodeIntOrString(forKey: .id)
+        anonymousNumber = try? container.decodeIfPresent(Int.self, forKey: .anonymousNumber)
         text = (try? container.decodeIfPresent(String.self, forKey: .text)) ?? ""
         createdAt = try? container.decodeIfPresent(Date.self, forKey: .createdAt)
         anonymous = (try? container.decodeIfPresent(Bool.self, forKey: .anonymous)) ?? false
@@ -117,7 +119,7 @@ struct ServerProposalCommentDTO: Decodable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, text, createdAt, anonymous, mine, author
+        case id, text, createdAt, anonymous, mine, author, anonymousNumber
     }
 
     /// `proposalAuthor` — 실명 제안이면 제안자 이름 (같은 이름의 실명 댓글을 제안자 댓글로 봐요)
@@ -130,7 +132,8 @@ struct ServerProposalCommentDTO: Decodable {
             isProposer: isProposer,
             isMine: mine ?? true,
             body: text,
-            createdAt: createdAt ?? now
+            createdAt: createdAt ?? now,
+            anonymousNumber: isProposer ? nil : anonymousNumber ?? ServerCommentDTO.anonymousNumber(from: author)
         )
     }
 }

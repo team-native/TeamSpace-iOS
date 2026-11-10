@@ -134,6 +134,13 @@ final class ProposalTests: XCTestCase {
         XCTAssertTrue(detail.isRecommended)
     }
 
+    func testProposalCommentAnonymousNumber() throws {
+        let json = Data(#"{"id":"5","text":"t","anonymous":true,"author":"익명 2","anonymousNumber":2}"#.utf8)
+        let comment = try JSONCoder.makeDecoder().decode(ServerProposalCommentDTO.self, from: json).toEntity(proposalAuthor: nil)
+        XCTAssertEqual(comment.anonymousNumber, 2)
+        XCTAssertTrue(comment.headerText.hasPrefix("익명 2 · "))
+    }
+
     func testListLoadsEveryPage() async throws {
         let store = MockProposalStore()
         let first = try JSONCoder.makeDecoder().decode(

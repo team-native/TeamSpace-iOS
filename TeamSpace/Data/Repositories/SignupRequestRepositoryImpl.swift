@@ -17,9 +17,9 @@ final class SignupRequestRepositoryImpl: SignupRequestRepository, @unchecked Sen
         return CursorPage(items: page.items.map { $0.toEntity() }, nextCursor: page.nextCursor)
     }
 
-    /// 응답 `{userId, status: "APPROVED"}` 은 쓰지 않아요.
-    func approve(id: Int, temporaryPassword: String?) async throws {
-        let body = ServerSignupApproveRequestDTO(temporaryPassword: temporaryPassword)
+    /// 응답 `{userId, memberId, status: "APPROVED"}` 은 쓰지 않아요.
+    func approve(id: Int, temporaryPassword: String?, memberId: String?) async throws {
+        let body = ServerSignupApproveRequestDTO(temporaryPassword: temporaryPassword, memberId: memberId)
         _ = try await request(
             Endpoint(method: .post, path: "admin/signup-requests/\(id)/approve", body: body),
             as: EmptyResponseDTO.self
