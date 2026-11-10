@@ -10,6 +10,7 @@ final class DIContainer {
     private let pushTokenRepository: PushTokenRepository
     private let dashboardRepository: DashboardRepository
     private let memberRepository: MemberRepository
+    private let memberAdminRepository: MemberAdminRepository
     private let financeRepository: FinanceRepository
     private let approvalRepository: ApprovalRepository
     private let libraryRepository: LibraryRepository
@@ -56,6 +57,7 @@ final class DIContainer {
         self.pushTokenRepository = PushTokenRepositoryImpl(client: apiClient)
         self.dashboardRepository = DashboardRepositoryImpl(client: apiClient)
         self.memberRepository = MemberRepositoryImpl(client: apiClient)
+        self.memberAdminRepository = MemberAdminRepositoryImpl(client: apiClient)
         self.financeRepository = FinanceRepositoryImpl(client: apiClient)
         self.approvalRepository = ApprovalRepositoryImpl(client: apiClient)
         self.libraryRepository = LibraryRepositoryImpl(client: apiClient)
@@ -927,6 +929,10 @@ extension DIContainer {
             fetchFinancePermissionsUseCase: FetchFinancePermissionsUseCase(financePermissionRepository: financePermissionRepository),
             changeFinancePermissionUseCase: ChangeFinancePermissionUseCase(financePermissionRepository: financePermissionRepository)
         )
+    }
+
+    func makeMemberAdminViewModel(user: AuthUser) -> MemberAdminViewModel {
+        MemberAdminViewModel(user: user, useCase: MemberAdminUseCase(repository: memberAdminRepository))
     }
 
     func makeSignupRequestListViewModel(user: AuthUser) -> SignupRequestListViewModel {

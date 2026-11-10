@@ -19,9 +19,11 @@ struct ServerPersonDTO: Decodable {
     let linked: Bool?
     /// 연결된 계정 id — 계정 없는 조직도 구성원은 nil
     let userId: String?
+    /// 계정이 켜져 있는지 — 없으면 nil (켜진 걸로 봐요)
+    let active: Bool?
 
     private enum CodingKeys: String, CodingKey {
-        case id, name, email, dept, department, role, major, cohort, joined, bio, interests, projects, lead, roles, linked, userId
+        case id, name, email, dept, department, role, major, cohort, joined, bio, interests, projects, lead, roles, linked, userId, active
     }
 
     init(from decoder: Decoder) throws {
@@ -44,6 +46,7 @@ struct ServerPersonDTO: Decodable {
         linked = try? container.decodeIfPresent(Bool.self, forKey: .linked)
         userId = (try? container.decodeIfPresent(String.self, forKey: .userId))
             ?? (try? container.decodeIfPresent(Int.self, forKey: .userId)).map { String($0) }
+        active = try? container.decodeIfPresent(Bool.self, forKey: .active)
     }
 
     var department: Department { Department(serverDept: dept, roles: roles) }

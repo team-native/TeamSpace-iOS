@@ -109,6 +109,8 @@ struct WorkspaceMenuList: View {
     var canHandleReports = false
     /// Admin 에게만 가입 요청 줄을 보여줘요.
     var canApproveSignups = false
+    /// Admin 에게만 멤버 관리 줄을 보여줘요.
+    var canManageMembers = false
     /// Admin 에게만 재정 권한 줄을 보여줘요.
     var canManageFinancePermissions = false
     /// FA · Admin 에게만 은행 거래 줄을 보여줘요.
@@ -132,6 +134,9 @@ struct WorkspaceMenuList: View {
         }
         if canApproveSignups {
             rows.append(("가입 요청", .signupRequests))
+        }
+        if canManageMembers {
+            rows.append(("멤버 관리", .memberAdmin))
         }
         if canManageFinancePermissions {
             rows.append(("재정 권한", .financePermissions))

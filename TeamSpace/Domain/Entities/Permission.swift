@@ -22,6 +22,8 @@ enum Permission: Hashable, Sendable {
     case approveSignups
     /// 재정 열람 권한 주기 · 회수 (서버 `require_admin` — Admin 만)
     case manageFinancePermissions
+    /// 멤버 관리 — 역할 · 부서 · 활성 · 조직도 연결 · 추가 · 삭제 (서버 `require_admin` — Admin 만)
+    case manageMembers
     /// 프로젝트 등록 · 기본 정보 수정 (서버 `require_admin` — Admin 만)
     case registerProjects
     /// 문서함 · 규칙 문서 등록 · 개정 (서버 `require_admin` — Admin 만)
@@ -50,7 +52,7 @@ extension AuthUser {
             return !roles.isDisjoint(with: [.fa, .leader, .admin])
         case .manageBankImports, .manageReceipts:
             return !roles.isDisjoint(with: [.fa, .admin])
-        case .viewNoticeReceipts, .manageEvents, .handleReports, .approveSignups, .manageFinancePermissions, .registerProjects, .manageDocs:
+        case .viewNoticeReceipts, .manageEvents, .handleReports, .approveSignups, .manageFinancePermissions, .manageMembers, .registerProjects, .manageDocs:
             return roles.contains(.admin)
         }
     }

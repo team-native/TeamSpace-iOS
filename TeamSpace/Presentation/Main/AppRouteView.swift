@@ -36,7 +36,7 @@ struct AppRouteView: View {
             boardScreen
         case .notices, .noticeDetail, .noticeCompose, .noticeEdit:
             noticeScreen
-        case .myInquiries, .inquiryCompose, .inquiryDetail, .inquiryInbox, .reportList, .signupRequests, .financePermissions, .bankImports, .inquiryReview,
+        case .myInquiries, .inquiryCompose, .inquiryDetail, .inquiryInbox, .reportList, .signupRequests, .memberAdmin, .financePermissions, .bankImports, .inquiryReview,
              .financeSettings:
             inquiryScreen
         case .proposals, .proposalDetail, .proposalCompose:
@@ -284,6 +284,8 @@ struct AppRouteView: View {
             ReportListView(viewModel: container.makeReportListViewModel(user: user), onNavigate: onNavigate)
         case .signupRequests:
             SignupRequestListView(viewModel: container.makeSignupRequestListViewModel(user: user))
+        case .memberAdmin:
+            MemberAdminView(viewModel: container.makeMemberAdminViewModel(user: user))
         case .bankImports:
             BankImportView(viewModel: container.makeBankImportViewModel(user: user))
         case .financePermissions:
