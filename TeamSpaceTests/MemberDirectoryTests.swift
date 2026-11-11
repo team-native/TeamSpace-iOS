@@ -81,6 +81,26 @@ final class MemberDirectoryTests: XCTestCase {
         XCTAssertEqual(viewModel.joinedText(detail), "2026년 3월 · 2기")
     }
 
+    func testRealOrganizationDepartmentsGroup() throws {
+        let json = #"""
+        {"items":[
+          {"id":"member-01","name":"김준표","dept":"","department":"Leader","roles":["Leader"],"lead":true},
+          {"id":"member-03","name":"안율","dept":"NativeOps","department":"NativeOps","roles":["Member"]},
+          {"id":"member-04","name":"양지우","dept":"","department":"Frontend","roles":["Member"]},
+          {"id":"member-09","name":"박서진","dept":"","department":"iOS","roles":["Member"]},
+          {"id":"member-05","name":"김민준","dept":"FA","department":"FA","roles":["FA"]},
+          {"id":"member-20","name":"한유진","dept":"","department":"Design & Client","roles":["Member"]},
+          {"id":"41","name":"새 팀원","dept":"IT","roles":["Member"]}
+        ],"nextCursor":null}
+        """#
+        let page = try JSONCoder.makeDecoder().decode(CursorPageDTO<ServerPersonDTO>.self, from: Data(json.utf8))
+        let members = page.items.map { $0.toEntity() }
+        XCTAssertEqual(members.map(\.department), [.leader, .nativeOps, .dev, .dev, .fa, .design, .dev], "dept 가 비면 department 로 묶어요")
+        let tree = try XCTUnwrap(OrganizationTreeBuilder.build(members))
+        XCTAssertEqual(tree.leader.name, "김준표")
+        XCTAssertEqual(tree.units.reduce(0) { $0 + $1.members.count }, 6, "리더 빼고 모두 어딘가에 들어가요")
+    }
+
     func testPersonDecodesOrganizationId() throws {
         let json = #"""
         {"items":[{"id":"member-02","name":"안율","dept":"Design","role":"Product Designer","isNew":false,"lead":true,"active":true,"avatarBackground":""},
