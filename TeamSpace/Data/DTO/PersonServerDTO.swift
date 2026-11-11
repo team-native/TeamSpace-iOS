@@ -31,8 +31,11 @@ struct ServerPersonDTO: Decodable {
         id = try container.decodeStringOrInt(forKey: .id)
         name = (try? container.decodeIfPresent(String.self, forKey: .name)) ?? ""
         email = (try? container.decodeIfPresent(String.self, forKey: .email)) ?? ""
-        dept = (try? container.decodeIfPresent(String.self, forKey: .dept))
-            ?? (try? container.decodeIfPresent(String.self, forKey: .department)) ?? ""
+        // 서버 `dept` 는 카드 조직(NativeLab · NativeOps · FA · IT)만 담고 나머지는 비워요.
+        // 실제 부서(Frontend · iOS …)는 `department` 에 와서 그쪽을 먼저 써요.
+        let rawDepartment = (try? container.decodeIfPresent(String.self, forKey: .department)) ?? nil
+        let cardDepartment = (try? container.decodeIfPresent(String.self, forKey: .dept)) ?? nil
+        dept = [rawDepartment, cardDepartment].compactMap { $0?.trimmingCharacters(in: .whitespaces) }.first { !$0.isEmpty } ?? ""
         let role = (try? container.decodeIfPresent(String.self, forKey: .role)) ?? ""
         self.role = role.isEmpty ? ((try? container.decodeIfPresent(String.self, forKey: .major)) ?? "") : role
         cohort = (try? container.decodeIfPresent(String.self, forKey: .cohort))
@@ -98,10 +101,12 @@ extension Department {
         switch text {
         case "leader": self = .leader
         case "nativeops", "ol", "운영": self = .nativeOps
-        case "pmo", "pm": self = .pmo
+        case "pmo", "pm", "pm / po", "pm/po": self = .pmo
         case "fa", "재무": self = .fa
-        case "design", "native", "디자인": self = .design
-        case "dev", "nativelab", "core platform", "개발": self = .dev
+        case "design", "native", "디자인", "design & client", "client": self = .design
+        // 조직도 직무(Frontend · iOS · Backend · DevOps · Android · Flutter)와 IT 는 개발로 묶어요.
+        case "dev", "nativelab", "core platform", "개발", "frontend", "web", "ios", "backend", "devops", "android", "flutter", "it":
+            self = .dev
         default:
             self = roles.contains(.leader) ? .leader : .unknown
         }
