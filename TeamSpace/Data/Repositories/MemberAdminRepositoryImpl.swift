@@ -7,20 +7,25 @@ final class MemberAdminRepositoryImpl: MemberAdminRepository, @unchecked Sendabl
         self.client = client
     }
 
+    /// 계정은 GET /admin/users(Admin · 꺼진 계정 포함), 연결 후보는 GET /people 에서 계정 없는 조직도 구성원만
     func fetchMembers() async throws -> [ManagedMember] {
-        var members: [ManagedMember] = []
+        async let accounts = fetchAll(path: "admin/users", as: ServerAdminUserDTO.self)
+        async let people = fetchAll(path: "people", as: ServerPersonDTO.self)
+        let candidates = try await people.filter { $0.linked == false && $0.userId == nil }
+        return try await accounts.map { $0.toManagedMember() } + candidates.map { $0.toManagedMember() }
+    }
+
+    private func fetchAll<Item: Decodable>(path: String, as type: Item.Type) async throws -> [Item] {
+        var items: [Item] = []
         var cursor: String?
         repeat {
             var query = [URLQueryItem(name: "limit", value: "100")]
             if let cursor { query.append(URLQueryItem(name: "cursor", value: cursor)) }
-            let page = try await request(
-                Endpoint(method: .get, path: "people", queryItems: query),
-                as: CursorPageDTO<ServerPersonDTO>.self
-            )
-            members += page.items.map { $0.toManagedMember() }
+            let page = try await request(Endpoint(method: .get, path: path, queryItems: query), as: CursorPageDTO<Item>.self)
+            items += page.items
             cursor = page.nextCursor == cursor ? nil : page.nextCursor
-        } while cursor != nil && members.count < 1_000
-        return members
+        } while cursor != nil && items.count < 1_000
+        return items
     }
 
     func changeRole(userId: String, role: UserRole) async throws -> [UserRole] {

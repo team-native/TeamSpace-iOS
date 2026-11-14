@@ -78,6 +78,23 @@ enum MockMemberFixture {
         return envelope(["items": page, "nextCursor": next ?? NSNull()])
     }
 
+    /// GET /admin/users — 계정이 있는 사람만, 관리자 목록 형식으로 (Mock 은 조직도 id 가 없어요)
+    static func adminUsers(cursor: String?, limit: Int, now: Date = Date()) -> String {
+        let accounts = people(now: now).filter { !($0["userId"] is NSNull) }.map { person -> [String: Any] in
+            let roles = person["roles"] as? [String] ?? []
+            return [
+                "id": person["id"] ?? "", "userId": person["userId"] ?? "", "memberId": NSNull(),
+                "name": person["name"] ?? "", "email": person["email"] ?? "", "dept": person["dept"] ?? "",
+                "roles": roles, "active": true, "inOrganization": false, "isAdmin": roles.contains("Admin")
+            ]
+        }
+        let start = cursor.flatMap { id in accounts.firstIndex { $0["userId"] as? String == id }.map { $0 + 1 } } ?? 0
+        let rest = Array(accounts.dropFirst(start))
+        let page = Array(rest.prefix(limit))
+        let next = rest.count > limit ? page.last?["userId"] : nil
+        return envelope(["items": page, "nextCursor": next ?? NSNull()])
+    }
+
     static func detail(id: Int, now: Date = Date()) -> String? {
         people(now: now).first { $0["id"] as? String == String(id) }.map(envelope)
     }
