@@ -999,6 +999,11 @@ struct MockTransport: HTTPTransport {
     private func adminUserRoute(_ request: URLRequest, components: [String]) throws -> (Data, HTTPURLResponse) {
         let body = request.httpBody.flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] } ?? [:]
         switch (request.httpMethod ?? "GET", components.count) {
+        case ("GET", 2):
+            let query = Self.query(of: request)
+            return try respond(request, status: 200, json: MockMemberFixture.adminUsers(
+                cursor: query["cursor"], limit: query["limit"].flatMap(Int.init) ?? 50
+            ))
         case ("POST", 2):
             let email = (body["email"] as? String ?? "").lowercased()
             if email.hasPrefix("taken@") { return try respond(request, status: 409, json: #"{"detail":"이미 등록된 이메일입니다."}"#) }

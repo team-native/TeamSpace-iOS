@@ -1,7 +1,7 @@
 import XCTest
 @testable import TeamSpace
 
-/// 멤버 관리 [Admin] — GET /people · PATCH /admin/users/{id}(/roles) · POST · DELETE /admin/users
+/// 멤버 관리 [Admin] — GET /admin/users · GET /people · PATCH /admin/users/{id}(/roles) · POST · DELETE /admin/users
 @MainActor
 final class MemberAdminTests: XCTestCase {
     private let admin = AuthUser(id: 1, name: "이시우", roles: [.admin])
@@ -34,6 +34,24 @@ final class MemberAdminTests: XCTestCase {
         XCTAssertEqual(members.map(\.organizationId), ["member-02", "member-24", nil])
         XCTAssertFalse(members[2].isActive)
         XCTAssertEqual(members[2].primaryRole, .pm)
+    }
+
+    func testAdminUsersKeepAdminsAndGeneratedIds() throws {
+        let json = #"""
+        {"items":[
+          {"id":"1","userId":"1","memberId":null,"name":"관리자","email":"admin@x.kr","dept":"","roles":["Admin"],"active":true,"inOrganization":false,"isAdmin":true},
+          {"id":"member-02","userId":"7","memberId":"member-02","name":"안율","email":"a@x.kr","dept":"NativeOps","roles":["Member"],"active":true,"inOrganization":true,"isAdmin":false},
+          {"id":"member-25","userId":"41","memberId":"member-25","name":"새 팀원","email":"n@x.kr","dept":"iOS","roles":["Member"],"active":false,"inOrganization":false,"isAdmin":false}
+        ],"nextCursor":null}
+        """#
+        let page = try JSONCoder.makeDecoder().decode(CursorPageDTO<ServerAdminUserDTO>.self, from: Data(json.utf8))
+        let members = page.items.map { $0.toManagedMember() }
+
+        XCTAssertEqual(members.map(\.id), ["1", "7", "41"], "관리 API 는 계정 id 로")
+        XCTAssertEqual(members.map(\.isLinked), [false, true, false], "member-25 처럼 새로 붙은 id 는 조직도 연결이 아니에요")
+        XCTAssertEqual(members.map(\.organizationId), [nil, "member-02", nil])
+        XCTAssertEqual(members[0].primaryRole, .admin, "Admin 도 목록에 있어요")
+        XCTAssertFalse(members[2].isActive, "꺼진 계정도 와요")
     }
 
     func testListShowsAccountsAndSummary() async {
@@ -141,9 +159,10 @@ final class MemberAdminTests: XCTestCase {
 
         let linked = try await useCase.link(account, to: organization, user: admin)
         XCTAssertTrue(linked.isLinked)
+        XCTAssertEqual(linked.organizationId, "member-24")
         do {
             _ = try await useCase.link(linked, to: organization, user: admin)
-            XCTFail("이미 연결된 계정은 다시 연결하지 않아요")
+            XCTFail("같은 구성원과는 다시 연결하지 않아요")
         } catch AppError.invalidInput {
         }
     }

@@ -213,13 +213,13 @@ private struct MemberEditSheet: View {
         .background(Color.tsBackground.ignoresSafeArea())
     }
 
-    /// 아직 조직도와 이어지지 않은 계정만 — 계정이 없는 조직도 구성원 중에서 골라요.
+    /// 계정이 없는 조직도 구성원 중에서 골라 이어요. 이미 이어진 계정은 다른 구성원으로 바꿀 수 있어요.
     @ViewBuilder
     private func linkSection(_ member: ManagedMember) -> some View {
-        if !member.isLinked {
+        if member.hasAccount {
             let candidates = viewModel.unlinkedOrganizationMembers
             VStack(alignment: .leading, spacing: Spacing.sm) {
-                Text("조직도 연결")
+                Text(member.isLinked ? "조직도 연결 바꾸기" : "조직도 연결")
                     .tsFont(.footnoteBold)
                     .foregroundStyle(Color.tsInk)
                 if candidates.isEmpty {
