@@ -5,7 +5,7 @@ struct ManagedMember: Equatable, Identifiable, Sendable {
     /// 관리 API(`/admin/users/{id}`)에 쓰는 계정 id. 계정이 없는 조직도 구성원은 조직도 id 예요.
     let id: String
     /// 조직도 id ("member-02") — 조직도에 없는 계정이면 nil
-    let organizationId: String?
+    var organizationId: String?
     let name: String
     let email: String
     var department: String

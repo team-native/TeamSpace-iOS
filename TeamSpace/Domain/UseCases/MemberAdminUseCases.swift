@@ -49,15 +49,18 @@ struct MemberAdminUseCase {
         return updated
     }
 
-    /// 이미 있는 계정을 조직도 구성원과 이어요.
+    /// 계정을 조직도 구성원과 이어요. 이미 이어진 계정이면 다른 구성원으로 바꿔요.
+    /// (서버는 조직도에 없는 계정에도 "member-25" 같은 id 를 붙여 `linked: true` 로 내려줘서, 연결 여부만으로는 막지 않아요.)
     func link(_ member: ManagedMember, to organizationMember: ManagedMember, user: AuthUser) async throws -> ManagedMember {
         try requireAdmin(user)
-        guard member.hasAccount, !member.isLinked else { throw AppError.invalidInput("이미 조직도와 연결된 계정이에요.") }
+        guard member.hasAccount else { throw AppError.invalidInput("계정이 없는 사람은 연결할 수 없어요.") }
         guard let organizationId = organizationMember.organizationId, !organizationMember.hasAccount else {
             throw AppError.invalidInput("이미 계정이 연결된 구성원이에요.")
         }
+        guard member.organizationId != organizationId else { throw AppError.invalidInput("이미 그 구성원과 연결된 계정이에요.") }
         try await repository.update(userId: member.id, isActive: nil, department: nil, organizationId: organizationId)
         var updated = member
+        updated.organizationId = organizationId
         updated.isLinked = true
         return updated
     }

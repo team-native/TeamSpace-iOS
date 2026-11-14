@@ -141,9 +141,10 @@ final class MemberAdminTests: XCTestCase {
 
         let linked = try await useCase.link(account, to: organization, user: admin)
         XCTAssertTrue(linked.isLinked)
+        XCTAssertEqual(linked.organizationId, "member-24")
         do {
             _ = try await useCase.link(linked, to: organization, user: admin)
-            XCTFail("이미 연결된 계정은 다시 연결하지 않아요")
+            XCTFail("같은 구성원과는 다시 연결하지 않아요")
         } catch AppError.invalidInput {
         }
     }
