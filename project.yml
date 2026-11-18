@@ -25,7 +25,10 @@ targets:
         CFBundleDisplayName: TeamSpace
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
-        UILaunchScreen: {}
+        UILaunchScreen:
+          UIColorName: LaunchBackground
+          UIImageName: launch-logo
+          UIImageRespectsSafeAreaInsets: false
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         API_BASE_URL: $(API_BASE_URL)
         USE_MOCK_API: $(USE_MOCK_API)
