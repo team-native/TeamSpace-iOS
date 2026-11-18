@@ -8,6 +8,9 @@ struct RootView: View {
 
     /// 07-14 설정의 다크 모드
     @AppStorage(AppAppearance.storageKey) private var appearance = AppAppearance.system.rawValue
+    /// 스플래시: 자동 로그인 확인이 끝나고, 최소 0.9초가 지나면 사라져요
+    @State private var splashMinDone = false
+    @State private var splashVisible = true
 
     var body: some View {
         content
@@ -20,7 +23,24 @@ struct RootView: View {
                 }
             }
             .animation(.easeOut(duration: 0.2), value: session.isExpiredNoticePresented)
+            .overlay {
+                if splashVisible {
+                    SplashView()
+                        .transition(.opacity.combined(with: .scale(scale: 1.04)))
+                        .zIndex(1)
+                }
+            }
+            .task {
+                try? await Task.sleep(for: .milliseconds(900))
+                splashMinDone = true
+            }
+            .onChange(of: splashReady, initial: true) { _, ready in
+                guard ready, splashVisible else { return }
+                withAnimation(.easeOut(duration: 0.32)) { splashVisible = false }
+            }
     }
+
+    private var splashReady: Bool { splashMinDone && session.state != .launching }
 
     @ViewBuilder
     private var content: some View {
@@ -40,12 +60,10 @@ struct RootView: View {
     }
 }
 
-/// 자동 로그인 확인 중 잠깐 보이는 화면
+/// 자동 로그인 확인 중의 바탕 (위에 SplashView가 덮여 있어요)
 private struct LaunchView: View {
     var body: some View {
-        BrandLogo()
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color.tsSurface.ignoresSafeArea())
+        Color("LaunchBackground").ignoresSafeArea()
     }
 }
 
