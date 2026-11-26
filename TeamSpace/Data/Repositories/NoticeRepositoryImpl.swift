@@ -59,6 +59,10 @@ final class NoticeRepositoryImpl: NoticeRepository, @unchecked Sendable {
         _ = try await request(Endpoint(method: .patch, path: "admin/notices/\(noticeId)", body: body), as: IgnoredJSONValue.self)
     }
 
+    func delete(noticeId: Int) async throws {
+        _ = try await request(Endpoint(method: .delete, path: "admin/notices/\(noticeId)"), as: IgnoredJSONValue.self)
+    }
+
     /// POST /uploads — 10MB 이하 파일
     private func upload(_ attachment: NoticeAttachment) async throws -> String {
         let file = MultipartFile(

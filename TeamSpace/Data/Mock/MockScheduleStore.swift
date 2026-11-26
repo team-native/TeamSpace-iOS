@@ -75,6 +75,16 @@ final class MockScheduleStore: @unchecked Sendable {
     }
 
     /// PATCH /admin/events/{id} — 서버처럼 보낸 항목으로 덮어쓰고 `{id, ...payload}` 를 돌려줘요.
+    /// DELETE /admin/events/{id} — 일정과 리마인더를 지워요.
+    func delete(id: Int) -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        guard let index = events.firstIndex(where: { $0.id == id }) else { return false }
+        events.remove(at: index)
+        reminders[id] = nil
+        return true
+    }
+
     func update(id: Int, request: ServerEventCreateRequestDTO) -> String? {
         lock.lock()
         defer { lock.unlock() }

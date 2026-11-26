@@ -14,7 +14,12 @@ final class NoticeDetailViewModel {
     private let fetchNoticeDetailUseCase: FetchNoticeDetailUseCase
     private let acknowledgeNoticeUseCase: AcknowledgeNoticeUseCase
     private let fetchNoticeUnconfirmedUseCase: FetchNoticeUnconfirmedUseCase?
+    private let deleteNoticeUseCase: DeleteNoticeUseCase?
     private let user: AuthUser?
+    /// 더보기 · 삭제 확인
+    var isMorePresented = false
+    var isDeleteConfirmPresented = false
+    private(set) var isDeleted = false
     /// 첨부 내려받기 · 미리보기
     let attachmentDownloader: AttachmentDownloadViewModel?
     /// 미확인자 시트
@@ -26,6 +31,7 @@ final class NoticeDetailViewModel {
         fetchNoticeDetailUseCase: FetchNoticeDetailUseCase,
         acknowledgeNoticeUseCase: AcknowledgeNoticeUseCase,
         fetchNoticeUnconfirmedUseCase: FetchNoticeUnconfirmedUseCase? = nil,
+        deleteNoticeUseCase: DeleteNoticeUseCase? = nil,
         user: AuthUser? = nil,
         attachmentDownloader: AttachmentDownloadViewModel? = nil
     ) {
@@ -34,6 +40,7 @@ final class NoticeDetailViewModel {
         self.fetchNoticeDetailUseCase = fetchNoticeDetailUseCase
         self.acknowledgeNoticeUseCase = acknowledgeNoticeUseCase
         self.fetchNoticeUnconfirmedUseCase = fetchNoticeUnconfirmedUseCase
+        self.deleteNoticeUseCase = deleteNoticeUseCase
         self.user = user
     }
 
@@ -73,6 +80,20 @@ final class NoticeDetailViewModel {
 
     /// 공지 게시 권한(FA · Leader · Admin)이 있으면 고칠 수 있어요.
     var canEdit: Bool { detail != nil && user?.can(.publishNotice) == true }
+
+    /// Admin 만 지울 수 있어요.
+    var canDelete: Bool { detail != nil && deleteNoticeUseCase != nil && user?.can(.deleteNotices) == true }
+
+    func delete() async {
+        guard let deleteNoticeUseCase, detail != nil else { return }
+        do {
+            try await deleteNoticeUseCase.execute(noticeId: noticeId, user: user)
+            isDeleted = true
+        } catch {
+            AppLog.record(error, context: "notice.delete")
+            errorMessage = error.userMessage
+        }
+    }
 
     var detail: NoticeDetail? { state.value }
 

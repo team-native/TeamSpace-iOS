@@ -22,7 +22,11 @@ struct NoticeDetailView: View {
         }
         .safeAreaInset(edge: .top, spacing: 0) {
             TSNavigationBar(title: "공지", onBack: { dismiss() }) {
-                if viewModel.canEdit, let id = viewModel.detail?.notice.id {
+                if viewModel.canDelete {
+                    CircleIconButton(icon: .ellipsis, accessibilityLabel: "더보기", background: .tsSurface, hasBorder: true) {
+                        viewModel.isMorePresented = true
+                    }
+                } else if viewModel.canEdit, let id = viewModel.detail?.notice.id {
                     CircleIconButton(icon: .pencil, accessibilityLabel: "공지 수정", background: .tsSurface, hasBorder: true) {
                         onNavigate(.noticeEdit(id: id))
                     }
@@ -51,6 +55,22 @@ struct NoticeDetailView: View {
         }
         .onChange(of: viewModel.didAcknowledge) { _, done in
             if done { dismiss() }
+        }
+        .onChange(of: viewModel.isDeleted) { _, deleted in
+            if deleted { dismiss() }
+        }
+        .confirmationDialog("공지 더보기", isPresented: $viewModel.isMorePresented, titleVisibility: .hidden) {
+            if viewModel.canEdit, let id = viewModel.detail?.notice.id {
+                Button("수정하기") { onNavigate(.noticeEdit(id: id)) }
+            }
+            Button("삭제하기", role: .destructive) { viewModel.isDeleteConfirmPresented = true }
+            Button("취소", role: .cancel) {}
+        }
+        .confirmationDialog("공지를 삭제할까요?", isPresented: $viewModel.isDeleteConfirmPresented, titleVisibility: .visible) {
+            Button("삭제하기", role: .destructive) { Task { await viewModel.delete() } }
+            Button("취소", role: .cancel) {}
+        } message: {
+            Text("확인 기록도 함께 지워지고 되돌릴 수 없어요.")
         }
         .alert(viewModel.errorMessage ?? "", isPresented: Binding(
             get: { viewModel.errorMessage != nil },

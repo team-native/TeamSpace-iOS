@@ -278,6 +278,18 @@ struct MockTransport: HTTPTransport {
             }
             return try respond(request, status: 200, json: json)
         }
+        if components.count == 3, components.starts(with: ["admin", "notices"]), request.httpMethod == "DELETE" {
+            guard let id = Int(components[2]), boardStore.noticeStore.delete(id: id) else {
+                return try respond(request, status: 404, json: #"{"detail":"공지를 찾을 수 없습니다."}"#)
+            }
+            return try respond(request, status: 200, json: #"{"id":"\#(id)","deleted":true}"#)
+        }
+        if components.count == 3, components.starts(with: ["admin", "events"]), request.httpMethod == "DELETE" {
+            guard let id = Int(components[2]), scheduleStore.delete(id: id) else {
+                return try respond(request, status: 404, json: #"{"detail":"일정을 찾을 수 없습니다."}"#)
+            }
+            return try respond(request, status: 200, json: #"{"id":"\#(id)","deleted":true}"#)
+        }
         if components.count == 3, components.starts(with: ["admin", "notices"]), request.httpMethod == "PATCH" {
             guard
                 let id = Int(components[2]), let body = request.httpBody,

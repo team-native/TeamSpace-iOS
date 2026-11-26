@@ -165,6 +165,10 @@ final class WorkspaceRepositoryImpl: WorkspaceRepository, @unchecked Sendable {
         _ = try await request(Endpoint(method: .patch, path: "admin/events/\(id)", body: body), as: EmptyResponseDTO.self)
     }
 
+    func deleteSchedule(id: Int) async throws {
+        _ = try await request(Endpoint(method: .delete, path: "admin/events/\(id)"), as: IgnoredJSONValue.self)
+    }
+
     /// GET /events/{id} + GET /events/{id}/reminders — 리마인더를 못 불러오면 꺼진 것으로 보여줘요.
     func fetchScheduleDetail(id: Int) async throws -> ScheduleEventDetail {
         async let remindersTask = fetchReminders(eventId: id)

@@ -166,6 +166,16 @@ final class MockNoticeStore: @unchecked Sendable {
     }
 
     /// PATCH /admin/notices/{id} — 제목 · 본문 · 고정 · 필독만 바꿔요. 없으면 nil
+    /// DELETE /admin/notices/{id} — 공지와 확인 기록을 지워요.
+    func delete(id: Int) -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        guard let index = records.firstIndex(where: { $0.summary.id == id }) else { return false }
+        records.remove(at: index)
+        confirmedIds.remove(id)
+        return true
+    }
+
     func update(id: Int, request: ServerNoticePatchRequestDTO) -> String? {
         lock.lock()
         defer { lock.unlock() }

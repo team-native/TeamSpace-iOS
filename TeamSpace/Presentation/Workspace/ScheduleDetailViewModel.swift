@@ -16,15 +16,22 @@ final class ScheduleDetailViewModel {
     private let fetchScheduleDetailUseCase: FetchScheduleDetailUseCase
     private let respondScheduleUseCase: RespondScheduleUseCase
     private let updateRemindersUseCase: UpdateRemindersUseCase
+    private let deleteScheduleUseCase: DeleteScheduleUseCase?
     private let user: AuthUser?
+    /// 더보기 · 삭제 확인
+    var isMorePresented = false
+    var isDeleteConfirmPresented = false
+    private(set) var isDeleted = false
 
     init(
         scheduleId: Int,
         fetchScheduleDetailUseCase: FetchScheduleDetailUseCase,
         respondScheduleUseCase: RespondScheduleUseCase,
         updateRemindersUseCase: UpdateRemindersUseCase,
+        deleteScheduleUseCase: DeleteScheduleUseCase? = nil,
         user: AuthUser? = nil
     ) {
+        self.deleteScheduleUseCase = deleteScheduleUseCase
         self.scheduleId = scheduleId
         self.user = user
         self.fetchScheduleDetailUseCase = fetchScheduleDetailUseCase
@@ -36,6 +43,20 @@ final class ScheduleDetailViewModel {
 
     /// 일정 수정 (서버 `require_admin` — Admin 만)
     var canEdit: Bool { detail != nil && user?.can(.manageEvents) == true }
+
+    /// 일정 삭제도 Admin 만
+    var canDelete: Bool { canEdit && deleteScheduleUseCase != nil }
+
+    func delete() async {
+        guard let deleteScheduleUseCase, detail != nil else { return }
+        do {
+            try await deleteScheduleUseCase.execute(scheduleId: scheduleId, user: user)
+            isDeleted = true
+        } catch {
+            AppLog.record(error, context: "schedule.delete")
+            errorMessage = error.userMessage
+        }
+    }
 
     /// "내 응답 저장됨 · 10.16 09:20"
     var savedResponseText: String? {

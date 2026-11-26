@@ -14,4 +14,6 @@ protocol NoticeRepository: Sendable {
     func fetchUnconfirmed(noticeId: Int) async throws -> [NoticeUnconfirmedMember]
     /// PATCH /admin/notices/{noticeId} — 제목 · 본문 · 중요 · 고정 · 푸시만 고쳐요. (대상 · 첨부 · 게시 시점은 그대로)
     func update(noticeId: Int, _ draft: NoticeDraft) async throws
+    /// DELETE /admin/notices/{noticeId} — 공지와 확인 기록을 지워요. (Admin 만)
+    func delete(noticeId: Int) async throws
 }
