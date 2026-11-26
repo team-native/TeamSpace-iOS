@@ -135,7 +135,7 @@ private struct NewMemberSpotlight: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: Spacing.md) {
-                AvatarView(size: 43)
+                AvatarView(size: 43, photo: member.photo)
                 VStack(alignment: .leading, spacing: Spacing.compact) {
                     Text("이번 주 새 멤버")
                         .tsFont(.caption2Bold)

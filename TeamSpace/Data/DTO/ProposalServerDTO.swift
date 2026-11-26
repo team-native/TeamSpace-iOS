@@ -26,6 +26,8 @@ struct ServerProposalDTO: Decodable {
     let createdAt: Date
     let mine: Bool
     let author: String?
+    /// 작성자 조직도 id — 익명이면 빈 값
+    let authorId: String?
     let answer: Answer?
     let history: [History]
     let comments: [ServerProposalCommentDTO]?
@@ -48,6 +50,7 @@ struct ServerProposalDTO: Decodable {
         createdAt = (try? container.decodeIfPresent(Date.self, forKey: .createdAt)) ?? Date()
         mine = (try? container.decodeIfPresent(Bool.self, forKey: .mine)) ?? false
         author = try? container.decodeIfPresent(String.self, forKey: .author)
+        authorId = (try? container.decodeStringOrInt(forKey: .authorId)).flatMap { $0.isEmpty ? nil : $0 }
         answer = try? container.decodeIfPresent(Answer.self, forKey: .answer)
         history = (try? container.decodeIfPresent([History].self, forKey: .history)) ?? []
         comments = try? container.decodeIfPresent([ServerProposalCommentDTO].self, forKey: .comments)
@@ -57,7 +60,7 @@ struct ServerProposalDTO: Decodable {
 
     private enum CodingKeys: String, CodingKey {
         case id, category, title, body, status, anonymous, likes, recommendCount, commentCount, createdAt, mine, author
-        case answer, history, comments, views, recommended
+        case answer, history, comments, views, recommended, authorId
     }
 
     func toEntity() -> ProposalSummary {
@@ -89,7 +92,9 @@ struct ServerProposalDTO: Decodable {
             answer: answer.map {
                 ProposalAnswer(department: category.isEmpty ? $0.who ?? "운영진" : category, body: $0.text, answeredAt: $0.at ?? createdAt)
             },
-            comments: (comments ?? []).map { $0.toEntity(proposalAuthor: anonymous ? nil : author) }
+            comments: (comments ?? []).map {
+                $0.toEntity(proposalAuthor: anonymous ? nil : author, proposalAuthorId: anonymous ? nil : authorId)
+            }
         )
     }
 }
@@ -106,6 +111,8 @@ struct ServerProposalCommentDTO: Decodable {
     let mine: Bool?
     let author: String?
     let anonymousNumber: Int?
+    /// 작성자 조직도 id — 익명이면 빈 값
+    let authorId: String?
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -116,15 +123,22 @@ struct ServerProposalCommentDTO: Decodable {
         anonymous = (try? container.decodeIfPresent(Bool.self, forKey: .anonymous)) ?? false
         mine = try? container.decodeIfPresent(Bool.self, forKey: .mine)
         author = try? container.decodeIfPresent(String.self, forKey: .author)
+        authorId = (try? container.decodeStringOrInt(forKey: .authorId)).flatMap { $0.isEmpty ? nil : $0 }
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, text, createdAt, anonymous, mine, author, anonymousNumber
+        case id, text, createdAt, anonymous, mine, author, anonymousNumber, authorId
     }
 
-    /// `proposalAuthor` — 실명 제안이면 제안자 이름 (같은 이름의 실명 댓글을 제안자 댓글로 봐요)
-    func toEntity(proposalAuthor: String?, now: Date = Date()) -> ProposalComment {
-        let isProposer = author == Self.proposerLabel || (!anonymous && author != nil && author == proposalAuthor)
+    /// 실명 제안이면 제안자 id 로 제안자 댓글을 알아봐요. id 가 없으면(옛 서버) 같은 이름으로 봐요.
+    func toEntity(proposalAuthor: String?, proposalAuthorId: String? = nil, now: Date = Date()) -> ProposalComment {
+        let isSameAuthor: Bool
+        if let proposalAuthorId, let authorId {
+            isSameAuthor = proposalAuthorId == authorId
+        } else {
+            isSameAuthor = author != nil && author == proposalAuthor
+        }
+        let isProposer = author == Self.proposerLabel || (!anonymous && isSameAuthor)
         return ProposalComment(
             id: id,
             authorName: anonymous || author == Self.proposerLabel ? nil : author,

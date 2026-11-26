@@ -3,7 +3,8 @@ import os
 
 /// 요청 생성 · 토큰 첨부 · 공통 응답(`data`) 꺼내기 · 토큰 갱신 · 오류 변환을 담당합니다.
 final class APIClient: @unchecked Sendable {
-    private let baseURL: URL
+    /// 서버 주소 — 프로필 사진처럼 상대 경로로 오는 주소를 풀 때도 써요.
+    let baseURL: URL
     private let transport: HTTPTransport
     private let tokenStorage: TokenStorage
     private let refresher = TokenRefresher()

@@ -25,6 +25,9 @@ struct ServerPostItemDTO: Decodable {
     let attachments: [ServerApprovalDTO.File]
     /// 익명 글이면 없어요.
     let author: String?
+    /// 작성자 조직도 id · 사진 주소 — 익명이면 빈 값
+    let authorId: String?
+    let authorPhoto: String?
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -41,10 +44,13 @@ struct ServerPostItemDTO: Decodable {
         attachmentCount = try container.decodeIfPresent([IgnoredJSONValue].self, forKey: .attachments)?.count ?? 0
         attachments = (try? container.decodeIfPresent([ServerApprovalDTO.File].self, forKey: .attachments)) ?? []
         author = try container.decodeIfPresent(String.self, forKey: .author)
+        authorId = try? container.decodeStringOrInt(forKey: .authorId)
+        authorPhoto = (try? container.decodeIfPresent(String.self, forKey: .authorPhoto)) ?? nil
     }
 
     private enum CodingKeys: String, CodingKey {
         case id, category, title, body, anonymous, views, likes, createdAt, mine, commentCount, attachments, author
+        case authorId, authorPhoto
     }
 
     func toEntity() -> PostSummary {
@@ -61,7 +67,9 @@ struct ServerPostItemDTO: Decodable {
             commentCount: commentCount,
             viewCount: views,
             hasImage: attachmentCount > 0,
-            isMine: mine
+            isMine: mine,
+            authorId: anonymous ? nil : authorId.flatMap { $0.isEmpty ? nil : $0 },
+            authorPhoto: anonymous ? nil : ProfilePhoto(authorPhoto)
         )
     }
 

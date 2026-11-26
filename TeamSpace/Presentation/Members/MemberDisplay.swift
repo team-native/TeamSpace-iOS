@@ -77,7 +77,7 @@ struct MemberRow: View {
 
     var body: some View {
         HStack(spacing: Spacing.md) {
-            AvatarView(size: 40)
+            AvatarView(size: 40, photo: member.photo)
             VStack(alignment: .leading, spacing: Spacing.xxxs) {
                 HStack(spacing: Spacing.xs) {
                     Text(member.name)

@@ -17,6 +17,7 @@ struct TeamSpaceApp: App {
             RootView(container: container, session: session, entryRouter: appDelegate.notificationEntryRouter)
                 // COMMON-08 큰 글자: 접근성 크기 2단계까지 키우고, 그보다 크면 레이아웃이 깨지지 않게 멈춰요.
                 .dynamicTypeSize(...DynamicTypeSize.accessibility2)
+                .environment(\.photoBaseURL, container.photoBaseURL)
                 .task {
                     appDelegate.pushTokenRegistrar.configure(
                         registerPushTokenUseCase: container.registerPushTokenUseCase
