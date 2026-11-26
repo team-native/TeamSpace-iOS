@@ -110,14 +110,12 @@ final class MemberAdminViewModel {
     }
 
     func link(_ member: ManagedMember, to organizationMember: ManagedMember) async {
-        await run(member, context: "member.admin.link") {
+        let linked = await run(member, context: "member.admin.link") {
             let updated = try await self.useCase.link(member, to: organizationMember, user: self.user)
             return (updated, "\(updated.name)님 계정을 조직도의 \(organizationMember.name)님과 연결했어요")
         }
-        // 연결에 성공했으면 그 조직도 구성원은 더 이상 후보가 아니에요.
-        if all.first(where: { $0.id == member.id })?.isLinked == true {
-            state = .loaded(all.filter { $0.id != organizationMember.id })
-        }
+        // 연결하면 후보 · 원래 연결됐던 구성원이 함께 바뀌어서 서버 목록을 다시 받아요.
+        if linked { await load() }
     }
 
     func startAdd() {
@@ -156,12 +154,13 @@ final class MemberAdminViewModel {
     }
 
     /// 한 사람씩 처리하고, 성공하면 목록의 그 사람을 바꿔요.
+    @discardableResult
     private func run(
         _ member: ManagedMember,
         context: String,
         _ action: @escaping () async throws -> (ManagedMember, String)
-    ) async {
-        guard processingId == nil else { return }
+    ) async -> Bool {
+        guard processingId == nil else { return false }
         processingId = member.id
         defer { processingId = nil }
         do {
@@ -170,9 +169,11 @@ final class MemberAdminViewModel {
             if let index = items.firstIndex(where: { $0.id == updated.id }) { items[index] = updated }
             state = .loaded(items)
             toastMessage = message
+            return true
         } catch {
             AppLog.record(error, context: context)
             errorMessage = error.userMessage
+            return false
         }
     }
 }
