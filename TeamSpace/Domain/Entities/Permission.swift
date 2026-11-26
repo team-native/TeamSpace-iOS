@@ -54,7 +54,9 @@ extension AuthUser {
             return !roles.isDisjoint(with: [.fa, .leader, .admin])
         case .manageBankImports, .manageReceipts:
             return !roles.isDisjoint(with: [.fa, .admin])
-        case .viewNoticeReceipts, .manageEvents, .handleReports, .approveSignups, .manageFinancePermissions, .manageMembers, .registerProjects, .manageDocs, .deleteNotices:
+        case .deleteNotices:
+            return roles.contains(.admin)
+        case .viewNoticeReceipts, .manageEvents, .handleReports, .approveSignups, .manageFinancePermissions, .manageMembers, .registerProjects, .manageDocs:
             return roles.contains(.admin)
         }
     }
