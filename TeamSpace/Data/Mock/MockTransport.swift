@@ -846,6 +846,22 @@ struct MockTransport: HTTPTransport {
                 return try respond(request, status: 422, json: #"{"detail":"제안 내용을 입력해주세요."}"#)
             }
             return try respond(request, status: 201, json: proposalStore.create(dto))
+        case ("PATCH", 2):
+            guard let id = id,
+                  let dto = request.httpBody.flatMap({ try? JSONDecoder().decode(ServerProposalPatchRequestDTO.self, from: $0) })
+            else { return try respond(request, status: 422, json: #"{"detail":"잘못된 요청입니다."}"#) }
+            guard ["NativeOps", "FA", "PM / PO", "Design"].contains(dto.dept) else {
+                return try respond(request, status: 422, json: #"{"detail":"허용되지 않은 운영 제안 담당 부서입니다."}"#)
+            }
+            switch proposalStore.update(id: id, request: dto) {
+            case .notFound: return try respond(request, status: 404, json: notFound)
+            case .forbidden(let message): return try respond(request, status: 403, json: #"{"detail":"\#(message)"}"#)
+            case .conflict(let message): return try respond(request, status: 409, json: #"{"detail":"\#(message)"}"#)
+            case .done(let json): return try respond(request, status: 200, json: json)
+            }
+        case ("DELETE", 2):
+            guard let id = id, proposalStore.delete(id: id) else { return try respond(request, status: 404, json: notFound) }
+            return try respond(request, status: 200, json: #"{"id":"\#(id)","deleted":true}"#)
         case ("POST", 3) where components[2] == "recommend":
             guard let id = id, let json = proposalStore.toggleRecommend(id: id) else { return try respond(request, status: 404, json: notFound) }
             return try respond(request, status: 200, json: json)

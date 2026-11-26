@@ -14,4 +14,8 @@ protocol ProposalRepository: Sendable {
     func create(_ draft: ProposalDraft) async throws -> ProposalSummary
     /// PATCH /admin/proposals/{proposalId} — 담당 부서 · Admin 처리 (상태 · 공식 답변)
     func manage(proposalId: Int, status: ProposalStatus, answer: String?) async throws
+    /// PATCH /proposals/{proposalId} — 내 제안 고치기 (접수 상태일 때만). 고친 상세를 돌려줘요.
+    func update(proposalId: Int, _ draft: ProposalDraft) async throws -> ProposalDetail
+    /// DELETE /proposals/{proposalId} — 작성자 · Admin
+    func delete(proposalId: Int) async throws
 }

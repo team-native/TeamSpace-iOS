@@ -3,9 +3,9 @@ import Foundation
 /// 목 서버(MockProposalStore)가 기억하는 운영 제안 모양 — 응답은 서버 형식(ServerProposalDTO)으로 바꿔 내보내요.
 struct ProposalSummaryDTO: Codable {
     let id: Int
-    let department: String
-    let title: String
-    let excerpt: String
+    var department: String
+    var title: String
+    var excerpt: String
     let isAnonymous: Bool
     let authorName: String?
     let createdAt: Date

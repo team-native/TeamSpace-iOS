@@ -5,7 +5,7 @@ import Foundation
 final class MockProposalStore: @unchecked Sendable {
     private struct Record {
         var summary: ProposalSummaryDTO
-        let body: String
+        var body: String
         var steps: [ProposalStepDTO]
         var answer: ProposalAnswerDTO?
         var comments: [ProposalCommentDTO]
@@ -179,6 +179,36 @@ final class MockProposalStore: @unchecked Sendable {
             steps: [ProposalStepDTO(status: .received, reachedAt: now)], answer: nil, comments: []
         ), at: 0)
         return json(["id": String(id), "status": "접수"])
+    }
+
+    enum Change {
+        case notFound
+        case forbidden(String)
+        case conflict(String)
+        case done(String)
+    }
+
+    /// PATCH /proposals/{id} — 내 제안 · 접수 상태만, 고친 상세를 돌려줘요.
+    func update(id: Int, request: ServerProposalPatchRequestDTO) -> Change {
+        lock.lock()
+        defer { lock.unlock() }
+        guard let index = records.firstIndex(where: { $0.summary.id == id }) else { return .notFound }
+        guard records[index].summary.isMine else { return .forbidden("작성자 본인만 운영 제안을 수정할 수 있습니다.") }
+        guard records[index].summary.status == .received else { return .conflict("접수 상태인 운영 제안만 수정할 수 있습니다.") }
+        records[index].summary.title = request.title
+        records[index].summary.department = request.category
+        records[index].summary.excerpt = String(request.body.prefix(60))
+        records[index].body = request.body
+        return .done(json(serverFields(records[index], detail: true)))
+    }
+
+    /// DELETE /proposals/{id} — 작성자 · Admin (Mock 사용자는 Admin 이라 지울 수 있어요)
+    func delete(id: Int) -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        guard let index = records.firstIndex(where: { $0.summary.id == id }) else { return false }
+        records.remove(at: index)
+        return true
     }
 
     /// PATCH /admin/proposals/{id} — 서버처럼 상태가 바뀌면 이력을 남기고, 답변이 오면 (반려가 아니면) 답변 완료로 바꿔요.

@@ -16,6 +16,13 @@ final class ProposalDetailViewModel {
     var manageDraft = ProposalManageDraft()
     private(set) var isManaging = false
     private(set) var department: String?
+    /// 더보기 · 고치기 · 지우기
+    var isMorePresented = false
+    var isDeleteConfirmPresented = false
+    /// 고치는 중인 내용 (시트)
+    var editDraft: ProposalDraft?
+    private(set) var isSavingEdit = false
+    private(set) var isDeleted = false
 
     private let proposalId: Int
     private let fetchProposalDetailUseCase: FetchProposalDetailUseCase
@@ -24,6 +31,7 @@ final class ProposalDetailViewModel {
     private let user: AuthUser?
     private let fetchProfileUseCase: FetchProfileUseCase?
     private let manageProposalUseCase: ManageProposalUseCase?
+    private let editProposalUseCase: EditProposalUseCase?
 
     init(
         proposalId: Int,
@@ -32,8 +40,10 @@ final class ProposalDetailViewModel {
         addProposalCommentUseCase: AddProposalCommentUseCase,
         user: AuthUser? = nil,
         fetchProfileUseCase: FetchProfileUseCase? = nil,
-        manageProposalUseCase: ManageProposalUseCase? = nil
+        manageProposalUseCase: ManageProposalUseCase? = nil,
+        editProposalUseCase: EditProposalUseCase? = nil
     ) {
+        self.editProposalUseCase = editProposalUseCase
         self.proposalId = proposalId
         self.fetchProposalDetailUseCase = fetchProposalDetailUseCase
         self.toggleProposalRecommendUseCase = toggleProposalRecommendUseCase
@@ -44,6 +54,28 @@ final class ProposalDetailViewModel {
     }
 
     var detail: ProposalDetail? { state.value }
+
+    /// 내 제안이고 접수 상태일 때만 고칠 수 있어요.
+    var canEdit: Bool {
+        guard editProposalUseCase != nil, let detail else { return false }
+        return EditProposalUseCase.canEdit(detail.proposal)
+    }
+
+    /// 내 제안 · Admin 은 지울 수 있어요.
+    var canDelete: Bool {
+        guard editProposalUseCase != nil, let detail else { return false }
+        return EditProposalUseCase.canDelete(detail.proposal, user: user)
+    }
+
+    var hasMoreMenu: Bool { canEdit || canDelete }
+
+    var canSaveEdit: Bool {
+        guard let editDraft, !isSavingEdit else { return false }
+        let title = editDraft.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        let body = editDraft.body.trimmingCharacters(in: .whitespacesAndNewlines)
+        return !title.isEmpty && !body.isEmpty
+            && editDraft.title.count <= ProposalDraft.titleLimit && editDraft.body.count <= ProposalDraft.bodyLimit
+    }
 
     var canSendComment: Bool {
         !isSendingComment && !commentText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -109,6 +141,38 @@ final class ProposalDetailViewModel {
             }
         } catch {
             AppLog.record(error, context: "proposal.manage")
+            errorMessage = error.userMessage
+        }
+    }
+
+    // MARK: 내 제안 고치기 · 지우기
+
+    func startEditing() {
+        guard let detail, canEdit else { return }
+        editDraft = EditProposalUseCase.draft(from: detail)
+    }
+
+    func saveEdit() async {
+        guard let detail, let editDraft, canSaveEdit, let editProposalUseCase else { return }
+        isSavingEdit = true
+        defer { isSavingEdit = false }
+        do {
+            state = .loaded(try await editProposalUseCase.update(detail, draft: editDraft))
+            self.editDraft = nil
+            toastMessage = "제안을 고쳤어요"
+        } catch {
+            AppLog.record(error, context: "proposal.update")
+            errorMessage = error.userMessage
+        }
+    }
+
+    func delete() async {
+        guard let detail, let editProposalUseCase else { return }
+        do {
+            try await editProposalUseCase.delete(detail.proposal, user: user)
+            isDeleted = true
+        } catch {
+            AppLog.record(error, context: "proposal.delete")
             errorMessage = error.userMessage
         }
     }

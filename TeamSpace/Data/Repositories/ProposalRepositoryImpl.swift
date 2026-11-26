@@ -45,7 +45,7 @@ final class ProposalRepositoryImpl: ProposalRepository, @unchecked Sendable {
             title: draft.title,
             body: draft.body,
             category: draft.department,
-            dept: draft.department,
+            dept: ProposalDraft.serverDepartment(draft.department),
             anonymous: draft.isAnonymous
         )
         let created = try await request(Endpoint(method: .post, path: "proposals", body: body), as: ServerProposalCreatedDTO.self)
@@ -68,6 +68,21 @@ final class ProposalRepositoryImpl: ProposalRepository, @unchecked Sendable {
     func manage(proposalId: Int, status: ProposalStatus, answer: String?) async throws {
         let body = ServerProposalManageRequestDTO(status: status.serverValue, answer: answer)
         _ = try await request(Endpoint(method: .patch, path: "admin/proposals/\(proposalId)", body: body), as: EmptyResponseDTO.self)
+    }
+
+    /// 익명 여부는 바꿀 수 없어서 부서 · 제목 · 내용만 보내요.
+    func update(proposalId: Int, _ draft: ProposalDraft) async throws -> ProposalDetail {
+        let body = ServerProposalPatchRequestDTO(
+            title: draft.title,
+            body: draft.body,
+            category: draft.department,
+            dept: ProposalDraft.serverDepartment(draft.department)
+        )
+        return try await request(Endpoint(method: .patch, path: "proposals/\(proposalId)", body: body), as: ServerProposalDTO.self).toDetail()
+    }
+
+    func delete(proposalId: Int) async throws {
+        _ = try await request(Endpoint(method: .delete, path: "proposals/\(proposalId)"), as: IgnoredJSONValue.self)
     }
 
     private func request<Response: Decodable>(_ endpoint: Endpoint, as type: Response.Type) async throws -> Response {
