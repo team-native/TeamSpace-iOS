@@ -40,6 +40,8 @@ extension AuthUser {
     func can(_ permission: Permission) -> Bool {
         let roles = Set(roles)
         switch permission {
+        case .deleteNotices:
+            return roles.contains(.admin)
         case .viewFinanceSummary:
             return true
         case .viewFinanceDetail:
@@ -54,8 +56,6 @@ extension AuthUser {
             return !roles.isDisjoint(with: [.fa, .leader, .admin])
         case .manageBankImports, .manageReceipts:
             return !roles.isDisjoint(with: [.fa, .admin])
-        case .deleteNotices:
-            return roles.contains(.admin)
         case .viewNoticeReceipts, .manageEvents, .handleReports, .approveSignups, .manageFinancePermissions, .manageMembers, .registerProjects, .manageDocs:
             return roles.contains(.admin)
         }
