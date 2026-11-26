@@ -13,6 +13,8 @@ struct PostListQuery: Equatable, Sendable {
     enum Sort: Equatable, Sendable {
         case latest
         case likes
+        /// 조회 많은 순 (`sort=views`)
+        case views
     }
 
     enum Period: Equatable, Sendable {

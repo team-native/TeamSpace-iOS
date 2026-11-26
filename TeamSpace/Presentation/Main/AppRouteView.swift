@@ -243,7 +243,10 @@ struct AppRouteView: View {
         case .boardSearch:
             BoardSearchView(viewModel: container.makeBoardSearchViewModel(), onNavigate: onNavigate)
         case .postDetail(let id):
-            PostDetailView(viewModel: container.makePostDetailViewModel(postId: id), onNavigate: onNavigate)
+            PostDetailView(
+                viewModel: container.makePostDetailViewModel(postId: id, canModerate: user.can(.moderatePosts)),
+                onNavigate: onNavigate
+            )
         case .postCompose:
             PostComposeView(viewModel: container.makePostComposeViewModel(), onNavigate: onNavigate)
         case .postEdit(let id):

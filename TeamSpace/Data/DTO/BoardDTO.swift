@@ -50,7 +50,7 @@ struct PostCommentDTO: Codable {
     let anonymousNumber: Int?
     let isPostAuthor: Bool
     let isMine: Bool
-    let body: String
+    var body: String
     let createdAt: Date
 
     func toEntity() -> PostComment {

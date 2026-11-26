@@ -120,6 +120,16 @@ struct ServerCommentCreateRequestDTO: Codable {
     let anonymous: Bool
 }
 
+/// PATCH /posts/{id}/comments/{commentId} 요청
+struct ServerCommentPatchRequestDTO: Codable {
+    let text: String
+}
+
+/// PATCH /admin/posts/{id} 요청 · 응답 `{id, pinned}`
+struct ServerPostPinDTO: Codable {
+    let pinned: Bool
+}
+
 /// POST /posts/{id}/like 응답
 struct ServerLikeResponseDTO: Codable {
     let liked: Bool

@@ -376,6 +376,14 @@ final class DIContainer {
         DeletePostUseCase(boardRepository: boardRepository)
     }
 
+    var managePostCommentUseCase: ManagePostCommentUseCase {
+        ManagePostCommentUseCase(boardRepository: boardRepository)
+    }
+
+    var pinPostUseCase: PinPostUseCase {
+        PinPostUseCase(boardRepository: boardRepository)
+    }
+
     var createPostUseCase: CreatePostUseCase {
         CreatePostUseCase(boardRepository: boardRepository, postDraftRepository: postDraftRepository)
     }
@@ -838,13 +846,17 @@ extension DIContainer {
         BoardSearchViewModel(searchBoardUseCase: searchBoardUseCase, recentSearchUseCase: boardRecentSearchUseCase)
     }
 
-    func makePostDetailViewModel(postId: Int) -> PostDetailViewModel {
+    /// `canModerate` — Admin 이면 고정 · 남의 댓글 지우기를 보여줘요.
+    func makePostDetailViewModel(postId: Int, canModerate: Bool = false) -> PostDetailViewModel {
         PostDetailViewModel(
             postId: postId,
+            canModerate: canModerate,
             fetchPostDetailUseCase: fetchPostDetailUseCase,
             togglePostLikeUseCase: togglePostLikeUseCase,
             reportPostUseCase: reportPostUseCase,
             deletePostUseCase: deletePostUseCase,
+            managePostCommentUseCase: managePostCommentUseCase,
+            pinPostUseCase: pinPostUseCase,
             attachmentDownloader: makeAttachmentDownloadViewModel()
         )
     }

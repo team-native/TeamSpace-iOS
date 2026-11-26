@@ -74,7 +74,11 @@ struct PostDetailView: View {
             PostCommentSection(
                 detail: detail,
                 likingCommentIds: viewModel.likingCommentIds,
-                onLikeComment: { id in Task { await viewModel.toggleCommentLike(id) } }
+                onLikeComment: { id in Task { await viewModel.toggleCommentLike(id) } },
+                canEdit: viewModel.canEditComment,
+                canDelete: viewModel.canDeleteComment,
+                onEditComment: viewModel.startEditing,
+                onDeleteComment: { viewModel.deletingComment = $0 }
             )
         }
     }
@@ -112,6 +116,9 @@ private struct PostDetailDialogs: ViewModifier {
                 if viewModel.canEdit {
                     Button("수정하기", action: onEdit)
                 }
+                if viewModel.canPin {
+                    Button(viewModel.pinTitle) { Task { await viewModel.togglePin() } }
+                }
                 if viewModel.canDelete {
                     Button("삭제하기", role: .destructive) { Task { await viewModel.delete() } }
                 }
@@ -124,6 +131,21 @@ private struct PostDetailDialogs: ViewModifier {
                 Button("취소", role: .cancel) {}
             } message: {
                 Text("신고 내용은 NativeOps만 확인해요.")
+            }
+            .sheet(isPresented: Binding(
+                get: { viewModel.editingComment != nil },
+                set: { if !$0 { viewModel.cancelEditing() } }
+            )) {
+                CommentEditSheet(viewModel: viewModel)
+            }
+            .confirmationDialog("댓글을 삭제할까요?", isPresented: Binding(
+                get: { viewModel.deletingComment != nil },
+                set: { if !$0 { viewModel.deletingComment = nil } }
+            ), titleVisibility: .visible) {
+                Button("삭제하기", role: .destructive) { Task { await viewModel.deleteComment() } }
+                Button("취소", role: .cancel) {}
+            } message: {
+                Text("삭제한 댓글은 되돌릴 수 없어요.")
             }
             .alert(viewModel.errorMessage ?? "", isPresented: Binding(
                 get: { viewModel.errorMessage != nil },

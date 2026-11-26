@@ -15,27 +15,44 @@ final class PostDetailViewModel {
     private(set) var isDeleted = false
     var isMorePresented = false
     var isReportPresented = false
+    /// 고치는 중인 댓글 · 입력 중인 글
+    var editingComment: PostComment?
+    var editingCommentText = ""
+    /// 지울지 묻는 댓글
+    var deletingComment: PostComment?
+    private(set) var isSavingComment = false
+    private(set) var isPinning = false
     var toastMessage: String?
     var errorMessage: String?
 
     let postId: Int
+    /// Admin — 고정 · 남의 댓글 지우기
+    let canModerate: Bool
     private let fetchPostDetailUseCase: FetchPostDetailUseCase
     private let togglePostLikeUseCase: TogglePostLikeUseCase
     private let reportPostUseCase: ReportPostUseCase
     private let deletePostUseCase: DeletePostUseCase
+    private let managePostCommentUseCase: ManagePostCommentUseCase
+    private let pinPostUseCase: PinPostUseCase
     /// 첨부 사진 받기 · 크게 보기
     let attachmentDownloader: AttachmentDownloadViewModel?
 
     init(
         postId: Int,
+        canModerate: Bool = false,
         fetchPostDetailUseCase: FetchPostDetailUseCase,
         togglePostLikeUseCase: TogglePostLikeUseCase,
         reportPostUseCase: ReportPostUseCase,
         deletePostUseCase: DeletePostUseCase,
+        managePostCommentUseCase: ManagePostCommentUseCase,
+        pinPostUseCase: PinPostUseCase,
         attachmentDownloader: AttachmentDownloadViewModel? = nil
     ) {
         self.attachmentDownloader = attachmentDownloader
         self.postId = postId
+        self.canModerate = canModerate
+        self.managePostCommentUseCase = managePostCommentUseCase
+        self.pinPostUseCase = pinPostUseCase
         self.fetchPostDetailUseCase = fetchPostDetailUseCase
         self.togglePostLikeUseCase = togglePostLikeUseCase
         self.reportPostUseCase = reportPostUseCase
@@ -52,6 +69,19 @@ final class PostDetailViewModel {
     var canDelete: Bool { detail?.post.isMine ?? false }
     /// 내 글만 고칠 수 있어요. (PATCH /posts/{id})
     var canEdit: Bool { detail?.post.isMine ?? false }
+    /// Admin 만 고정 · 해제 (PATCH /admin/posts/{id})
+    var canPin: Bool { canModerate && detail != nil }
+    var pinTitle: String { detail?.post.isPinned == true ? "고정 해제" : "상단에 고정" }
+
+    /// 내 댓글은 고치기 · 지우기, Admin 은 남의 댓글도 지우기
+    func canEditComment(_ comment: PostComment) -> Bool { comment.isMine }
+    func canDeleteComment(_ comment: PostComment) -> Bool { comment.isMine || canModerate }
+
+    var canSaveComment: Bool {
+        let count = editingCommentText.trimmingCharacters(in: .whitespacesAndNewlines).count
+        return !isSavingComment && count > 0 && count <= CommentDraft.bodyLimit
+            && editingCommentText != editingComment?.body
+    }
 
     func load() async {
         if state.value == nil { state = .loading }
@@ -110,6 +140,60 @@ final class PostDetailViewModel {
             toastMessage = "신고를 접수했어요"
         } catch {
             AppLog.record(error, context: "board.post.report")
+            errorMessage = error.userMessage
+        }
+    }
+
+    // MARK: 댓글 고치기 · 지우기
+
+    func startEditing(_ comment: PostComment) {
+        editingCommentText = comment.body
+        editingComment = comment
+    }
+
+    func cancelEditing() {
+        editingComment = nil
+        editingCommentText = ""
+    }
+
+    func saveComment() async {
+        guard let comment = editingComment, let current = detail, canSaveComment else { return }
+        isSavingComment = true
+        defer { isSavingComment = false }
+        do {
+            state = .loaded(try await managePostCommentUseCase.update(current, commentId: comment.id, text: editingCommentText))
+            cancelEditing()
+            toastMessage = "댓글을 고쳤어요"
+        } catch {
+            AppLog.record(error, context: "board.comment.update")
+            errorMessage = error.userMessage
+        }
+    }
+
+    func deleteComment() async {
+        guard let comment = deletingComment, let current = detail else { return }
+        deletingComment = nil
+        do {
+            state = .loaded(try await managePostCommentUseCase.delete(current, commentId: comment.id, isAdmin: canModerate))
+            toastMessage = "댓글을 지웠어요"
+        } catch {
+            AppLog.record(error, context: "board.comment.delete")
+            errorMessage = error.userMessage
+        }
+    }
+
+    // MARK: 10-8 상단 고정 (Admin)
+
+    func togglePin() async {
+        guard let current = detail, !isPinning else { return }
+        isPinning = true
+        defer { isPinning = false }
+        let pin = !current.post.isPinned
+        do {
+            state = .loaded(try await pinPostUseCase.execute(current, isPinned: pin, isAdmin: canModerate))
+            toastMessage = pin ? "게시글을 상단에 고정했어요" : "고정을 풀었어요"
+        } catch {
+            AppLog.record(error, context: "board.post.pin")
             errorMessage = error.userMessage
         }
     }

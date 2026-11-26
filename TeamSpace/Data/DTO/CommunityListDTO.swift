@@ -25,6 +25,8 @@ struct ServerPostItemDTO: Decodable {
     let attachments: [ServerApprovalDTO.File]
     /// 익명 글이면 없어요.
     let author: String?
+    /// 관리자가 고정한 글
+    let pinned: Bool
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -41,10 +43,11 @@ struct ServerPostItemDTO: Decodable {
         attachmentCount = try container.decodeIfPresent([IgnoredJSONValue].self, forKey: .attachments)?.count ?? 0
         attachments = (try? container.decodeIfPresent([ServerApprovalDTO.File].self, forKey: .attachments)) ?? []
         author = try container.decodeIfPresent(String.self, forKey: .author)
+        pinned = (try? container.decodeIfPresent(Bool.self, forKey: .pinned)) ?? false
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, category, title, body, anonymous, views, likes, createdAt, mine, commentCount, attachments, author
+        case id, category, title, body, anonymous, views, likes, createdAt, mine, commentCount, attachments, author, pinned
     }
 
     func toEntity() -> PostSummary {
@@ -61,7 +64,8 @@ struct ServerPostItemDTO: Decodable {
             commentCount: commentCount,
             viewCount: views,
             hasImage: attachmentCount > 0,
-            isMine: mine
+            isMine: mine,
+            isPinned: pinned
         )
     }
 
@@ -214,7 +218,7 @@ extension PostListQuery {
     /// GET /posts 쿼리
     func queryItems(cursor: String?, limit: Int) -> [URLQueryItem] {
         var items = [
-            URLQueryItem(name: "sort", value: sort == .likes ? "likes" : "latest"),
+            URLQueryItem(name: "sort", value: sort.serverValue),
             URLQueryItem(name: "limit", value: String(limit))
         ]
         if let value = category?.serverValue { items.append(URLQueryItem(name: "category", value: value)) }
@@ -241,5 +245,16 @@ extension PostListQuery {
         formatter.timeZone = TimeZone(identifier: "Asia/Seoul")
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter.string(from: date)
+    }
+}
+
+extension PostListQuery.Sort {
+    /// GET /posts `sort` — latest · likes · views
+    var serverValue: String {
+        switch self {
+        case .latest: return "latest"
+        case .likes: return "likes"
+        case .views: return "views"
+        }
     }
 }

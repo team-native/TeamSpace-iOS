@@ -8,6 +8,9 @@ struct PostDetailHeader: View {
         VStack(alignment: .leading, spacing: Spacing.md) {
             HStack(spacing: Spacing.xs) {
                 StatusBadge(status: detail.post.category, size: .small)
+                if detail.post.isPinned {
+                    StatusBadge(title: "고정", tone: .primary, size: .small)
+                }
                 if detail.post.isAnonymous {
                     StatusBadge(title: "익명 게시글", tone: .neutral, size: .small)
                 }
@@ -108,6 +111,11 @@ struct PostCommentSection: View {
     let detail: PostDetail
     var likingCommentIds: Set<Int> = []
     var onLikeComment: (Int) -> Void = { _ in }
+    /// 내 댓글 · Admin 에게만 더보기(고치기 · 지우기)를 보여줘요.
+    var canEdit: (PostComment) -> Bool = { _ in false }
+    var canDelete: (PostComment) -> Bool = { _ in false }
+    var onEditComment: (PostComment) -> Void = { _ in }
+    var onDeleteComment: (PostComment) -> Void = { _ in }
 
     var body: some View {
         WorkspaceCard {
@@ -131,7 +139,11 @@ struct PostCommentSection: View {
                 PostCommentRow(
                     comment: comment,
                     isLiking: likingCommentIds.contains(comment.id),
-                    onLike: { onLikeComment(comment.id) }
+                    canEdit: canEdit(comment),
+                    canDelete: canDelete(comment),
+                    onLike: { onLikeComment(comment.id) },
+                    onEdit: { onEditComment(comment) },
+                    onDelete: { onDeleteComment(comment) }
                 )
             }
         }
@@ -141,7 +153,11 @@ struct PostCommentSection: View {
 private struct PostCommentRow: View {
     let comment: PostComment
     let isLiking: Bool
+    var canEdit = false
+    var canDelete = false
     let onLike: () -> Void
+    var onEdit: () -> Void = {}
+    var onDelete: () -> Void = {}
 
     var body: some View {
         HStack(alignment: .top, spacing: Spacing.sm) {
@@ -178,6 +194,66 @@ private struct PostCommentRow: View {
                 .accessibilityAddTraits(comment.isLiked ? .isSelected : [])
             }
             Spacer(minLength: 0)
+            if canEdit || canDelete {
+                Menu {
+                    if canEdit {
+                        Button("수정하기", action: onEdit)
+                    }
+                    if canDelete {
+                        Button("삭제하기", role: .destructive, action: onDelete)
+                    }
+                } label: {
+                    TSIcon.ellipsis.sized(.sm)
+                        .foregroundStyle(Color.tsInk3)
+                        .frame(width: 32, height: 32)
+                        .contentShape(Rectangle())
+                }
+                .accessibilityLabel("댓글 더보기")
+            }
         }
+    }
+}
+
+/// 댓글 고치기 시트 — 본문만 고쳐요. (익명 여부는 그대로)
+struct CommentEditSheet: View {
+    @Bindable var viewModel: PostDetailViewModel
+    @FocusState private var isFocused: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Spacing.lg) {
+            HStack {
+                Button("취소") { viewModel.cancelEditing() }
+                    .tsFont(.callout)
+                    .foregroundStyle(Color.tsInk2)
+                Spacer()
+                Text("댓글 수정")
+                    .tsFont(.headline)
+                    .foregroundStyle(Color.tsInk)
+                    .accessibilityAddTraits(.isHeader)
+                Spacer()
+                Button("저장") { Task { await viewModel.saveComment() } }
+                    .tsFont(.calloutBold)
+                    .foregroundStyle(viewModel.canSaveComment ? Color.tsPrimary : Color.tsInk3)
+                    .disabled(!viewModel.canSaveComment)
+            }
+            TextEditor(text: $viewModel.editingCommentText)
+                .tsFont(.body)
+                .foregroundStyle(Color.tsInk)
+                .scrollContentBackground(.hidden)
+                .padding(Spacing.md)
+                .frame(minHeight: 160)
+                .background(Color.tsSurface, in: RoundedRectangle(cornerRadius: Radius.lg, style: .continuous))
+                .focused($isFocused)
+            Text("\(TSFormat.number(viewModel.editingCommentText.count)) / \(TSFormat.number(CommentDraft.bodyLimit))")
+                .tsFont(.caption2)
+                .foregroundStyle(viewModel.editingCommentText.count > CommentDraft.bodyLimit ? Color.tsNegative : Color.tsInk3)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+            Spacer(minLength: 0)
+        }
+        .padding(Spacing.screen)
+        .background(Color.tsBackground.ignoresSafeArea())
+        .onAppear { isFocused = true }
+        .presentationDetents([.medium, .large])
+        .interactiveDismissDisabled(viewModel.isSavingComment)
     }
 }

@@ -127,11 +127,21 @@ enum BoardFilter: Hashable {
 enum BoardSort: CaseIterable, Hashable {
     case latest
     case popular
+    case views
 
     var title: String {
         switch self {
         case .latest: return "최신순"
         case .popular: return "인기순"
+        case .views: return "조회순"
+        }
+    }
+
+    var querySort: PostListQuery.Sort {
+        switch self {
+        case .latest: return .latest
+        case .popular: return .likes
+        case .views: return .views
         }
     }
 }
