@@ -980,7 +980,8 @@ extension DIContainer {
             addProposalCommentUseCase: addProposalCommentUseCase,
             user: user,
             fetchProfileUseCase: fetchProfileUseCase,
-            manageProposalUseCase: manageProposalUseCase
+            manageProposalUseCase: manageProposalUseCase,
+            editProposalUseCase: EditProposalUseCase(proposalRepository: proposalRepository)
         )
     }
 

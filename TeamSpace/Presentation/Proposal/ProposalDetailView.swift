@@ -20,7 +20,13 @@ struct ProposalDetailView: View {
         }
         .scrollDismissesKeyboard(.interactively)
         .safeAreaInset(edge: .top, spacing: 0) {
-            TSNavigationBar(title: "제안 상세", onBack: { dismiss() })
+            TSNavigationBar(title: "제안 상세", onBack: { dismiss() }) {
+                if viewModel.hasMoreMenu {
+                    CircleIconButton(icon: .ellipsis, accessibilityLabel: "더보기", background: .tsSurface, hasBorder: true) {
+                        viewModel.isMorePresented = true
+                    }
+                }
+            }
                 .padding(.horizontal, Spacing.screen)
                 .padding(.bottom, Spacing.sm)
                 .background(Color.tsBackground)
@@ -35,6 +41,30 @@ struct ProposalDetailView: View {
         .task { await viewModel.load() }
         .refreshable { await viewModel.load() }
         .tsToast($viewModel.toastMessage)
+        .onChange(of: viewModel.isDeleted) { _, isDeleted in
+            if isDeleted { dismiss() }
+        }
+        .confirmationDialog("제안 더보기", isPresented: $viewModel.isMorePresented, titleVisibility: .hidden) {
+            if viewModel.canEdit {
+                Button("수정하기") { viewModel.startEditing() }
+            }
+            if viewModel.canDelete {
+                Button("삭제하기", role: .destructive) { viewModel.isDeleteConfirmPresented = true }
+            }
+            Button("취소", role: .cancel) {}
+        }
+        .confirmationDialog("제안을 삭제할까요?", isPresented: $viewModel.isDeleteConfirmPresented, titleVisibility: .visible) {
+            Button("삭제하기", role: .destructive) { Task { await viewModel.delete() } }
+            Button("취소", role: .cancel) {}
+        } message: {
+            Text("추천과 댓글도 함께 지워지고 되돌릴 수 없어요.")
+        }
+        .sheet(isPresented: Binding(
+            get: { viewModel.editDraft != nil },
+            set: { if !$0 { viewModel.editDraft = nil } }
+        )) {
+            ProposalEditSheet(viewModel: viewModel)
+        }
         .alert(viewModel.errorMessage ?? "", isPresented: Binding(
             get: { viewModel.errorMessage != nil },
             set: { if !$0 { viewModel.errorMessage = nil } }

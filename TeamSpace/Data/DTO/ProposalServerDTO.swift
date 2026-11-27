@@ -207,6 +207,14 @@ struct ServerProposalCreateRequestDTO: Codable, Equatable {
     let anonymous: Bool
 }
 
+/// PATCH /proposals/{id} 요청 (`ProposalPatch`) — 익명 여부는 못 바꿔요.
+struct ServerProposalPatchRequestDTO: Codable, Equatable {
+    let title: String
+    let body: String
+    let category: String
+    let dept: String
+}
+
 extension ProposalStatus {
     /// 서버 상태 (접수 · 검토 중 · 협업 중 · 답변 완료 · 반려), 예전 영문 값도 받아요.
     init(serverValue: String) {

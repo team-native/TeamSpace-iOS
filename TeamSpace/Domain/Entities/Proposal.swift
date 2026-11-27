@@ -79,4 +79,18 @@ struct ProposalDraft: Equatable, Codable, Sendable {
         title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             && body.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
+
+    /// 서버 담당 부서(`dept`) — 서버는 공식 부서와 "PM / PO" · "전공 리더" 만 받아서 PMO 는 "PM / PO" 로 보내요.
+    static func serverDepartment(_ department: String) -> String {
+        department == "PMO" ? "PM / PO" : department
+    }
+
+    /// 서버 값을 칩 이름으로 ("PM / PO" → PMO, "Design & Client" → Design)
+    static func chipDepartment(_ server: String) -> String {
+        switch server {
+        case "PM / PO", "PM/PO", "PM", "PO": return "PMO"
+        case "Design & Client": return "Design"
+        default: return server
+        }
+    }
 }
