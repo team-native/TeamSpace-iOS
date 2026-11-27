@@ -21,9 +21,11 @@ struct ServerPersonDTO: Decodable {
     let userId: String?
     /// 계정이 켜져 있는지 — 없으면 nil (켜진 걸로 봐요)
     let active: Bool?
+    /// 프로필 사진 주소 — 서버가 data URL 대신 `/people/{id}/photo?v=…` 로 줘요. 없으면 빈 값
+    let photo: String?
 
     private enum CodingKeys: String, CodingKey {
-        case id, name, email, dept, department, role, major, cohort, joined, bio, interests, projects, lead, roles, linked, userId, active
+        case id, name, email, dept, department, role, major, cohort, joined, bio, interests, projects, lead, roles, linked, userId, active, photo
     }
 
     init(from decoder: Decoder) throws {
@@ -50,6 +52,7 @@ struct ServerPersonDTO: Decodable {
         userId = (try? container.decodeIfPresent(String.self, forKey: .userId))
             ?? (try? container.decodeIfPresent(Int.self, forKey: .userId)).map { String($0) }
         active = try? container.decodeIfPresent(Bool.self, forKey: .active)
+        photo = (try? container.decodeIfPresent(String.self, forKey: .photo)) ?? nil
     }
 
     var department: Department { Department(serverDept: dept, roles: roles) }
@@ -67,7 +70,8 @@ struct ServerPersonDTO: Decodable {
         Member(
             id: id, name: name, department: department, roles: roles, tag: tag,
             position: role, joinedAt: joined ?? .distantPast,
-            needsAccount: linked == false && userId == nil
+            needsAccount: linked == false && userId == nil,
+            photo: ProfilePhoto(photo)
         )
     }
 

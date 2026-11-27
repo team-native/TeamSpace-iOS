@@ -8,15 +8,19 @@ extension AvatarBackground {
         case .yellow: return .tsAmberSoft
         case .green: return .tsPositiveSoft
         case .pink: return .tsNegativeSoft
+        case .white: return .white
         }
     }
 }
 
-/// 07-13 미모티콘 — 고른 사진이 있으면 사진, 없으면 기본 얼굴
+/// 07-13 미모티콘 — 새로 고른 사진 → 서버 사진 → 기본 얼굴 순서로 보여줘요.
 struct ProfileAvatar: View {
     let imageData: Data?
+    var photo: ProfilePhoto?
     let background: AvatarBackground
     var size: CGFloat = 96
+
+    @Environment(\.photoBaseURL) private var baseURL
 
     var body: some View {
         ZStack {
@@ -26,15 +30,32 @@ struct ProfileAvatar: View {
                     .resizable()
                     .scaledToFill()
             } else {
-                Image(systemName: "person.fill")
-                    .font(.system(size: size * 0.48))
-                    .foregroundStyle(Color.tsInk3)
-                    .offset(y: size * 0.08)
+                defaultFace
+                if let url = photo?.url(relativeTo: baseURL) {
+                    AsyncImage(url: url) { phase in
+                        if let image = phase.image {
+                            image.resizable().scaledToFill()
+                        }
+                    }
+                }
             }
         }
         .frame(width: size, height: size)
         .clipShape(Circle())
+        // 흰 배경은 바탕과 섞이지 않게 테두리를 그려요.
+        .overlay {
+            if background == .white {
+                Circle().strokeBorder(Color.tsLine, lineWidth: 1)
+            }
+        }
         .accessibilityLabel("내 미모티콘")
+    }
+
+    private var defaultFace: some View {
+        Image(systemName: "person.fill")
+            .font(.system(size: size * 0.48))
+            .foregroundStyle(Color.tsInk3)
+            .offset(y: size * 0.08)
     }
 }
 
