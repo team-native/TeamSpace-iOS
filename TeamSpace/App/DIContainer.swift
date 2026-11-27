@@ -724,6 +724,7 @@ extension DIContainer {
             fetchScheduleDetailUseCase: fetchScheduleDetailUseCase,
             respondScheduleUseCase: respondScheduleUseCase,
             updateRemindersUseCase: updateRemindersUseCase,
+            deleteScheduleUseCase: DeleteScheduleUseCase(workspaceRepository: workspaceRepository),
             user: user
         )
     }
@@ -892,6 +893,7 @@ extension DIContainer {
             fetchNoticeDetailUseCase: fetchNoticeDetailUseCase,
             acknowledgeNoticeUseCase: acknowledgeNoticeUseCase,
             fetchNoticeUnconfirmedUseCase: FetchNoticeUnconfirmedUseCase(noticeRepository: noticeRepository),
+            deleteNoticeUseCase: DeleteNoticeUseCase(noticeRepository: noticeRepository),
             user: user,
             attachmentDownloader: makeAttachmentDownloadViewModel()
         )

@@ -17,6 +17,8 @@ protocol WorkspaceRepository: Sendable {
     func createSchedule(_ draft: ScheduleDraft) async throws -> Int
     /// PATCH /admin/events/{id} — 일정 수정 (Admin)
     func updateSchedule(id: Int, _ draft: ScheduleDraft) async throws
+    /// DELETE /admin/events/{id} — 일정과 리마인더를 지워요. (Admin)
+    func deleteSchedule(id: Int) async throws
     /// GET /events/{id} · GET /events/{id}/reminders — 07-8 일정 상세
     func fetchScheduleDetail(id: Int) async throws -> ScheduleEventDetail
     /// POST /events/{id}/rsvp — 참석 · 불참 · 미정

@@ -22,7 +22,11 @@ struct ScheduleDetailView: View {
         }
         .safeAreaInset(edge: .top, spacing: 0) {
             TSNavigationBar(title: "Native 일정", onBack: { dismiss() }) {
-                if viewModel.canEdit, let id = viewModel.detail?.event.id {
+                if viewModel.canDelete {
+                    CircleIconButton(icon: .ellipsis, accessibilityLabel: "더보기", background: .tsSurface, hasBorder: true) {
+                        viewModel.isMorePresented = true
+                    }
+                } else if viewModel.canEdit, let id = viewModel.detail?.event.id {
                     CircleIconButton(icon: .pencil, accessibilityLabel: "일정 수정", background: .tsSurface, hasBorder: true) {
                         onNavigate(.scheduleEdit(id: id))
                     }
@@ -37,6 +41,22 @@ struct ScheduleDetailView: View {
         .task { await viewModel.load() }
         .refreshable { await viewModel.load() }
         .modifier(ScheduleDetailSheets(viewModel: viewModel))
+        .onChange(of: viewModel.isDeleted) { _, deleted in
+            if deleted { dismiss() }
+        }
+        .confirmationDialog("일정 더보기", isPresented: $viewModel.isMorePresented, titleVisibility: .hidden) {
+            if let id = viewModel.detail?.event.id {
+                Button("수정하기") { onNavigate(.scheduleEdit(id: id)) }
+            }
+            Button("삭제하기", role: .destructive) { viewModel.isDeleteConfirmPresented = true }
+            Button("취소", role: .cancel) {}
+        }
+        .confirmationDialog("일정을 삭제할까요?", isPresented: $viewModel.isDeleteConfirmPresented, titleVisibility: .visible) {
+            Button("삭제하기", role: .destructive) { Task { await viewModel.delete() } }
+            Button("취소", role: .cancel) {}
+        } message: {
+            Text("리마인더도 함께 지워지고 되돌릴 수 없어요.")
+        }
     }
 
     @ViewBuilder
