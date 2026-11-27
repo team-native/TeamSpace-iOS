@@ -46,7 +46,7 @@ struct ProfileEditView: View {
             ErrorStateView(message: error.userMessage) { Task { await viewModel.load() } }
         case .loaded(let profile):
             VStack(spacing: Spacing.md) {
-                ProfileAvatar(imageData: viewModel.avatarImageData, background: viewModel.avatarBackground)
+                ProfileAvatar(imageData: viewModel.avatarImageData, photo: viewModel.currentPhoto, background: viewModel.avatarBackground)
                 Button("미모티콘 바꾸기") { viewModel.isAvatarMenuPresented = true }
                     .tsFont(.calloutBold)
                     .foregroundStyle(Color.tsOnPrimary)

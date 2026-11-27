@@ -43,7 +43,7 @@ private struct LeaderNode: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: Spacing.md + Spacing.xxxs) {
-                AvatarView(size: 38)
+                AvatarView(size: 38, photo: leader.photo)
                     .padding(Spacing.compact)
                     .background(Color.tsOnPrimary.opacity(0.25), in: Circle())
                 VStack(alignment: .leading, spacing: 1) {
@@ -91,7 +91,7 @@ private struct UnitBranch: View {
                     Text(unit.summary)
                         .tsFont(.caption)
                         .foregroundStyle(Color.tsInk3)
-                    AvatarStack(count: unit.members.count)
+                    AvatarStack(members: unit.members)
                 }
                 .padding(Spacing.md + Spacing.xxxs)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -105,13 +105,15 @@ private struct UnitBranch: View {
 
 /// 겹쳐 놓은 미모티콘 (최대 5개 + 나머지 숫자)
 private struct AvatarStack: View {
-    let count: Int
+    let members: [Member]
     private let maxVisible = 5
+
+    private var count: Int { members.count }
 
     var body: some View {
         HStack(spacing: -8) {
-            ForEach(0..<min(count, maxVisible), id: \.self) { _ in
-                AvatarView(size: 32)
+            ForEach(members.prefix(maxVisible)) { member in
+                AvatarView(size: 32, photo: member.photo)
                     .padding(Spacing.xxxs)
                     .background(Color.tsSurface, in: Circle())
             }

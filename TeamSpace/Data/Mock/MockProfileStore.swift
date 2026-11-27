@@ -36,6 +36,10 @@ final class MockProfileStore: @unchecked Sendable {
         fields["bio"] = request.bio
         fields["interests"] = request.interests
         fields["avatarBackground"] = request.avatarBackground
+        // 서버처럼 새 사진은 주소로 바꿔 저장하고, 빈 값이면 지워요.
+        if let photo = request.photo {
+            fields["photo"] = photo.isEmpty ? "" : "/people/member-01/photo?v=\(abs(photo.hashValue) % 100_000)"
+        }
         return encoded()
     }
 

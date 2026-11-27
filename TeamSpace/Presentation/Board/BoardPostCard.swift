@@ -57,7 +57,7 @@ struct BoardAuthorLabel: View {
             if post.isAnonymous {
                 IconTile(icon: .anonymous, iconSize: .sm, tileSize: 22, tint: .tsInk2, background: .tsSurface2, isCircle: true)
             } else {
-                AvatarView(size: 22)
+                AvatarView(size: 22, photo: post.authorPhoto)
             }
             Text(post.authorText)
                 .tsFont(.caption)

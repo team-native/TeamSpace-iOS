@@ -6,7 +6,7 @@ struct MemberProfileHeader: View {
 
     var body: some View {
         VStack(spacing: Spacing.md + Spacing.xxxs) {
-            AvatarView(size: 110)
+            AvatarView(size: 110, photo: detail.member.photo)
                 .padding(5)
                 .background(Color.tsSurface, in: Circle())
             VStack(spacing: Spacing.sm) {

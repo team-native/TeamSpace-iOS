@@ -486,7 +486,8 @@ final class WorkspaceTests: XCTestCase {
     func testProfileValidation() {
         XCTAssertThrowsError(try UpdateProfileUseCase.normalizedInterest("열한글자가넘는관심사입니다", existing: []))
         XCTAssertThrowsError(try UpdateProfileUseCase.normalizedInterest("새것", existing: ["a", "b", "c", "d", "e"]))
-        XCTAssertEqual(AvatarBackground.pink.next, .gray, "마지막 색 다음은 처음 색")
+        XCTAssertEqual(AvatarBackground.pink.next, .white, "분홍 다음은 흰색")
+        XCTAssertEqual(AvatarBackground.white.next, .gray, "마지막 색 다음은 처음 색")
     }
 
     func testPermissionsTexts() {

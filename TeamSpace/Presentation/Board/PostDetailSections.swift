@@ -21,7 +21,7 @@ struct PostDetailHeader: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .accessibilityAddTraits(.isHeader)
             HStack(spacing: Spacing.sm) {
-                PostAuthorAvatar(isAnonymous: detail.post.isAnonymous, size: 36)
+                PostAuthorAvatar(isAnonymous: detail.post.isAnonymous, photo: detail.post.authorPhoto, size: 36)
                 VStack(alignment: .leading, spacing: Spacing.xxxs) {
                     Text(detail.post.authorText)
                         .tsFont(.footnoteBold)
@@ -48,6 +48,7 @@ struct PostDetailHeader: View {
 struct PostAuthorAvatar: View {
     let isAnonymous: Bool
     var isHighlighted = false
+    var photo: ProfilePhoto?
     var size: CGFloat = 32
 
     var body: some View {
@@ -61,7 +62,7 @@ struct PostAuthorAvatar: View {
                 isCircle: true
             )
         } else {
-            AvatarView(size: size)
+            AvatarView(size: size, photo: photo)
         }
     }
 }
@@ -161,7 +162,7 @@ private struct PostCommentRow: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: Spacing.sm) {
-            PostAuthorAvatar(isAnonymous: comment.isAnonymous, isHighlighted: comment.isPostAuthor)
+            PostAuthorAvatar(isAnonymous: comment.isAnonymous, isHighlighted: comment.isPostAuthor, photo: comment.authorPhoto)
             VStack(alignment: .leading, spacing: Spacing.xxs) {
                 HStack(spacing: Spacing.xs) {
                     Text(comment.authorText)

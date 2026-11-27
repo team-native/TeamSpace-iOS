@@ -27,7 +27,7 @@ struct ServerPostDetailDTO: Decodable {
             body: post.body,
             commentPolicy: anonComments || post.anonymous ? .anonymous : .realName,
             isLiked: liked,
-            comments: comments.map { $0.toEntity(postAuthor: summary.authorName) },
+            comments: comments.map { $0.toEntity(postAuthor: summary.authorName, postAuthorId: summary.authorId) },
             images: post.attachments.compactMap { file in
                 guard let id = FileAttachment.uploadId(id: file.id, url: file.url) else { return nil }
                 return FileAttachment(name: file.filename, sizeText: FileAttachment.sizeText(file.size), fileId: id)
@@ -50,10 +50,15 @@ struct ServerCommentDTO: Decodable {
     let liked: Bool
     /// 익명 댓글의 작성자별 번호 (`익명 1` 의 1)
     let anonymousNumber: Int?
+    /// 작성자 조직도 id · 사진 주소 — 익명이면 빈 값
+    let authorId: String?
+    let authorPhoto: String?
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decodeIntOrString(forKey: .id)
+        authorId = (try? container.decodeStringOrInt(forKey: .authorId)).flatMap { $0.isEmpty ? nil : $0 }
+        authorPhoto = (try? container.decodeIfPresent(String.self, forKey: .authorPhoto)) ?? nil
         anonymousNumber = try? container.decodeIfPresent(Int.self, forKey: .anonymousNumber)
         anonymous = try container.decodeIfPresent(Bool.self, forKey: .anonymous) ?? false
         text = try container.decodeIfPresent(String.self, forKey: .text) ?? ""
@@ -65,24 +70,33 @@ struct ServerCommentDTO: Decodable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, anonymous, text, createdAt, author, mine, likes, liked, anonymousNumber
+        case id, anonymous, text, createdAt, author, mine, likes, liked, anonymousNumber, authorId, authorPhoto
     }
 
     /// 익명 댓글은 `anonymousNumber` 로 번호가 와요. 없으면 author "익명 1" 에서 숫자를 읽어요.
-    func toEntity(postAuthor: String?) -> PostComment {
+    /// 글쓴이 댓글은 작성자 id 가 있으면 id 로, 없으면(옛 서버) 이름으로 알아봐요.
+    func toEntity(postAuthor: String?, postAuthorId: String? = nil) -> PostComment {
         let isAnonymousPostAuthor = author == Self.postAuthorLabel
         let isAnonymous = anonymous || isAnonymousPostAuthor
+        let isSameAuthor: Bool
+        if let postAuthorId, let authorId {
+            isSameAuthor = postAuthorId == authorId
+        } else {
+            isSameAuthor = postAuthor != nil && author == postAuthor
+        }
         return PostComment(
             id: id,
             authorName: isAnonymous ? nil : author,
             isAnonymous: isAnonymous,
             anonymousNumber: isAnonymous && !isAnonymousPostAuthor ? anonymousNumber ?? Self.anonymousNumber(from: author) : nil,
-            isPostAuthor: isAnonymousPostAuthor || (postAuthor != nil && author == postAuthor),
+            isPostAuthor: isAnonymousPostAuthor || (!isAnonymous && isSameAuthor),
             isMine: mine,
             body: text,
             createdAt: createdAt,
             likeCount: likes,
-            isLiked: liked
+            isLiked: liked,
+            authorId: isAnonymous ? nil : authorId,
+            authorPhoto: isAnonymous ? nil : ProfilePhoto(authorPhoto)
         )
     }
 

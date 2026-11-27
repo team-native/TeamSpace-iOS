@@ -29,6 +29,10 @@ struct PostSummary: Equatable, Identifiable, Sendable {
     let hasImage: Bool
     /// 내가 쓴 글 (익명이어도 본인에게는 알려줘요)
     let isMine: Bool
+    /// 작성자 조직도 id ("member-02") — 익명이면 nil
+    var authorId: String?
+    /// 작성자 프로필 사진 — 익명이거나 사진이 없으면 nil
+    var authorPhoto: ProfilePhoto?
     /// 관리자가 목록 맨 위에 고정한 글
     var isPinned = false
 }
@@ -58,6 +62,9 @@ struct PostComment: Equatable, Identifiable, Sendable {
     /// 댓글 공감 수 · 내가 공감했는지 (POST /posts/{id}/comments/{cid}/like)
     var likeCount: Int = 0
     var isLiked: Bool = false
+    /// 작성자 조직도 id · 프로필 사진 — 익명이면 nil
+    var authorId: String?
+    var authorPhoto: ProfilePhoto?
 }
 
 /// 10-3 게시글 상세

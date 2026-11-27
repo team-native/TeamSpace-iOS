@@ -33,6 +33,9 @@ final class DIContainer {
 
     private let apiClient: APIClient
 
+    /// 프로필 사진 주소(`/people/{id}/photo`)를 풀 서버 주소
+    var photoBaseURL: URL { apiClient.baseURL }
+
     init(
         apiClient: APIClient,
         tokenStorage: TokenStorage,

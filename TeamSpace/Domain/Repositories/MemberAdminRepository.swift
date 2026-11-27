@@ -2,7 +2,7 @@ import Foundation
 
 /// 멤버 관리 [Admin] — 서버 `require_admin`
 protocol MemberAdminRepository: Sendable {
-    /// GET /people (커서를 따라 전부) — 계정 · 조직도 연결 여부 · 활성 상태 포함
+    /// GET /admin/users(모든 계정) + GET /people(계정 없는 조직도 구성원) — 커서를 따라 전부
     func fetchMembers() async throws -> [ManagedMember]
     /// PATCH /admin/users/{id}/roles — 역할 하나. 마지막 관리자를 내리면 409
     func changeRole(userId: String, role: UserRole) async throws -> [UserRole]

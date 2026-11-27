@@ -14,6 +14,8 @@ struct Member: Equatable, Hashable, Identifiable, Sendable {
     let joinedAt: Date
     /// 조직도에는 있지만 아직 계정이 연결되지 않은 사람 — 가입 승인 때 고를 수 있어요.
     var needsAccount = false
+    /// 프로필 사진 (`/people/{id}/photo?v=…`) — 없으면 nil
+    var photo: ProfilePhoto?
 }
 
 /// 팀원 상세 · 참여 중인 프로젝트
