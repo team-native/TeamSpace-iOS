@@ -266,6 +266,13 @@ struct MockTransport: HTTPTransport {
         if components.first == "posts" {
             return try boardRoute(request, components: components)
         }
+        if components.count == 3, components.starts(with: ["admin", "posts"]), request.httpMethod == "PATCH" {
+            guard let id = Int(components[2]),
+                  let dto = request.httpBody.flatMap({ try? JSONDecoder().decode(ServerPostPinDTO.self, from: $0) }),
+                  let json = boardStore.setPinned(postId: id, isPinned: dto.pinned)
+            else { return try respond(request, status: 404, json: #"{"detail":"게시글을 찾을 수 없습니다."}"#) }
+            return try respond(request, status: 200, json: json)
+        }
         if components.first == "notices" {
             return try noticeRoute(request, components: components)
         }
@@ -493,6 +500,17 @@ struct MockTransport: HTTPTransport {
     }
 
     /// 10 팀 게시판 — /posts(서버 형식 목록) · /posts/{id} · like · reports
+    private func commentChange(_ request: URLRequest, _ change: MockBoardStore.CommentChange) throws -> (Data, HTTPURLResponse)? {
+        switch change {
+        case .notFound:
+            return try respond(request, status: 404, json: #"{"detail":"댓글을 찾을 수 없습니다."}"#)
+        case .forbidden:
+            return try respond(request, status: 403, json: #"{"detail":"댓글 작성자 또는 관리자만 수정할 수 있습니다."}"#)
+        case .done(let json):
+            return try respond(request, status: 200, json: json)
+        }
+    }
+
     private func boardRoute(_ request: URLRequest, components: [String]) throws -> (Data, HTTPURLResponse)? {
         let notFound = #"{"code":404,"message":"해당 게시글을 찾을 수 없습니다."}"#
         let forbidden = #"{"code":403,"message":"이 게시글에는 할 수 없는 작업이에요."}"#
@@ -531,6 +549,16 @@ struct MockTransport: HTTPTransport {
                 let json = boardStore.createComment(postId: id, request: dto)
             else { return try respond(request, status: 404, json: notFound) }
             return try respond(request, status: 201, json: json)
+        case ("PATCH", 4) where components[2] == "comments":
+            guard let id = id, let commentId = Int(components[3]),
+                  let dto = request.httpBody.flatMap({ try? JSONDecoder().decode(ServerCommentPatchRequestDTO.self, from: $0) })
+            else { return try respond(request, status: 422, json: #"{"detail":"댓글 내용을 입력해주세요."}"#) }
+            let text = dto.text.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !text.isEmpty else { return try respond(request, status: 422, json: #"{"detail":"댓글 내용을 입력해주세요."}"#) }
+            return try commentChange(request, boardStore.updateComment(postId: id, commentId: commentId, text: text))
+        case ("DELETE", 4) where components[2] == "comments":
+            guard let id = id, let commentId = Int(components[3]) else { return try respond(request, status: 404, json: notFound) }
+            return try commentChange(request, boardStore.deleteComment(postId: id, commentId: commentId, isAdmin: true))
         case ("POST", 5) where components[2] == "comments" && components[4] == "like":
             guard let id = id, let commentId = Int(components[3]), let json = boardStore.toggleCommentLike(postId: id, commentId: commentId) else {
                 return try respond(request, status: 404, json: #"{"detail":"댓글을 찾을 수 없습니다."}"#)

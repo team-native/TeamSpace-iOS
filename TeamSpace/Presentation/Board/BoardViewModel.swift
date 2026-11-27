@@ -60,7 +60,7 @@ final class BoardViewModel {
 
     /// 지금 칩 · 기간 · 정렬을 서버 조건으로
     var query: PostListQuery {
-        var query = PostListQuery(period: period.serverPeriod(now: now()), sort: sort == .popular ? .likes : .latest)
+        var query = PostListQuery(period: period.serverPeriod(now: now()), sort: sort.querySort)
         if case .category(let category) = filter { query.category = category }
         return query
     }

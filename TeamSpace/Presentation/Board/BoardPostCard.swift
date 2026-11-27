@@ -11,6 +11,9 @@ struct BoardPostCard: View {
             WorkspaceCard {
                 HStack {
                     StatusBadge(status: post.category, size: .small)
+                    if post.isPinned {
+                        StatusBadge(title: "고정", tone: .primary, size: .small)
+                    }
                     Spacer(minLength: Spacing.sm)
                     Text(TSFormat.dayTime(post.createdAt, now: now))
                         .tsFont(.caption2)

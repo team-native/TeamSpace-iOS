@@ -33,6 +33,8 @@ struct PostSummary: Equatable, Identifiable, Sendable {
     var authorId: String?
     /// 작성자 프로필 사진 — 익명이거나 사진이 없으면 nil
     var authorPhoto: ProfilePhoto?
+    /// 관리자가 목록 맨 위에 고정한 글
+    var isPinned = false
 }
 
 /// 댓글 작성 정책 — 글쓴이가 정한 기본 표시 방식 (10-2 · 10-3)
@@ -55,7 +57,7 @@ struct PostComment: Equatable, Identifiable, Sendable {
     /// 글쓴이가 단 댓글
     let isPostAuthor: Bool
     let isMine: Bool
-    let body: String
+    var body: String
     let createdAt: Date
     /// 댓글 공감 수 · 내가 공감했는지 (POST /posts/{id}/comments/{cid}/like)
     var likeCount: Int = 0

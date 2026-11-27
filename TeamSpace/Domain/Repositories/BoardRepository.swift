@@ -30,4 +30,10 @@ protocol BoardRepository: Sendable {
     func updatePost(id: Int, _ draft: PostDraft) async throws
     /// POST /posts/{postId}/comments — 10-4 댓글 등록
     func createComment(postId: Int, draft: CommentDraft) async throws -> PostComment
+    /// PATCH /posts/{postId}/comments/{commentId} — 댓글 고치기 (작성자 · Admin)
+    func updateComment(postId: Int, commentId: Int, text: String) async throws -> PostComment
+    /// DELETE /posts/{postId}/comments/{commentId} — 댓글 지우기 (작성자 · Admin)
+    func deleteComment(postId: Int, commentId: Int) async throws
+    /// PATCH /admin/posts/{postId} `{pinned}` — 목록 맨 위 고정 · 해제 (Admin). 바뀐 고정 상태를 돌려줘요.
+    func setPinned(postId: Int, isPinned: Bool) async throws -> Bool
 }

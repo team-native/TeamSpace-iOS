@@ -20,6 +20,8 @@ final class MockBoardStore: @unchecked Sendable {
     /// POST /posts 로 붙인 업로드 id
     private var attachmentIds: [Int: [String]] = [:]
     private var comments: [Int: [PostCommentDTO]] = [:]
+    /// PATCH /admin/posts/{id} 로 고정한 글
+    private var pinnedPostIds: Set<Int> = []
     /// 새로 쓴 글의 본문 · 댓글 정책
     private var bodies: [Int: String] = [:]
     private var policies: [Int: CommentPolicy] = [:]
@@ -158,9 +160,13 @@ final class MockBoardStore: @unchecked Sendable {
         }
         if query["sort"] == "likes" {
             items.sort { ($0.likeCount, $0.createdAt, $0.id) > ($1.likeCount, $1.createdAt, $1.id) }
+        } else if query["sort"] == "views" {
+            items.sort { ($0.viewCount, $0.createdAt, $0.id) > ($1.viewCount, $1.createdAt, $1.id) }
         } else {
             items.sort { ($0.createdAt, $0.id) > ($1.createdAt, $1.id) }
         }
+        // 서버처럼 고정한 글을 맨 위로
+        items = items.filter { pinnedPostIds.contains($0.id) } + items.filter { !pinnedPostIds.contains($0.id) }
         let start = query["cursor"].flatMap { $0.hasPrefix("o:") ? Int($0.dropFirst(2)) : nil } ?? 0
         let limit = query["limit"].flatMap(Int.init) ?? 20
         let page = Array(items.dropFirst(start).prefix(limit))
@@ -198,7 +204,7 @@ final class MockBoardStore: @unchecked Sendable {
         fields["anonComments"] = post.isAnonymous
         fields["views"] = post.viewCount
         fields["likes"] = post.likeCount
-        fields["pinned"] = false
+        fields["pinned"] = pinnedPostIds.contains(post.id)
         fields["mine"] = post.isMine
         fields["commentCount"] = commentCount
         fields["attachments"] = attachments
@@ -298,6 +304,46 @@ final class MockBoardStore: @unchecked Sendable {
         comments[postId] = existing + [comment]
         posts[index].commentCount += 1
         return Self.json(serverCommentFields(comment, postId: postId, postAnonymous: post.isAnonymous))
+    }
+
+    enum CommentChange {
+        case notFound
+        case forbidden
+        case done(String)
+    }
+
+    /// PATCH /posts/{id}/comments/{commentId} — 내 댓글만 (Mock 사용자는 Admin 이지만 서버처럼 작성자만 고쳐요)
+    func updateComment(postId: Int, commentId: Int, text: String) -> CommentChange {
+        lock.lock()
+        defer { lock.unlock() }
+        guard let post = posts.first(where: { $0.id == postId }),
+              let index = comments[postId]?.firstIndex(where: { $0.id == commentId }) else { return .notFound }
+        guard comments[postId]?[index].isMine == true else { return .forbidden }
+        comments[postId]?[index].body = text
+        guard let comment = comments[postId]?[index] else { return .notFound }
+        return .done(Self.json(serverCommentFields(comment, postId: postId, postAnonymous: post.isAnonymous)))
+    }
+
+    /// DELETE /posts/{id}/comments/{commentId} — 작성자 · Admin
+    func deleteComment(postId: Int, commentId: Int, isAdmin: Bool) -> CommentChange {
+        lock.lock()
+        defer { lock.unlock() }
+        guard let index = comments[postId]?.firstIndex(where: { $0.id == commentId }) else { return .notFound }
+        guard comments[postId]?[index].isMine == true || isAdmin else { return .forbidden }
+        comments[postId]?.remove(at: index)
+        if let postIndex = posts.firstIndex(where: { $0.id == postId }) {
+            posts[postIndex].commentCount = max(0, posts[postIndex].commentCount - 1)
+        }
+        return .done(#"{"id":"\#(commentId)","deleted":true}"#)
+    }
+
+    /// PATCH /admin/posts/{id} `{pinned}` → `{id, pinned}`
+    func setPinned(postId: Int, isPinned: Bool) -> String? {
+        lock.lock()
+        defer { lock.unlock() }
+        guard posts.contains(where: { $0.id == postId }) else { return nil }
+        if isPinned { pinnedPostIds.insert(postId) } else { pinnedPostIds.remove(postId) }
+        return #"{"id":"\#(postId)","pinned":\#(isPinned)}"#
     }
 
     /// POST /posts/{id}/like

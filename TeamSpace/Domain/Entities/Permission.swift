@@ -32,6 +32,8 @@ enum Permission: Hashable, Sendable {
     case manageBankImports
     /// 수금 등록 · 수정 (서버 `/admin/finance/receipts` — Admin · FA)
     case manageReceipts
+    /// 게시글 상단 고정 · 남의 댓글 지우기 (서버 `require_admin` · `is_admin_account` — Admin 만)
+    case moderatePosts
 }
 
 extension AuthUser {
@@ -52,7 +54,7 @@ extension AuthUser {
             return !roles.isDisjoint(with: [.fa, .leader, .admin])
         case .manageBankImports, .manageReceipts:
             return !roles.isDisjoint(with: [.fa, .admin])
-        case .viewNoticeReceipts, .manageEvents, .handleReports, .approveSignups, .manageFinancePermissions, .manageMembers, .registerProjects, .manageDocs:
+        case .viewNoticeReceipts, .manageEvents, .handleReports, .approveSignups, .manageFinancePermissions, .manageMembers, .registerProjects, .manageDocs, .moderatePosts:
             return roles.contains(.admin)
         }
     }

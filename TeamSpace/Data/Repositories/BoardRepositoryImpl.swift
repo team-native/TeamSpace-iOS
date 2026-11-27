@@ -138,6 +138,25 @@ final class BoardRepositoryImpl: BoardRepository, @unchecked Sendable {
         return try await request(endpoint, as: ServerCommentDTO.self).toEntity(postAuthor: nil)
     }
 
+    /// 서버는 고친 댓글 한 건을 돌려줘요.
+    func updateComment(postId: Int, commentId: Int, text: String) async throws -> PostComment {
+        let endpoint = Endpoint(
+            method: .patch,
+            path: "posts/\(postId)/comments/\(commentId)",
+            body: ServerCommentPatchRequestDTO(text: text)
+        )
+        return try await request(endpoint, as: ServerCommentDTO.self).toEntity(postAuthor: nil)
+    }
+
+    func deleteComment(postId: Int, commentId: Int) async throws {
+        try await send(Endpoint(method: .delete, path: "posts/\(postId)/comments/\(commentId)"))
+    }
+
+    func setPinned(postId: Int, isPinned: Bool) async throws -> Bool {
+        let endpoint = Endpoint(method: .patch, path: "admin/posts/\(postId)", body: ServerPostPinDTO(pinned: isPinned))
+        return try await request(endpoint, as: ServerPostPinDTO.self).pinned
+    }
+
     /// POST /uploads — JPG · PNG 만 (서버가 파일 앞부분을 확인해요)
     private func upload(_ image: Data, index: Int) async throws -> String {
         let isPNG = image.starts(with: [0x89, 0x50, 0x4E, 0x47])
